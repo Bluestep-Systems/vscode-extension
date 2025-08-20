@@ -20,6 +20,10 @@
       {
         "command": "bsjs-push-pull.pullScript",
         "title": "B6P: Pull Script"
+      },
+      {
+        "command": "bsjs-push-pull.updateCredentials",
+        "title": "B6P: Update Credentials"
       }
     ]
   },

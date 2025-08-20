@@ -1,17 +1,17 @@
 import * as vscode from 'vscode';
-import { pullScript, pushScript } from './ctrl-p-commands';
+import { pullScript, pushScript, updateCredentials } from './ctrl-p-commands';
+import {UserManager, UserManagerInterface} from './usermanager';
 
 
 export const State = new class {
   #context: vscode.ExtensionContext | null;
-  #vars: Map<string, any> = new Map<string, any>();
-
-  // The command has been defined in the package.json file
-  // Now provide the implementation of the command with registerCommand
+  #usermanager: UserManagerInterface = UserManager;
+  // The command must be defined in the package.json file
   // The commandId parameter must match the command field in package.json
   #disposables: vscode.Disposable[] = [
     vscode.commands.registerCommand('bsjs-push-pull.pullScript', pullScript),
     vscode.commands.registerCommand('bsjs-push-pull.pushScript', pushScript),
+    vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', updateCredentials),
   ];
   constructor() {
     this.#context = null;
@@ -30,6 +30,13 @@ export const State = new class {
     }
     this.#context = context;
     this.#disposables.forEach(disposable => context.subscriptions.push(disposable));
+  }
+
+  get User(): UserManagerInterface {
+    return this.#usermanager;
+  }
+  set User(_user: any) {
+    throw new Error("User property is read-only");
   }
 }();
 

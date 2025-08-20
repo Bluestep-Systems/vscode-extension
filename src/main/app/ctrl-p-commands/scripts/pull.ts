@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
-
+import { State } from '../..';
 /**
  * TODO
  */
-export default function(): void {
-  vscode.window.showInformationMessage('Hello World from bsjs-push-pull.pullScript!');
+export default function (): void {
+  State.User.creds.then(creds => {
+    vscode.window.showInformationMessage(JSON.stringify(creds, null, 2));
+  });
+
 }
