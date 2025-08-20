@@ -1,4 +1,8 @@
 import * as vscode from 'vscode';
-export default function() {
+
+/**
+ * TODO
+ */
+export default function(): void {
   vscode.window.showInformationMessage('Hello World from bsjs-push-pull.pullScript!');
 }

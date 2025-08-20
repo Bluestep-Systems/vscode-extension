@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
-import pullScript from './commands/pullScript';
-import pushScript from './commands/pushScript';
+import { pullScript, pushScript } from '../ctrl-p-commands';
 
 // The command has been defined in the package.json file
 // Now provide the implementation of the command with registerCommand
