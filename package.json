@@ -14,8 +14,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "bsjs-push-pull.helloWorld",
-        "title": "Hello World"
+        "command": "bsjs-push-pull.pushScript",
+        "title": "B6P: Push Script"
+      },
+      {
+        "command": "bsjs-push-pull.pullScript",
+        "title": "B6P: Pull Script"
       }
     ]
   },
