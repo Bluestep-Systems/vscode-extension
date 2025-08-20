@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
-import lifeCycle from './lifecycle';
-import { State } from './shared';
-
+import lifeCycle from './lifecycle-control';
 
 /**
  * This method is called when the extension is activated. Triggers once on load.
@@ -11,7 +9,6 @@ import { State } from './shared';
  */
 export function activate(context: vscode.ExtensionContext) {
 	lifeCycle.start(context);
-	State.context = context;
 }
 
 
