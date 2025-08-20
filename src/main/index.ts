@@ -11,7 +11,7 @@ import { State } from './shared';
  */
 export function activate(context: vscode.ExtensionContext) {
 	lifeCycle.start(context);
-	State.setContext(context);
+	State.context = context;
 }
 
 

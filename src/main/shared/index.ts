@@ -11,18 +11,20 @@ export const b6p_disposables: vscode.Disposable[] = [
 
 export const State = new class {
   #context: vscode.ExtensionContext | null;
+  static vars: Map<string, any> = new Map<string, any>();
 
   constructor() {
     this.#context = null;
   }
 
-  public getContext(): vscode.ExtensionContext {
+  get context(): vscode.ExtensionContext {
     if (this.#context === null) {
       throw new Error('Extension context is not set');
     }
     return this.#context;
   }
-  setContext(context: vscode.ExtensionContext) {
+
+  set context(context: vscode.ExtensionContext) {
     if (this.#context !== null) {
       throw new Error('Extension context is already set');
     }
