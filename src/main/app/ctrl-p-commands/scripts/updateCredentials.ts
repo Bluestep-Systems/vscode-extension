@@ -6,7 +6,7 @@ export default async function (): Promise<void> {
   vscode.window.showInformationMessage("Current Credentials: " + JSON.stringify(creds, null, 2));
   const oldUsername = creds.username;
   const oldPassword = creds.password;
-  const newUsername = await vscode.window.showInputBox({ prompt: 'Enter new username' , placeHolder: "Leave blank to keep existing username" });
+  const newUsername = await vscode.window.showInputBox({ prompt: 'Enter new username' , placeHolder: oldUsername + " (Enter to Keep)"});
   if (typeof newUsername === 'string') {
     if (newUsername !== "") {
       creds.username = newUsername;
@@ -15,7 +15,7 @@ export default async function (): Promise<void> {
     vscode.window.showErrorMessage('Invalid username');
     return;
   }
-  const newPassword = await vscode.window.showInputBox({ prompt: 'Enter new password', placeHolder: "Leave Blank to keep existing password" });
+  const newPassword = await vscode.window.showInputBox({ prompt: 'Enter new password', placeHolder: oldPassword + " (Enter to Keep)" });
   if (typeof newPassword === 'string') {
     if (newPassword !== "") {
       creds.password = newPassword;

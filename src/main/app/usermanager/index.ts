@@ -5,10 +5,10 @@ interface UserCredentials {
   newUsername(value: string): UserCredentials;
   newPassword(value: string): UserCredentials;
 }
-export interface UserManagerInterface {
+export interface UserManager {
   creds: Thenable<UserCredentials>;
 }
-export const UserManager = new class implements UserManagerInterface {
+export const UserManager = new class implements UserManager {
   #credentials: UserCredentials | null;
 
   constructor() {
@@ -29,16 +29,20 @@ export const UserManager = new class implements UserManagerInterface {
         if (typeof resp === 'string') {
           return resp;
         } else {
-          throw new Error('Invalid username');
+          console.trace();
+          return "";
+
         }
-        
+
       });
     const password = await vscode.window.showInputBox({ prompt: 'Enter your password', password: true })
       .then(resp => {
         if (typeof resp === 'string') {
           return resp;
         } else {
-          throw new Error('Invalid username');
+          console.trace();
+
+          return "";
         }
       });
 
