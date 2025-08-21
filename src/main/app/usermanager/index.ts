@@ -1,10 +1,5 @@
 import * as vscode from 'vscode';
-interface UserCredentials {
-  username: string;
-  password: string;
-  newUsername(value: string): UserCredentials;
-  newPassword(value: string): UserCredentials;
-}
+import type { UserCredentials } from '../../../../types/b6p-vscode-extension';
 export interface UserManager {
   creds: Thenable<UserCredentials>;
 }
@@ -26,32 +21,20 @@ export const UserManager = new class implements UserManager {
     // Implement your logic to get new credentials here
     const username = await vscode.window.showInputBox({ prompt: 'Enter your username' })
       .then(resp => {
-        if (typeof resp === 'string') {
-          return resp;
-        } else {
-          console.trace();
-          return "";
-
-        }
-
+        // username validation?
+        return resp;
       });
     const password = await vscode.window.showInputBox({ prompt: 'Enter your password', password: true })
       .then(resp => {
-        if (typeof resp === 'string') {
-          return resp;
-        } else {
-          console.trace();
-
-          return "";
-        }
+        // password validation?
+        return resp;
       });
-
     this.#credentials = new class implements UserCredentials {
       username: string;
       password: string;
-      constructor(username: string, password: string) {
-        this.username = username;
-        this.password = password;
+      constructor(username?: string, password?: string) {
+        this.username = username || '';
+        this.password = password || '';
       }
       newUsername(value: string) {
         this.username = value;
