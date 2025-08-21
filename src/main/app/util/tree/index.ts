@@ -1,5 +1,6 @@
 import { UserCredentials } from "../../../../../types";
-import { SavableMap, State } from "../StateManager";
+import { State } from "../StateManager";
+import { SavableMap } from "../SavableMap";
 import { parse } from "himalaya";
 export default new class {
   TREE = new SavableMap();

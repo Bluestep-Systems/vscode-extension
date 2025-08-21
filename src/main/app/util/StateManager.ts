@@ -1,19 +1,16 @@
 import * as vscode from 'vscode';
-import type { ReadOnlyMap, SavableObject, VSCodeSerializable } from '../../../../types';
+import type { ReadOnlyMap, SavableObject } from '../../../../types';
 import { User } from './UserManager';
+import { SavableMap } from './SavableMap';
 import { pullScript, pushScript, updateCredentials } from '../ctrl-p-commands';
 
-// NOTE: this class declaration must be done BEFORE StateManager
-export class SavableMap extends Map<string, SavableObject> {
-  constructor(entries?: readonly (readonly [string, SavableObject])[] | null) {
-    super(entries);
-  }
-}
+
 class StateManager {
   #_context: vscode.ExtensionContext | null;
   #_usermanager = User;
   static #_singleton = new StateManager();
-  variables = new SavableMap();
+  #_variables: SavableMap<SavableObject> | null;
+  #_privates: SavableMap<SavableObject> | null;
 
   /**
    * a read-only map interceptor for command registrations
@@ -23,7 +20,16 @@ class StateManager {
     #map = new Map<string, vscode.Disposable>([
       ['bsjs-push-pull.pushScript', vscode.commands.registerCommand('bsjs-push-pull.pushScript', pushScript)],
       ['bsjs-push-pull.pullScript', vscode.commands.registerCommand('bsjs-push-pull.pullScript', pullScript)],
-      ['bsjs-push-pull.updateCredentials', vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', updateCredentials)]
+      ['bsjs-push-pull.updateCredentials', vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', updateCredentials)],
+      ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
+        console.log("STATE", State.variables.toJSON(), "PRIVATES", State.privates.toJSON());
+        State.saveState();
+      })],
+      ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
+        State.variables.clear();
+        State.privates.clear();
+        State.saveState();
+      })]
     ]);
     constructor() { }
     forEach(callback: (disposable: vscode.Disposable, key?: string) => void) {
@@ -37,21 +43,39 @@ class StateManager {
     }
   }();
 
-
-
   private constructor() {
     this.#_context = null;
+    this.#_variables = null;
+    this.#_privates = null;
   }
 
   static getSingleton(): StateManager {
     return this.#_singleton;
   }
 
+  public isInitialized(): boolean {
+    return this.#_context !== null;
+  }
+
   public get context(): vscode.ExtensionContext {
-    if (this.#_context === null) {
+    if (!this.isInitialized()) {
       throw new Error('Extension context is not set');
     }
-    return this.#_context;
+    return this.#_context!;
+  }
+
+  public get variables(): SavableMap<SavableObject> {
+    if (this.#_variables === null) {
+      throw new Error('Variables map is not set');
+    }
+    return this.#_variables!;
+  }
+
+  public get privates(): SavableMap<SavableObject> {
+    if (this.#_privates === null) {
+      throw new Error('Privates map is not set');
+    }
+    return this.#_privates!;
   }
 
   public initializeFromContext(context: vscode.ExtensionContext) {
@@ -62,24 +86,20 @@ class StateManager {
     // `.forEach(context.subscriptions.push)`
     this.disposables.forEach(disposable => context.subscriptions.push(disposable));
     this.#_context = context;
+    this.#_variables = new SavableMap(context.workspaceState.get('variables', undefined));
+    context.secrets.get('privates').then(jsonString => {
+      this.#_privates = new SavableMap(jsonString ? JSON.parse(jsonString) : undefined);
+      console.log("Privates:", State.privates.toJSON());
+    });
   }
 
   public get User(): typeof User {
     return this.#_usermanager;
   }
 
-  public saveState() {
-    this.variables;
-    this.context.workspaceState.update('variables', mapToObj(this.variables));
-    function mapToObj(map: SavableMap): VSCodeSerializable {
-      const obj = Object.fromEntries(map);
-      for (const [key, value] of Object.entries(obj)) {
-        if (value instanceof Map) {
-          obj[key] = mapToObj(value);
-        }
-      }
-      return obj;
-    }
+  public async saveState() {
+    this.context.workspaceState.update('variables', this.variables.toSavableObject());
+    this.context.secrets.store('privates', this.privates.toJSON());
   }
 }
 

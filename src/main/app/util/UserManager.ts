@@ -1,11 +1,20 @@
-import { UserCredentials } from "../../../../types";
+import { SavableObject, UserCredentials } from "../../../../types";
 import * as vscode from 'vscode';
+import { State } from "./StateManager";
+import { SavableMap } from "./SavableMap";
 class UserManager {
   #credentials: UserCredentials | null;
   static #_singleton = new UserManager();
 
   private constructor() {
     this.#credentials = null;
+  }
+  async saveCreds() {
+    if (this.#credentials) {
+      // Save the credentials to the context or a secure location
+      State.privates.set('user.credentials', this.#credentials.store.toSavableObject());
+      await State.saveState();
+    }
   }
 
   static getInstance(): UserManager {
@@ -32,28 +41,19 @@ class UserManager {
         return resp;
       });
     this.#credentials = new class implements UserCredentials {
-      username: string;
-      password: string;
+      store = new SavableMap<{ username: string; password: string }>();
       constructor(username?: string, password?: string) {
-        this.username = username || '';
-        this.password = password || '';
-      }
-      newUsername(value: string) {
-        this.username = value;
-        return this;
-      }
-      newPassword(value: string) {
-        this.password = value;
-        return this;
+        this.store.set('default', { username: username || '', password: password || '' });
       }
       get toBase64() {
-        return Buffer.from(`${this.username}:${this.password}`).toString('base64');
+        const { username, password } = this.store.get('default') || {};
+        return Buffer.from(`${username}:${password}`).toString('base64');
       }
       authHeaderValue() {
         return `Basic ${this.toBase64}`;
       }
     }(username, password);
-
+    this.saveCreds();
     return this.#credentials;
   }
 

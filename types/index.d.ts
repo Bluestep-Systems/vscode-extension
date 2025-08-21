@@ -1,5 +1,4 @@
-import type { Serializable } from "node:worker_threads";
-import { SavableMap } from "../src/main/app/util/StateManager";
+import type { SavableMap } from "../src/main/app/util/SavableMap";
 
 /**
  * TODO
@@ -13,16 +12,13 @@ declare interface ReadOnlyMap<T> {
  * TODO
  */
 declare interface UserCredentials {
-  username: string;
-  password: string;
-  newUsername(value: string): UserCredentials;
-  newPassword(value: string): UserCredentials;
+  store: SavableMap<{ username: string; password: string }>;
   get toBase64(): string;
   authHeaderValue(): string;
 }
 /**
  * TODO
  */
+//type VSCodeSerializable = { [k: string]: SavableObject | SavableObject[] };
 
-type VSCodeSerializable = { [k: string]: SavableObject };
-type SavableObject = string | number | boolean | null | bigint | SavableMap | VSCodeSerializable;
+type SavableObject = string | number | boolean | null | bigint | { [key: string]: SavableObject } | SavableObject[];
