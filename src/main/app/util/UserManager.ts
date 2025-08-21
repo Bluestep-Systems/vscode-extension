@@ -1,13 +1,15 @@
+import { UserCredentials } from "../../../../types";
 import * as vscode from 'vscode';
-import type { UserCredentials } from '../../../../types/b6p-vscode-extension';
-export interface UserManager {
-  creds: Thenable<UserCredentials>;
-}
-export const UserManager = new class implements UserManager {
+class UserManager {
   #credentials: UserCredentials | null;
+  static #_singleton = new UserManager();
 
-  constructor() {
+  private constructor() {
     this.#credentials = null;
+  }
+
+  static getInstance(): UserManager {
+    return this.#_singleton;
   }
 
   get creds(): Thenable<UserCredentials> {
@@ -47,9 +49,13 @@ export const UserManager = new class implements UserManager {
       get toBase64() {
         return Buffer.from(`${this.username}:${this.password}`).toString('base64');
       }
+      authHeaderValue() {
+        return `Basic ${this.toBase64}`;
+      }
     }(username, password);
 
     return this.#credentials;
   }
 
-}();
+};
+export const User = UserManager.getInstance();

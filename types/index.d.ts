@@ -1,4 +1,5 @@
 import type { Serializable } from "node:worker_threads";
+import { SavableMap } from "../src/main/app/util/StateManager";
 
 /**
  * TODO
@@ -16,6 +17,8 @@ declare interface UserCredentials {
   password: string;
   newUsername(value: string): UserCredentials;
   newPassword(value: string): UserCredentials;
+  get toBase64(): string;
+  authHeaderValue(): string;
 }
 /**
  * TODO
@@ -23,4 +26,3 @@ declare interface UserCredentials {
 
 type VSCodeSerializable = { [k: string]: SavableObject };
 type SavableObject = string | number | boolean | null | bigint | SavableMap | VSCodeSerializable;
-export class SavableMap extends Map<string, SavableObject> { }

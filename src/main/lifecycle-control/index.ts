@@ -1,5 +1,7 @@
-import end from "./end";
-import start from "./start";
+import start from './start';
+import end from './end';
 
-
-export default { start, end };
+export default {
+  start,
+  end
+};

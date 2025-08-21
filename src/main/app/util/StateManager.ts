@@ -1,13 +1,19 @@
 import * as vscode from 'vscode';
-import { pullScript, pushScript, updateCredentials } from './ctrl-p-commands';
-import { UserManager } from './usermanager';
-import { Serializable } from 'node:worker_threads';
-import type { ReadOnlyMap, VSCodeSerializable } from '../../../types/b6p-vscode-extension';
-import { SavableMap } from '../../../types/b6p-vscode-extension';
+import type { ReadOnlyMap, SavableObject, VSCodeSerializable } from '../../../../types';
+import { User } from './UserManager';
+import { pullScript, pushScript, updateCredentials } from '../ctrl-p-commands';
 
-export const State = new class {
-  private _context: vscode.ExtensionContext | null;
-  private _usermanager = UserManager;
+// NOTE: this class declaration must be done BEFORE StateManager
+export class SavableMap extends Map<string, SavableObject> {
+  constructor(entries?: readonly (readonly [string, SavableObject])[] | null) {
+    super(entries);
+  }
+}
+class StateManager {
+  #_context: vscode.ExtensionContext | null;
+  #_usermanager = User;
+  static #_singleton = new StateManager();
+  variables = new SavableMap();
 
   /**
    * a read-only map interceptor for command registrations
@@ -31,31 +37,35 @@ export const State = new class {
     }
   }();
 
-  variables = new SavableMap();
 
-  constructor() {
-    this._context = null;
+
+  private constructor() {
+    this.#_context = null;
+  }
+
+  static getSingleton(): StateManager {
+    return this.#_singleton;
   }
 
   public get context(): vscode.ExtensionContext {
-    if (this._context === null) {
+    if (this.#_context === null) {
       throw new Error('Extension context is not set');
     }
-    return this._context;
+    return this.#_context;
   }
 
   public initializeFromContext(context: vscode.ExtensionContext) {
-    if (this._context !== null) {
+    if (this.#_context !== null) {
       throw new Error('Extension context is already set');
     }
     // for some reason we can't perform the truncated version of this. I.E.
     // `.forEach(context.subscriptions.push)`
     this.disposables.forEach(disposable => context.subscriptions.push(disposable));
-    this._context = context;
+    this.#_context = context;
   }
 
-  public get User(): UserManager {
-    return this._usermanager;
+  public get User(): typeof User {
+    return this.#_usermanager;
   }
 
   public saveState() {
@@ -71,6 +81,6 @@ export const State = new class {
       return obj;
     }
   }
-}();
+}
 
-
+export const State = StateManager.getSingleton();

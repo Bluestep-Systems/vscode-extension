@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { State } from '../..';
+import { State } from "../../../app/util/StateManager";
 
 export default async function (): Promise<void> {
   const creds = await State.User.creds;
