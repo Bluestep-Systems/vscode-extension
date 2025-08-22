@@ -1,4 +1,4 @@
-import { SavableObject } from "../../../../types";
+import type { SavableObject } from "../../../../types";
 import { isPrimitive } from ".";
 export class SavableMap<T extends (SavableObject | SavableObject[] | SavableMap<T>)> extends Map<string, T> {
   constructor(savableObj?: SavableObject) {
@@ -9,22 +9,22 @@ export class SavableMap<T extends (SavableObject | SavableObject[] | SavableMap<
       for (const [key, value] of Object.entries(savableObj as object)) {
         if (isPrimitive(value)) {
           constructedM.set(key, value);
-        } else if (Array.isArray(value)) {
-          const nextM = new SavableMap();
-          for (let i = 0; i < value.length/2; i++) {
-            nextM.set(value[i*2], value[i*2+1]);
-          }
-          constructedM.set(key, nextM as unknown as T);
         } else if (value instanceof Object && "___wasMap" in value) {
           delete value["___wasMap"];
           const subMap = new SavableMap(Object.entries(value));
           constructedM.set(key, subMap as T);
-        } else if (value instanceof Object && "___wasArray" in value) {
+        } else if (Array.isArray(value)) {
+          const nextM = new SavableMap();
+          for (let i = 0; i < value.length/2; i++) {
+            nextM.set(value[i*2], new SavableMap(value[i*2+1]));
+          }
+          constructedM.set(key, nextM as unknown as T);
+        }  else if (value instanceof Object && "___wasArray" in value) {
           delete value["___wasArray"];
           const array = Object.values(value) as SavableObject[];
           constructedM.set(key, array as T);
         } else {
-          constructedM.set(key, new SavableMap(Object.entries(value)) as unknown as T);
+          constructedM.set(key, value);
         }
       }
       return constructedM;

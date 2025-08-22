@@ -89,7 +89,6 @@ class StateManager {
     this.#_variables = new SavableMap(context.workspaceState.get('variables', undefined));
     context.secrets.get('privates').then(jsonString => {
       this.#_privates = new SavableMap(jsonString ? JSON.parse(jsonString) : undefined);
-      console.log("Privates:", State.privates.toJSON());
     });
   }
 

@@ -1,4 +1,3 @@
-import { SavableObject, UserCredentials } from "../../../../types";
 import * as vscode from 'vscode';
 import { State } from "./StateManager";
 import { SavableMap } from "./SavableMap";
@@ -23,7 +22,11 @@ class UserManager {
 
   get creds(): Thenable<UserCredentials> {
     if (this.#credentials === null) {
-      return this.#newCredentials();
+      const userCreds = new SavableMap<{ username: string; password: string }>(State.privates.get('user.credentials')).get('default');
+      this.#credentials = new UserCredentials(userCreds?.username, userCreds?.password);
+      if (this.#credentials === null) {
+        return this.#newCredentials();
+      }
     }
     return Promise.resolve(this.#credentials);
   }
@@ -58,4 +61,19 @@ class UserManager {
   }
 
 };
+export class UserCredentials {
+  store: SavableMap<{ username: string; password: string }>;
+
+  constructor(username?: string, password?: string) {
+    this.store = new SavableMap<{ username: string; password: string }>();
+    this.store.set('default', { username: username || '', password: password || '' });
+  }
+  get toBase64(): string {
+    const { username, password } = this.store.get('default') || {};
+    return Buffer.from(`${username}:${password}`).toString('base64');
+  }
+  authHeaderValue(): string {
+    return `Basic ${this.toBase64}`;
+  }
+}
 export const User = UserManager.getInstance();

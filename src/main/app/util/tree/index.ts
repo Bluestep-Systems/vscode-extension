@@ -1,5 +1,4 @@
-import { UserCredentials } from "../../../../../types";
-import { State } from "../StateManager";
+import { UserCredentials } from "../UserManager";
 import { SavableMap } from "../SavableMap";
 import { parse } from "himalaya";
 export default new class {
