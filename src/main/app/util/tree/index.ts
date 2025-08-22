@@ -28,13 +28,16 @@ export async function getScript({ url, creds, curLayer = {} }: GetScriptArg): Pr
     });
     const responseObj: XMLResponse = parser.parse(await response.text());
     const rawFiles = responseObj["D:multistatus"]["D:response"]
-      .filter(terminal => terminal["D:href"].indexOf("/snapshot/") === -1) // get something less fragile
+      .filter(terminal => {
+        // get something less fragile
+        return terminal["D:href"].indexOf("/snapshot/") === -1 && terminal["D:href"].indexOf("/.build/") === -1;
+      }) 
       .map(terminal => {
         const url = new URL(terminal["D:href"]);
         const path = url.pathname.split("/");
         path.shift(); // first one is always empty string
         path.shift(); // second one is always "files"
-        const newPath = "/" + path.join("/");
+        const newPath = path.join("/");
         const _webdavId = path.shift(); // may be useful somewhere
         if (path.at(-1)! === "") {
           path.pop();
