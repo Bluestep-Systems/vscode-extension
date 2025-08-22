@@ -31,27 +31,29 @@ async function getStartingURL() {
 }
 
 async function createFileOrFolder(path: string, startingUrl: URL): Promise<void> {
-  const activeEditor = vscode.workspace.workspaceFolders![0]!;
-  if (!activeEditor) {
+  const activeFolder = vscode.workspace.workspaceFolders![0]!;
+  if (!activeFolder) {
     vscode.window.showErrorMessage('No active file found');
     return;
   }
-  const curPath = activeEditor.uri;
-  const filePath = vscode.Uri.file(curPath.fsPath + "/" + path);
-  const isDirectory = filePath.toString().endsWith("/");
+  const curPath = activeFolder.uri;
+  const ultimatePath = vscode.Uri.file(curPath.fsPath + "/" + startingUrl.host + "/" + path);
+  const isDirectory = ultimatePath.toString().endsWith("/");
 
   if (isDirectory) {
     let dirExists = false;
     try {
-      const stat = await vscode.workspace.fs.stat(filePath);
+      const stat = await vscode.workspace.fs.stat(ultimatePath);
       dirExists = stat.type === vscode.FileType.Directory;
     } catch (e) {
-
+      // swallow this error. We need to find a better way to determine
+      // if the reason for this error is that the directory exists or not, but I couldn't
+      // find some analog of `optFolderExists()`
     } 
     if (dirExists) {
-      console.log(`Directory already exists: ${filePath.fsPath}`);
+      //console.log(`Directory already exists: ${ultimatePath.fsPath}`);
     } else {
-      await vscode.workspace.fs.createDirectory(filePath);
+      await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
     const creds = await State.User.creds;
@@ -61,6 +63,6 @@ async function createFileOrFolder(path: string, startingUrl: URL): Promise<void>
         "Authorization": `${creds.authHeaderValue()}`
       }
     });
-    vscode.workspace.fs.writeFile(filePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));
+    vscode.workspace.fs.writeFile(ultimatePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));
   }
 }

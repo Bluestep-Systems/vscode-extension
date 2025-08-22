@@ -53,7 +53,7 @@ export async function getScript({ url, creds, curLayer = {} }: GetScriptArg): Pr
     }
     //console.log(JSON.stringify(objToWork));
 
-    console.log(responseObj);
+    //console.log(responseObj);
     return { structure: curLayer, rawFiles };
   } catch (e) {
     console.trace(e);
