@@ -3,7 +3,7 @@ import { State } from '../../app/util/StateManager';
 
 export default function (context: vscode.ExtensionContext) {
   try {
-    console.log("Initializing state...");
+    console.log("B6P: Initializing state...");
     State.initializeFromContext(context);
     //we don't know if this is a string, an error wrapper or whatever
     // so sadly `any` is the only appropriate catch type

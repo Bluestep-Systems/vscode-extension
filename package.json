@@ -65,6 +65,6 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
-    "himalaya": "^1.1.1"
+    "fast-xml-parser": "^4.5.3"
   }
 }
