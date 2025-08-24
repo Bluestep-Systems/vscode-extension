@@ -21,7 +21,11 @@
       },
       {
         "command": "bsjs-push-pull.pullScript",
-        "title": "B6P: Pull Script"
+        "title": "B6P: Pull New Script"
+      },
+      {
+        "command": "bsjs-push-pull.pullCurrent",
+        "title": "B6P: Pull Current Script"
       },
       {
         "command": "bsjs-push-pull.updateCredentials",

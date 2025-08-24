@@ -42,7 +42,7 @@ export async function getScript({ url, authManager: creds, curLayer = {} }: GetS
       .map(terminal => {
         const { url, webDavId, trailing } = urlParser(terminal["D:href"]);
 
-        const newPath = `/${trailing}`; // /draft/etc
+        const newPath = `${webDavId}/${trailing}`; 
         const path = newPath.split("/");
         if (newPath.at(-1)! === "") {
           path.pop();
