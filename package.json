@@ -20,6 +20,10 @@
         "title": "B6P: Push Script"
       },
       {
+        "command": "bsjs-push-pull.pushCurrent",
+        "title": "B6P: Push Current Script"
+      },
+      {
         "command": "bsjs-push-pull.pullScript",
         "title": "B6P: Pull New Script"
       },

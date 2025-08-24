@@ -5,8 +5,8 @@ import { urlParser } from "../../util/URLParser";
 /**
  * TODO
  */
-export default async function (): Promise<void> {
-  const urlObj = await getStartingURL();
+export default async function (overrideFormulaUri?: string): Promise<void> {
+  const urlObj = await getStartingURL(overrideFormulaUri);
   if (urlObj === undefined) {
     return;
   }
@@ -21,8 +21,8 @@ export default async function (): Promise<void> {
   });
 }
 
-async function getStartingURL() {
-  const formulaURI = await vscode.window.showInputBox({ prompt: 'Paste in the desired formula URI' });
+async function getStartingURL(overrideFormulaUri?: string) {
+  const formulaURI = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the desired formula URI' });
   if (formulaURI === undefined) {
     vscode.window.showErrorMessage('No formula URI provided');
     return;

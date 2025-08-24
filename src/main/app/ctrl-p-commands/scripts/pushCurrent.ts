@@ -11,7 +11,7 @@ export default async function (): Promise<void> {
   console.log("Active Editor URI:", activeEditorUri.toString());
   console.log("workspace URI:", workspaceUri.toString());
   const { webdavId, domain } = await getFileMetaData({ workspaceUri: workspaceUri, curUri: activeEditorUri });
-  pullScript(`https://${domain}/files/${webdavId}/draft/`);
+  pushScript(`https://${domain}/files/${webdavId}/draft/`);
   // const { url, webDavId, trailing } = urlObj;
   // vscode.window.showInformationMessage(`Yoinking formula from ${url.href}`);
   // const ScriptObject = await getScript({ url, authManager: BasicAuthManager.getSingleton() });

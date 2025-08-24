@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
 import type { ReadOnlyMap, SavableObject } from '../../../types';
 import { PublicPersistanceMap } from './util/PseudoMaps';
-import { pullScript, pushScript, updateCredentials } from './ctrl-p-commands';
+import { pullScript, pushScript, updateCredentials, pullCurrent,pushCurrent } from './ctrl-p-commands';
 import { BasicAuthManager } from './util/Auth';
-import pullCurrent from './ctrl-p-commands/scripts/pullCurrent';
 
 
 export const State = new class {
@@ -18,6 +17,7 @@ export const State = new class {
       ['bsjs-push-pull.pushScript', vscode.commands.registerCommand('bsjs-push-pull.pushScript', pushScript)],
       ['bsjs-push-pull.pullScript', vscode.commands.registerCommand('bsjs-push-pull.pullScript', pullScript)],
       ['bsjs-push-pull.pullCurrent', vscode.commands.registerCommand('bsjs-push-pull.pullCurrent', pullCurrent)],
+      ['bsjs-push-pull.pushCurrent', vscode.commands.registerCommand('bsjs-push-pull.pushCurrent', pushCurrent)],
       ['bsjs-push-pull.updateCredentials', vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', updateCredentials)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
         console.log("STATE", State.variables.toJSON());

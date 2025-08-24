@@ -4,14 +4,14 @@ import { AuthManager, AuthType, BasicAuth, BasicAuthManager } from '../../util/A
 /**
  * TODO
  */
-export default async function (): Promise<void> {
+export default async function (overrideFormulaUri?: string): Promise<void> {
   const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
   if (activeEditorUri === undefined) {
     vscode.window.showErrorMessage('No source path provided');
     return;
   }
   console.log("Active Editor URI:", activeEditorUri.toString());
-  const targetFormulaUri = await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
+  const targetFormulaUri = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
   if (targetFormulaUri === undefined) {
     vscode.window.showErrorMessage('No target URI provided');
     return;
