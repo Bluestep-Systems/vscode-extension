@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { getScript } from "../../util/tree";
-import { BasicAuthManager } from '../../util/Auth';
+import {State} from "../../App";
 import { urlParser } from "../../util/URLParser";
+import { BasicAuthManager } from '../../util/Auth';
 /**
  * TODO
  */
@@ -10,7 +11,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
   if (urlObj === undefined) {
     return;
   }
-  const { url, webDavId, trailing } = urlObj;
+  const { url } = urlObj;
   vscode.window.showInformationMessage(`Yoinking formula from ${url.href}`);
   const ScriptObject = await getScript({ url, authManager: BasicAuthManager.getSingleton() });
   if (ScriptObject === undefined) {

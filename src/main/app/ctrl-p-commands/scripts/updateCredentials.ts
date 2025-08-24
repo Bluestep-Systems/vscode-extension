@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
+
 import { BasicAuthManager } from '../../util/Auth';
-import {State as App} from "../../App";
 
 export default async function (): Promise<void> {
   try {

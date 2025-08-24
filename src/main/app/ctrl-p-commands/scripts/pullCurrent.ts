@@ -12,15 +12,7 @@ export default async function (): Promise<void> {
   console.log("workspace URI:", workspaceUri.toString());
   const { webdavId, domain } = await getFileMetaData({ workspaceUri: workspaceUri, curUri: activeEditorUri });
   pullScript(`https://${domain}/files/${webdavId}/draft/`);
-  // const { url, webDavId, trailing } = urlObj;
-  // vscode.window.showInformationMessage(`Yoinking formula from ${url.href}`);
-  // const ScriptObject = await getScript({ url, authManager: BasicAuthManager.getSingleton() });
-  // if (ScriptObject === undefined) {
-  //   return;
-  // }
-  // ScriptObject.rawFiles.forEach(file => {
-  //   createIndividualFileOrFolder(file, url);
-  // });
+
 }
 
 
