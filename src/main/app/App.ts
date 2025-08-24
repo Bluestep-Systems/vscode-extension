@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { ReadOnlyMap, SavableObject } from '../../../types';
-import { PublicPersistanceMap } from './util/PersistantMap';
+import { PublicPersistanceMap } from './util/PseudoMaps';
 import { pullScript, pushScript, updateCredentials } from './ctrl-p-commands';
 import { BasicAuthManager } from './util/Auth';
 

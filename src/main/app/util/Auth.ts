@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { PrivateKeys, PrivatePersistanceMap } from "./PersistantMap";
+import { PrivateKeys, PrivatePersistanceMap } from "./PseudoMaps";
 import { SavableObject } from '../../../../types';
 
 export interface AuthType {
@@ -20,6 +20,9 @@ export class BasicAuth implements AuthType {
   }
   toSavableObject() {
     return { username: this.username, password: this.password };
+  }
+  toJSON() {
+    return JSON.stringify(new BasicAuth({ username: this.username, password: "***" }));
   }
 }
 export abstract class AuthManager<T extends AuthType> {
@@ -59,7 +62,7 @@ export class BasicAuthManager extends AuthManager<BasicAuth> {
 
   async getAuth(flag: AUTH_FLAGS = this.FLAG): Promise<BasicAuth> {
     console.log("persistanceColl", this.persistanceCollection);
-    const existingAuth = await this.persistanceCollection.get(flag);
+    const existingAuth = this.persistanceCollection.get(flag);
     console.log("existingAuth", existingAuth);
     if (!existingAuth) {
       vscode.window.showInformationMessage('No existing credentials found, please enter new credentials.');

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { getScript } from "../../util/tree";
 import { BasicAuthManager } from '../../util/Auth';
-import { State } from "../../App";
 import { urlParser } from "./../../util/URLParser";
 /**
  * TODO
@@ -18,7 +17,7 @@ export default async function (): Promise<void> {
     return;
   }
   ScriptObject.rawFiles.forEach(file => {
-    createFileOrFolder(file, url);
+    createIndividualFileOrFolder(file, url);
   });
 }
 
@@ -31,14 +30,14 @@ async function getStartingURL() {
   return urlParser(formulaURI);
 }
 
-async function createFileOrFolder(path: string, startingUrl: URL): Promise<void> {
+async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promise<void> {
   const activeFolder = vscode.workspace.workspaceFolders![0]!;
   if (!activeFolder) {
     vscode.window.showErrorMessage('No active file found');
     return;
   }
   const curPath = activeFolder.uri;
-  const ultimatePath = vscode.Uri.file(curPath.fsPath + "/" + startingUrl.host + "/" + path);
+  const ultimatePath = vscode.Uri.file(curPath.fsPath + "/" + sourceUrl.host + "/" + path);
   const isDirectory = ultimatePath.toString().endsWith("/");
 
   if (isDirectory) {
@@ -58,7 +57,7 @@ async function createFileOrFolder(path: string, startingUrl: URL): Promise<void>
     }
   } else {
     const creds = BasicAuthManager.getSingleton();
-    const contents = await fetch("https://" + startingUrl.host + "/files/" + path, {
+    const contents = await fetch("https://" + sourceUrl.host + "/files/" + path, {
       method: "GET",
       headers: {
         "Authorization": `${await creds.authHeaderValue()}`
