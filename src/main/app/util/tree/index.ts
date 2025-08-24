@@ -1,10 +1,10 @@
 import { AuthManager, AuthType } from "../Auth";
 import JsonPath from "../JsonPath";
-import { RegexPatterns } from "./Regex";
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { XMLParser } from 'fast-xml-parser';
 import PutObjVal from "./PutObjVal";
 import * as vscode from "vscode";
+import { urlParser } from "../URLParser";
 
 type GetScriptArg = {
   url: URL;
@@ -40,13 +40,11 @@ export async function getScript({ url, authManager: creds, curLayer = {} }: GetS
         return terminal["D:href"].indexOf("/snapshot/") === -1 && terminal["D:href"].indexOf("/.build/") === -1;
       }) 
       .map(terminal => {
-        const url = new URL(terminal["D:href"]);
-        const path = url.pathname.split("/");
-        path.shift(); // first one is always empty string
-        path.shift(); // second one is always "files"
-        const newPath = path.join("/");
-        const _webdavId = path.shift(); // may be useful somewhere
-        if (path.at(-1)! === "") {
+        const { url, webDavId, trailing } = urlParser(terminal["D:href"]);
+
+        const newPath = `/${trailing}`; // /draft/etc
+        const path = newPath.split("/");
+        if (newPath.at(-1)! === "") {
           path.pop();
           PutObjVal(curLayer, path, {}, "string");
         } else {
@@ -58,9 +56,6 @@ export async function getScript({ url, authManager: creds, curLayer = {} }: GetS
     if (!response.ok) {
       throw new Error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
     }
-    //console.log(JSON.stringify(objToWork));
-
-    //console.log(responseObj);
     return { structure: curLayer, rawFiles };
   } catch (e) {
     console.trace(e);

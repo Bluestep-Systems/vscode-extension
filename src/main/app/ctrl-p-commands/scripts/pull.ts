@@ -1,36 +1,34 @@
 import * as vscode from 'vscode';
 import { getScript } from "../../util/tree";
 import { BasicAuthManager } from '../../util/Auth';
+import { State } from "../../App";
+import { urlParser } from "./../../util/URLParser";
 /**
  * TODO
  */
 export default async function (): Promise<void> {
-  const startingUrl = await getStartingURL();
-  if (startingUrl === undefined) {
+  const urlObj = await getStartingURL();
+  if (urlObj === undefined) {
     return;
   }
-  vscode.window.showInformationMessage(`Yoinking formula from ${startingUrl.href}`);
-  const ScriptObject = await getScript({ url: startingUrl, authManager: BasicAuthManager.getSingleton() });
+  const { url, webDavId, trailing } = urlObj;
+  vscode.window.showInformationMessage(`Yoinking formula from ${url.href}`);
+  const ScriptObject = await getScript({ url, authManager: BasicAuthManager.getSingleton() });
   if (ScriptObject === undefined) {
     return;
   }
-  console.log(ScriptObject);
   ScriptObject.rawFiles.forEach(file => {
-    createFileOrFolder(file, startingUrl);
+    createFileOrFolder(file, url);
   });
 }
 
 async function getStartingURL() {
-  //const STARTING_URL = "https://bst3.bluestep.net/files/1433697/draft/";
   const formulaURI = await vscode.window.showInputBox({ prompt: 'Paste in the desired formula URI' });
   if (formulaURI === undefined) {
     vscode.window.showErrorMessage('No formula URI provided');
     return;
   }
-  const S = formulaURI.split("/");
-  S.pop(); // get rid of last empty string
-  S.pop(); // get rid of "draft" from the copy-paste
-  return new URL(S.join("/")); // should look like `https://bst3.bluestep.net/files/1433697`
+  return urlParser(formulaURI);
 }
 
 async function createFileOrFolder(path: string, startingUrl: URL): Promise<void> {
@@ -52,7 +50,7 @@ async function createFileOrFolder(path: string, startingUrl: URL): Promise<void>
       // swallow this error. We need to find a better way to determine
       // if the reason for this error is that the directory exists or not, but I couldn't
       // find some analog of `optFolderExists()`
-    } 
+    }
     if (dirExists) {
       //console.log(`Directory already exists: ${ultimatePath.fsPath}`);
     } else {

@@ -1,14 +1,13 @@
 import * as vscode from 'vscode';
-import type { ReadOnlyMap, SavableObject } from '../../../../types';
-import { PublicPersistanceMap } from './PersistantMap';
-import { pullScript, pushScript, updateCredentials } from '../ctrl-p-commands';
-import { BasicAuthManager } from './Auth';
+import type { ReadOnlyMap, SavableObject } from '../../../types';
+import { PublicPersistanceMap } from './util/PersistantMap';
+import { pullScript, pushScript, updateCredentials } from './ctrl-p-commands';
+import { BasicAuthManager } from './util/Auth';
 
 
 export const State = new class {
   #_context: vscode.ExtensionContext | null;
   #_variables: PublicPersistanceMap<SavableObject> | null = null;
-
   /**
    * a read-only map interceptor for command registrations
    */
@@ -25,6 +24,7 @@ export const State = new class {
       ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
         State.variables.clear();
         State.saveState();
+        BasicAuthManager.getSingleton().persistanceCollection.clear();
       })]
     ]);
     constructor() { }
