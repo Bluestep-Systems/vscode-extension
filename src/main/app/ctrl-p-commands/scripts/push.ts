@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { State } from "../../../app/util/StateManager";
-import { UserCredentials } from '../../util/UserManager';
+import { AuthManager, AuthType, BasicAuth, BasicAuthManager } from '../../util/UserManager';
 /**
  * TODO
  */
@@ -36,7 +36,7 @@ export default async function (): Promise<void> {
     .then(async node => await tunnelNode(node, { nodeURI: sourceFolderUri }));
 
   for (const file of fileList) {
-    sendFile({ file, sourceId, host: sourceHost, targetFormulaUri, creds: await State.User.creds });
+    sendFile({ file, sourceId, host: sourceHost, targetFormulaUri, creds: BasicAuthManager.getSingleton() });
   }
 }
 async function tunnelNode(node: [string, vscode.FileType][], {
@@ -58,7 +58,7 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   return pathList;
 }
 
-async function sendFile({ file: localFile, targetFormulaUri, sourceId, host: sourceHost, creds }: { file: string; targetFormulaUri: string; sourceId: string; host: string; creds: UserCredentials; }) {
+async function sendFile({ file: localFile, targetFormulaUri, sourceId, host: sourceHost, creds }: { file: string; targetFormulaUri: string; sourceId: string; host: string; creds: AuthManager<AuthType>; }) {
 
   const targetUrl = new URL(targetFormulaUri.split("/draft/")[0]);
   const desto = localFile.split(sourceHost + "/" + sourceId)[1]!;
@@ -69,7 +69,7 @@ async function sendFile({ file: localFile, targetFormulaUri, sourceId, host: sou
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `${creds.authHeaderValue()}`
+      'Authorization': `${await creds.authHeaderValue()}`
     },
     body: fileContents
   });

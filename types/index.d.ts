@@ -6,10 +6,13 @@ declare interface ReadOnlyMap<T> {
   has(key: string): boolean;
   forEach(callback: (value: T, key?: string) => void): void;
 }
+export type Primitive = string | number | boolean | null | bigint;
 
-export type SavableObject = string | number | boolean | null | bigint | { [key: string]: SavableObject } | SavableObject[];
+export type PrimitiveNestedObject = {
+  [key: string]: Primitive | PrimitiveNestedObject
+}
 
-export type PrimativeNestedObject<T> = { [key: string]: T | PrimativeNestedObject<T> };
+export type SavableObject = Primitive | Primitive[] | { [key: string]: SavableObject } | SavableObject[];
 
 export type XMLResponse = {
   "?xml": {
@@ -45,4 +48,3 @@ export type XMLResponse = {
     }[];
   };
 }
-export type SimpleNestedObject<T> = PrimativeNestedObject<T | PrimativeNestedObject<T>>;

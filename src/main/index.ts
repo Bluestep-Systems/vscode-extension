@@ -8,7 +8,12 @@ import lifeCycle from './lifecycle-control';
  * @param context
  */
 export function activate(context: vscode.ExtensionContext) {
-	lifeCycle.start(context);
+	try {
+		lifeCycle.start(context);
+	}catch (error) {
+		console.trace("Error during activation:", error);
+	}
+	
 }
 
 

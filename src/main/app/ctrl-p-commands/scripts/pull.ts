@@ -1,16 +1,19 @@
 import * as vscode from 'vscode';
-import { State } from "../../../app/util/StateManager";
 import { getScript } from "../../util/tree";
+import { BasicAuthManager } from '../../util/UserManager';
 /**
  * TODO
  */
 export default async function (): Promise<void> {
-  const creds = await State.User.creds;
   const startingUrl = await getStartingURL();
   if (startingUrl === undefined) {
     return;
   }
-  const ScriptObject = await getScript({ url: startingUrl, creds });
+  vscode.window.showInformationMessage(`Yoinking formula from ${startingUrl.href}`);
+  const ScriptObject = await getScript({ url: startingUrl, authManager: BasicAuthManager.getSingleton() });
+  if (ScriptObject === undefined) {
+    return;
+  }
   console.log(ScriptObject);
   ScriptObject.rawFiles.forEach(file => {
     createFileOrFolder(file, startingUrl);
@@ -56,11 +59,11 @@ async function createFileOrFolder(path: string, startingUrl: URL): Promise<void>
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const creds = await State.User.creds;
+    const creds = BasicAuthManager.getSingleton();
     const contents = await fetch("https://" + startingUrl.host + "/files/" + path, {
       method: "GET",
       headers: {
-        "Authorization": `${creds.authHeaderValue()}`
+        "Authorization": `${await creds.authHeaderValue()}`
       }
     });
     vscode.workspace.fs.writeFile(ultimatePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));

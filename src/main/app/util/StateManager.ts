@@ -1,16 +1,13 @@
 import * as vscode from 'vscode';
 import type { ReadOnlyMap, SavableObject } from '../../../../types';
-import { User } from './UserManager';
-import { SavableMap } from './SavableMap';
+import { PrivateKeys, PrivatePersistanceMap, PublicPersistanceMap, TransientMap } from './PersistantMap';
 import { pullScript, pushScript, updateCredentials } from '../ctrl-p-commands';
 
 
-class StateManager {
+export const State = new class {
   #_context: vscode.ExtensionContext | null;
-  #_usermanager = User;
-  static #_singleton = new StateManager();
-  #_variables: SavableMap<SavableObject> | null;
-  #_privates: SavableMap<SavableObject> | null;
+  #_variables: PublicPersistanceMap<SavableObject> | null = null;
+  #_privates: Record<string, PrivatePersistanceMap<SavableObject>> = {};
 
   /**
    * a read-only map interceptor for command registrations
@@ -22,12 +19,12 @@ class StateManager {
       ['bsjs-push-pull.pullScript', vscode.commands.registerCommand('bsjs-push-pull.pullScript', pullScript)],
       ['bsjs-push-pull.updateCredentials', vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', updateCredentials)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
-        console.log("STATE", State.variables.toJSON(), "PRIVATES", State.privates.toJSON());
+        console.log("STATE", State.variables.toJSON(), "PRIVATES", State.privates);
         State.saveState();
       })],
       ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
         State.variables.clear();
-        State.privates.clear();
+        State.privates = {};
         State.saveState();
       })]
     ]);
@@ -43,15 +40,10 @@ class StateManager {
     }
   }();
 
-  private constructor() {
+  constructor() {
     this.#_context = null;
-    this.#_variables = null;
-    this.#_privates = null;
   }
 
-  static getSingleton(): StateManager {
-    return this.#_singleton;
-  }
 
   public isInitialized(): boolean {
     return this.#_context !== null;
@@ -64,18 +56,21 @@ class StateManager {
     return this.#_context!;
   }
 
-  public get variables(): SavableMap<SavableObject> {
+  public get variables() {
     if (this.#_variables === null) {
       throw new Error('Variables map is not set');
     }
     return this.#_variables!;
   }
 
-  public get privates(): SavableMap<SavableObject> {
+  public get privates() {
     if (this.#_privates === null) {
       throw new Error('Privates map is not set');
     }
     return this.#_privates!;
+  }
+  private set privates(value: Record<string, PrivatePersistanceMap<SavableObject>>) {
+    this.#_privates = value;
   }
 
   public initializeFromContext(context: vscode.ExtensionContext) {
@@ -84,22 +79,22 @@ class StateManager {
     }
     // for some reason we can't perform the truncated version of this. I.E.
     // `.forEach(context.subscriptions.push)`
-    this.disposables.forEach(disposable => context.subscriptions.push(disposable));
     this.#_context = context;
-    this.#_variables = new SavableMap(context.workspaceState.get('variables', undefined));
-    context.secrets.get('privates').then(jsonString => {
-      this.#_privates = new SavableMap(jsonString ? JSON.parse(jsonString) : undefined);
+    this.disposables.forEach(disposable => context.subscriptions.push(disposable));
+
+    this.#_variables = new PublicPersistanceMap("variables");
+    context.secrets.get('privates').then(csl => {
+      csl?.split(",").forEach(key => {
+        this.#_privates[key] = new PrivatePersistanceMap(key as PrivateKeys);
+      });
     });
   }
 
-  public get User(): typeof User {
-    return this.#_usermanager;
-  }
+
 
   public async saveState() {
-    this.context.workspaceState.update('variables', this.variables.toSavableObject());
-    this.context.secrets.store('privates', this.privates.toJSON());
+    this.context.workspaceState.update('variables', this.variables);
+    this.context.secrets.store('privates', Object.keys(this.privates).join(","));
   }
-}
+}();
 
-export const State = StateManager.getSingleton();

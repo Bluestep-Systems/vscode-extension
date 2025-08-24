@@ -1,17 +1,18 @@
-import { UserCredentials } from "../UserManager";
+import { AuthManager, AuthType } from "../UserManager";
 import JsonPath from "../JsonPath";
 import { RegexPatterns } from "./Regex";
-import { SimpleNestedObject, XMLResponse } from "../../../../../types";
+import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { XMLParser } from 'fast-xml-parser';
 import PutObjVal from "./PutObjVal";
+import * as vscode from "vscode";
 
 type GetScriptArg = {
   url: URL;
-  creds: UserCredentials;
-  curLayer?: SimpleNestedObject<string>;
+  authManager: AuthManager<AuthType>;
+  curLayer?: PrimitiveNestedObject;
 }
-type GetScriptRet = { structure: SimpleNestedObject<string>; rawFiles: string[] };
-export async function getScript({ url, creds, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
+type GetScriptRet = { structure: PrimitiveNestedObject; rawFiles: string[] } | undefined;
+export async function getScript({ url, authManager: creds, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
   try {
     const parser = new XMLParser();
     const response = await fetch(url, {
@@ -22,11 +23,17 @@ export async function getScript({ url, creds, curLayer = {} }: GetScriptArg): Pr
         "cache-control": "no-cache",
         "pragma": "no-cache",
         "upgrade-insecure-requests": "1",
-        "authorization": `${creds.authHeaderValue()}`
+        "authorization": `${await creds.authHeaderValue()}`
       },
       "method": "PROPFIND"
     });
+    if (!response.ok) {
+      vscode.window.showErrorMessage(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
+      return;
+    }
+    console.log("Response Status:", response.status);
     const responseObj: XMLResponse = parser.parse(await response.text());
+    console.log("Response Object:", responseObj);
     const rawFiles = responseObj["D:multistatus"]["D:response"]
       .filter(terminal => {
         // get something less fragile

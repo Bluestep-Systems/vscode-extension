@@ -1,79 +1,96 @@
 import * as vscode from 'vscode';
 import { State } from "./StateManager";
-import { SavableMap } from "./SavableMap";
-class UserManager {
-  #credentials: UserCredentials | null;
-  static #_singleton = new UserManager();
+import { PrivateKeys, PrivatePersistanceMap, PseudoMap, PublicPersistanceMap, TransientMap } from "./PersistantMap";
+import { SavableObject } from '../../../../types';
 
+export interface AuthType {
+}
+export class BasicAuth implements AuthType {
+  username: string;
+  password: string;
+  constructor(username: string, password: string) {
+    this.username = username;
+    this.password = password;
+  }
+  getUserName(): string {
+    return this.username;
+  }
+  getPassword(): string {
+    return this.password;
+  }
+  toSavableObject() {
+    return { username: this.username, password: this.password };
+  }
+}
+export abstract class AuthManager<T extends AuthType> {
+  protected curManager: AuthManager<T> | null = null;
+  abstract store: PrivatePersistanceMap<SavableObject>;
+  
+  constructor() { }
+
+  abstract authHeaderValue(): Promise<string>;
+  abstract newCredentials(): Thenable<AuthManager<T>>;
+}
+export class BasicAuthManager extends AuthManager<BasicAuth> {
+  authCollection: TransientMap<BasicAuth>;
+  store: PrivatePersistanceMap<SavableObject> = new PrivatePersistanceMap(PrivateKeys.BASIC_AUTH);
+  FLAG: BASIC_AUTH_FLAGS;
+  private static singleton: BasicAuthManager | null = null;
+
+  static getSingleton() {
+    if (!this.singleton) {
+      this.singleton = new BasicAuthManager();
+    }
+    return this.singleton;
+  }
   private constructor() {
-    this.#credentials = null;
+    super();
+    this.authCollection = new TransientMap<BasicAuth>();
+    this.FLAG = BASIC_AUTH_FLAGS.DEFAULT;
   }
-  async saveCreds() {
-    if (this.#credentials) {
-      // Save the credentials to the context or a secure location
-      State.privates.set('user.credentials', this.#credentials.store.toSavableObject());
-      await State.saveState();
-    }
+  async getAuth(): Promise<BasicAuth> {
+    return this.authCollection.get(this.FLAG) || (await this.newCredentials()).getAuth();
   }
-
-  static getInstance(): UserManager {
-    return this.#_singleton;
+  setAuth(auth: BasicAuth) {
+    this.authCollection.set(this.FLAG, auth);
   }
-
-  get creds(): Thenable<UserCredentials> {
-    if (this.#credentials === null) {
-      const userCreds = new SavableMap<{ username: string; password: string }>(State.privates.get('user.credentials')).get('default');
-      this.#credentials = new UserCredentials(userCreds?.username, userCreds?.password);
-      if (this.#credentials === null) {
-        return this.#newCredentials();
-      }
-    }
-    return Promise.resolve(this.#credentials);
+  getAuthByFlag(flag: BASIC_AUTH_FLAGS): BasicAuth | undefined {
+    return this.authCollection.get(flag);
+  }
+  setAuthByFlag(flag: BASIC_AUTH_FLAGS, auth: BasicAuth) {
+    this.authCollection.set(flag, auth);
   }
 
-  async #newCredentials(): Promise<UserCredentials> {
-    // Implement your logic to get new credentials here
+  getDefaultAuth(): BasicAuth {
+    return this.getAuthByFlag(BASIC_AUTH_FLAGS.DEFAULT)!;
+  }
+  async toBase64() {
+    const auth = await this.getAuth();
+    console.log("Auth Object:", auth);
+    return auth ? Buffer.from(`${auth.username}:${auth.password}`).toString('base64') : '';
+  }
+
+  async authHeaderValue() {
+    return `Basic ${await this.toBase64()}`;
+  }
+
+  async newCredentials(): Promise<this> {
     const username = await vscode.window.showInputBox({ prompt: 'Enter your username' })
       .then(resp => {
         // username validation?
-        return resp;
+        return resp || "";
       });
     const password = await vscode.window.showInputBox({ prompt: 'Enter your password', password: true })
       .then(resp => {
         // password validation?
-        return resp;
+        return resp || "";
       });
-    this.#credentials = new class implements UserCredentials {
-      store = new SavableMap<{ username: string; password: string }>();
-      constructor(username?: string, password?: string) {
-        this.store.set('default', { username: username || '', password: password || '' });
-      }
-      get toBase64() {
-        const { username, password } = this.store.get('default') || {};
-        return Buffer.from(`${username}:${password}`).toString('base64');
-      }
-      authHeaderValue() {
-        return `Basic ${this.toBase64}`;
-      }
-    }(username, password);
-    this.saveCreds();
-    return this.#credentials;
+    this.setAuth(new BasicAuth(username, password));
+    return this;
   }
-
 };
-export class UserCredentials {
-  store: SavableMap<{ username: string; password: string }>;
 
-  constructor(username?: string, password?: string) {
-    this.store = new SavableMap<{ username: string; password: string }>();
-    this.store.set('default', { username: username || '', password: password || '' });
-  }
-  get toBase64(): string {
-    const { username, password } = this.store.get('default') || {};
-    return Buffer.from(`${username}:${password}`).toString('base64');
-  }
-  authHeaderValue(): string {
-    return `Basic ${this.toBase64}`;
-  }
+enum BASIC_AUTH_FLAGS {
+  DEFAULT = 'default',
 }
-export const User = UserManager.getInstance();
+
