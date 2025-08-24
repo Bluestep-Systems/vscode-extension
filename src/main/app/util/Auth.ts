@@ -61,9 +61,7 @@ export class BasicAuthManager extends AuthManager<BasicAuth> {
   }
 
   async getAuth(flag: AUTH_FLAGS = this.FLAG): Promise<BasicAuth> {
-    console.log("persistanceColl", this.persistanceCollection);
     const existingAuth = this.persistanceCollection.get(flag);
-    console.log("existingAuth", existingAuth);
     if (!existingAuth) {
       vscode.window.showInformationMessage('No existing credentials found, please enter new credentials.');
       return (await this.newCredentials()).getAuth();
@@ -88,7 +86,6 @@ export class BasicAuthManager extends AuthManager<BasicAuth> {
 
   async toBase64() {
     const auth = await this.getAuth();
-    console.log("Auth Object:", auth);
     return auth ? Buffer.from(`${auth.username}:${auth.password}`).toString('base64') : '';
   }
 
