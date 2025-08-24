@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import type { ReadOnlyMap, SavableObject } from '../../../../types';
-import { PrivateKeys, PrivatePersistanceMap, PublicPersistanceMap, TransientMap } from './PersistantMap';
+import { PublicPersistanceMap } from './PersistantMap';
 import { pullScript, pushScript, updateCredentials } from '../ctrl-p-commands';
+import { BasicAuthManager } from './Auth';
 
 
 export const State = new class {
   #_context: vscode.ExtensionContext | null;
   #_variables: PublicPersistanceMap<SavableObject> | null = null;
-  #_privates: Record<string, PrivatePersistanceMap<SavableObject>> = {};
 
   /**
    * a read-only map interceptor for command registrations
@@ -19,12 +19,11 @@ export const State = new class {
       ['bsjs-push-pull.pullScript', vscode.commands.registerCommand('bsjs-push-pull.pullScript', pullScript)],
       ['bsjs-push-pull.updateCredentials', vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', updateCredentials)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
-        console.log("STATE", State.variables.toJSON(), "PRIVATES", State.privates);
+        console.log("STATE", State.variables.toJSON());
         State.saveState();
       })],
       ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
         State.variables.clear();
-        State.privates = {};
         State.saveState();
       })]
     ]);
@@ -63,16 +62,6 @@ export const State = new class {
     return this.#_variables!;
   }
 
-  public get privates() {
-    if (this.#_privates === null) {
-      throw new Error('Privates map is not set');
-    }
-    return this.#_privates!;
-  }
-  private set privates(value: Record<string, PrivatePersistanceMap<SavableObject>>) {
-    this.#_privates = value;
-  }
-
   public initializeFromContext(context: vscode.ExtensionContext) {
     if (this.#_context !== null) {
       throw new Error('Extension context is already set');
@@ -81,20 +70,12 @@ export const State = new class {
     // `.forEach(context.subscriptions.push)`
     this.#_context = context;
     this.disposables.forEach(disposable => context.subscriptions.push(disposable));
-
     this.#_variables = new PublicPersistanceMap("variables");
-    context.secrets.get('privates').then(csl => {
-      csl?.split(",").forEach(key => {
-        this.#_privates[key] = new PrivatePersistanceMap(key as PrivateKeys);
-      });
-    });
+    BasicAuthManager.touch();
   }
-
-
 
   public async saveState() {
     this.context.workspaceState.update('variables', this.variables);
-    this.context.secrets.store('privates', Object.keys(this.privates).join(","));
   }
 }();
 

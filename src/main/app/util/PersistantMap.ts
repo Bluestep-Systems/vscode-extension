@@ -1,5 +1,5 @@
 import type { SavableObject } from "../../../../types";
-import { State } from "./StateManager";
+import { State } from "./State";
 
 export abstract class PseudoMap<T> {
   protected obj: Record<string, T> = {};
@@ -8,7 +8,7 @@ export abstract class PseudoMap<T> {
       this.obj = initialData;
     }
   }
-  get(key: string): T | undefined {
+  get(key: string): T | undefined  {
     return this.obj[key];
   }
   has(key: string): boolean {
@@ -25,19 +25,11 @@ export abstract class PseudoMap<T> {
   toJSON(): string {
     return JSON.stringify(this.obj);
   }
-  getKeyRequired(key: string): T {
-    if (!this.has(key)) {
-      throw new Error(`Key '${key}' is required but not found`);
-    }
-    return this.get(key)!;
+  toSavableObject(): SavableObject {
+    return this.obj as SavableObject;
   }
 };
 
-export class TransientMap<T> extends PseudoMap<T> {
-  constructor(initialData?: Record<string, T>) {
-    super(initialData);
-  }
-}
 
 interface Persistable {
   readonly key: string;
@@ -64,21 +56,32 @@ export class PublicPersistanceMap<T extends SavableObject> extends PseudoMap<T> 
 }
 export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T> implements Persistable {
   readonly key: PrivateKeys;
+  private initialized: boolean = false;
   constructor(key: PrivateKeys) {
     super();
     this.key = key;
-    console.log("PrivatePersistanceMap initialized with key:", key);
+    console.log("PrivatePersistanceMap loaded data for key:", this.key);
     State.context.secrets.get(this.key).then(jsonString => {
+      console.log("PrivatePersistanceMap loaded data for key:", this.key, "data:", jsonString);
       this.obj = JSON.parse(jsonString || '{}');
+      this.initialized = true;
     });
   }
   store(): void {
     console.log("PrivatePersistanceMap storing data with key:", this.key);
     State.context.secrets.store(this.key, JSON.stringify(this.obj));
+    State.saveState();
   }
   clear(bool?: boolean): void {
     this.obj = {};
     bool && this.store();
+  }
+  // @Override
+  get(key: string): T | undefined {
+    return this.obj[key];
+  }
+  async touch(): Promise<void> {
+    // Update the last accessed time
   }
 }
 

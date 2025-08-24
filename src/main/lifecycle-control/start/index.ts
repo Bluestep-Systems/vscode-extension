@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { State } from '../../app/util/StateManager';
+import { State } from '../../app/util/State';
 
 export default function (context: vscode.ExtensionContext) {
   try {

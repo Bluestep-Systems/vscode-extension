@@ -1,4 +1,4 @@
-import { AuthManager, AuthType } from "../UserManager";
+import { AuthManager, AuthType } from "../Auth";
 import JsonPath from "../JsonPath";
 import { RegexPatterns } from "./Regex";
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";

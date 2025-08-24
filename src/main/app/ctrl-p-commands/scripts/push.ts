@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { State } from "../../../app/util/StateManager";
-import { AuthManager, AuthType, BasicAuth, BasicAuthManager } from '../../util/UserManager';
+import { State } from "../../util/State";
+import { AuthManager, AuthType, BasicAuth, BasicAuthManager } from '../../util/Auth';
 /**
  * TODO
  */

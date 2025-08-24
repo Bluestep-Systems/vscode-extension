@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { State } from "./StateManager";
-import { PrivateKeys, PrivatePersistanceMap, PseudoMap, PublicPersistanceMap, TransientMap } from "./PersistantMap";
+import { PrivateKeys, PrivatePersistanceMap } from "./PersistantMap";
 import { SavableObject } from '../../../../types';
 
 export interface AuthType {
 }
+type BasicAuthConstructorValue = { username: string; password: string };
 export class BasicAuth implements AuthType {
   username: string;
   password: string;
-  constructor(username: string, password: string) {
+  constructor({ username, password }: BasicAuthConstructorValue) {
     this.username = username;
     this.password = password;
   }
@@ -23,18 +23,19 @@ export class BasicAuth implements AuthType {
   }
 }
 export abstract class AuthManager<T extends AuthType> {
-  protected curManager: AuthManager<T> | null = null;
-  abstract store: PrivatePersistanceMap<SavableObject>;
-  
-  constructor() { }
+  abstract persistanceCollection: PrivatePersistanceMap<SavableObject>;
 
+  constructor() { }
+  abstract getAuth(flag?: AUTH_FLAGS): Promise<T>
+  abstract setAuth(auth: T, flag?: AUTH_FLAGS): void;
+  abstract getDefaultAuth(): Promise<T>
   abstract authHeaderValue(): Promise<string>;
   abstract newCredentials(): Thenable<AuthManager<T>>;
 }
+
 export class BasicAuthManager extends AuthManager<BasicAuth> {
-  authCollection: TransientMap<BasicAuth>;
-  store: PrivatePersistanceMap<SavableObject> = new PrivatePersistanceMap(PrivateKeys.BASIC_AUTH);
-  FLAG: BASIC_AUTH_FLAGS;
+  persistanceCollection: PrivatePersistanceMap<SavableObject> = new PrivatePersistanceMap(PrivateKeys.BASIC_AUTH);
+  FLAG: AUTH_FLAGS;
   private static singleton: BasicAuthManager | null = null;
 
   static getSingleton() {
@@ -45,25 +46,43 @@ export class BasicAuthManager extends AuthManager<BasicAuth> {
   }
   private constructor() {
     super();
-    this.authCollection = new TransientMap<BasicAuth>();
-    this.FLAG = BASIC_AUTH_FLAGS.DEFAULT;
-  }
-  async getAuth(): Promise<BasicAuth> {
-    return this.authCollection.get(this.FLAG) || (await this.newCredentials()).getAuth();
-  }
-  setAuth(auth: BasicAuth) {
-    this.authCollection.set(this.FLAG, auth);
-  }
-  getAuthByFlag(flag: BASIC_AUTH_FLAGS): BasicAuth | undefined {
-    return this.authCollection.get(flag);
-  }
-  setAuthByFlag(flag: BASIC_AUTH_FLAGS, auth: BasicAuth) {
-    this.authCollection.set(flag, auth);
+    this.FLAG = AUTH_FLAGS.DEFAULT;
+    this.persistanceCollection.touch();
   }
 
-  getDefaultAuth(): BasicAuth {
-    return this.getAuthByFlag(BASIC_AUTH_FLAGS.DEFAULT)!;
+  /**
+   * Ensure the singleton is initialized
+   */
+  static touch(): void {
+    BasicAuthManager.getSingleton();
   }
+
+  async getAuth(flag: AUTH_FLAGS = this.FLAG): Promise<BasicAuth> {
+    console.log("persistanceColl", this.persistanceCollection);
+    const existingAuth = await this.persistanceCollection.get(flag);
+    console.log("existingAuth", existingAuth);
+    if (!existingAuth) {
+      vscode.window.showInformationMessage('No existing credentials found, please enter new credentials.');
+      return (await this.newCredentials()).getAuth();
+    } else {
+      return new BasicAuth(existingAuth as unknown as BasicAuthConstructorValue);
+    }
+
+  }
+
+  setAuth(auth: BasicAuth, flag: AUTH_FLAGS = this.FLAG) {
+    this.persistanceCollection.set(flag, auth.toSavableObject());
+    this.save();
+  }
+
+  async getDefaultAuth(): Promise<BasicAuth> {
+    return await this.getAuth(AUTH_FLAGS.DEFAULT);
+  }
+
+  private save() {
+    this.persistanceCollection.store();
+  }
+
   async toBase64() {
     const auth = await this.getAuth();
     console.log("Auth Object:", auth);
@@ -85,12 +104,12 @@ export class BasicAuthManager extends AuthManager<BasicAuth> {
         // password validation?
         return resp || "";
       });
-    this.setAuth(new BasicAuth(username, password));
+    this.setAuth(new BasicAuth({ username, password }));
     return this;
   }
 };
 
-enum BASIC_AUTH_FLAGS {
+enum AUTH_FLAGS {
   DEFAULT = 'default',
 }
 

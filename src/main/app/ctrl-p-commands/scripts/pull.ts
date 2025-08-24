@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getScript } from "../../util/tree";
-import { BasicAuthManager } from '../../util/UserManager';
+import { BasicAuthManager } from '../../util/Auth';
 /**
  * TODO
  */

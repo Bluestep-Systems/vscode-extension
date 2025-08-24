@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { State } from "../../../app/util/StateManager";
-import { BasicAuthManager } from '../../util/UserManager';
+import { State } from "../../util/State";
+import { BasicAuthManager } from '../../util/Auth';
 
 
 export default async function (): Promise<void> {
