@@ -4,7 +4,7 @@ import {State as App} from "../../App";
 
 export default async function (): Promise<void> {
   try {
-    const creds = await App.BasicAuthManager.getAuth();
+    const creds = await BasicAuthManager.getSingleton().getAuth();
     const oldUsername = creds.username;
     const oldPassword = creds.password;
     const newUsername = await vscode.window.showInputBox({ prompt: 'Enter new username', placeHolder: oldUsername + " (Enter to Keep)" });
