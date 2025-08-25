@@ -62,7 +62,6 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T>
     this.key = key;
     console.log("PrivatePersistanceMap loaded data for key:", this.key);
     State.context.secrets.get(this.key).then(jsonString => {
-      console.log("PrivatePersistanceMap loaded data for key:", this.key, "data:", jsonString);
       this.obj = JSON.parse(jsonString || '{}');
       this.initialized = true;
     });
