@@ -10,20 +10,24 @@ type GetScriptArg = {
   url: URL;
   authManager: AuthManager<AuthType>;
   curLayer?: PrimitiveNestedObject;
+  webDavId: string;
 }
 type GetScriptRet = { structure: PrimitiveNestedObject; rawFiles: string[] } | undefined;
-export async function getScript({ url, authManager: creds, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
+export async function getScript({ url, webDavId, authManager, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
   try {
     const parser = new XMLParser();
+    console.log("Fetching script from URL:", url.href);
+    url.pathname = `/files/${webDavId}/`;
+    console.log("Fetching script from URL:", url.href);
     const response = await fetch(url, {
       //TODO review these
       "headers": {
-        "accept": "application/json",
+        "accept": "*/*",
         "accept-language": "en-US,en;q=0.9",
         "cache-control": "no-cache",
         "pragma": "no-cache",
         "upgrade-insecure-requests": "1",
-        "authorization": `${await creds.authHeaderValue()}`
+        "authorization": `${await authManager.authHeaderValue()}`
       },
       "method": "PROPFIND"
     });

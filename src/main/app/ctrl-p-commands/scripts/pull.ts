@@ -11,9 +11,9 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
   if (urlObj === undefined) {
     return;
   }
-  const { url } = urlObj;
-  vscode.window.showInformationMessage(`Yoinking formula from ${url.href}`);
-  const ScriptObject = await getScript({ url, authManager: BasicAuthManager.getSingleton() });
+  const { url, webDavId } = urlObj;
+  vscode.window.showInformationMessage(`Pulling formula from ${url.href}`);
+  const ScriptObject = await getScript({ url, webDavId, authManager: BasicAuthManager.getSingleton() });
   if (ScriptObject === undefined) {
     return;
   }
@@ -38,7 +38,8 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
     return;
   }
   const curPath = activeFolder.uri;
-  const ultimatePath = vscode.Uri.file(curPath.fsPath + "/" + sourceUrl.host + "/" + path);
+  const ultimatePathStr = curPath.fsPath + "/" + sourceUrl.host + "/" + path;
+  const ultimatePath = vscode.Uri.file(ultimatePathStr);
   const isDirectory = ultimatePath.toString().endsWith("/");
 
   if (isDirectory) {
