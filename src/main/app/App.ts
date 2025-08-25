@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ReadOnlyMap, SavableObject } from '../../../types';
 import { PublicPersistanceMap } from './util/PseudoMaps';
-import { pullScript, pushScript, updateCredentials, pullCurrent,pushCurrent } from './ctrl-p-commands';
+import ctrlPCommands from './ctrl-p-commands';
 import { BasicAuthManager } from './util/Auth';
 
 
@@ -14,11 +14,12 @@ export const State = new class {
   disposables = new class implements ReadOnlyMap<vscode.Disposable> {
 
     #map = new Map<string, vscode.Disposable>([
-      ['bsjs-push-pull.pushScript', vscode.commands.registerCommand('bsjs-push-pull.pushScript', pushScript)],
-      ['bsjs-push-pull.pullScript', vscode.commands.registerCommand('bsjs-push-pull.pullScript', pullScript)],
-      ['bsjs-push-pull.pullCurrent', vscode.commands.registerCommand('bsjs-push-pull.pullCurrent', pullCurrent)],
-      ['bsjs-push-pull.pushCurrent', vscode.commands.registerCommand('bsjs-push-pull.pushCurrent', pushCurrent)],
-      ['bsjs-push-pull.updateCredentials', vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', updateCredentials)],
+      ['bsjs-push-pull.pushScript', vscode.commands.registerCommand('bsjs-push-pull.pushScript', ctrlPCommands.pushScript)],
+      ['bsjs-push-pull.pullScript', vscode.commands.registerCommand('bsjs-push-pull.pullScript', ctrlPCommands.pullScript)],
+      ['bsjs-push-pull.pullCurrent', vscode.commands.registerCommand('bsjs-push-pull.pullCurrent', ctrlPCommands.pullCurrent)],
+      ['bsjs-push-pull.pushCurrent', vscode.commands.registerCommand('bsjs-push-pull.pushCurrent', ctrlPCommands.pushCurrent)],
+      ['bsjs-push-pull.updateCredentials', vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', ctrlPCommands.updateCredentials)],
+      ['bsjs-push-pull.runTask', vscode.commands.registerCommand('bsjs-push-pull.runTask', ctrlPCommands.runTask)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
         console.log("STATE", State.variables.toJSON());
         State.saveState();

@@ -42,6 +42,10 @@
       {
         "command": "bsjs-push-pull.clear",
         "title": "B6P: Clear State"
+      },
+      {
+        "command": "bsjs-push-pull.runTask",
+        "title": "B6P: Run Task"
       }
     ]
   },

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getFileMetaData } from '../../util/FileMetaData';
-import { pullScript, pushScript } from '..';
+import pullScript from '../scripts/pull';
 export default async function (): Promise<void> {
   const workspaceUri = vscode.workspace.workspaceFolders![0]!.uri;
   const activeEditorUri = vscode.window.activeTextEditor!.document.uri;
