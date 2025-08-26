@@ -10,7 +10,7 @@ export default async function (): Promise<void> {
   }
   console.log("Active Editor URI:", activeEditorUri.toString());
   console.log("workspace URI:", workspaceUri.toString());
-  const { webdavId, domain } = await getFileMetaData({ workspaceUri: workspaceUri, curUri: activeEditorUri });
+  const { webdavId, domain } = await getFileMetaData({ curUri: activeEditorUri });
   pushScript(`https://${domain}/files/${webdavId}/`);
 }
 

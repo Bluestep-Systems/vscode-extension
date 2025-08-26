@@ -71,6 +71,7 @@ export const State = new class {
     this.disposables.forEach(disposable => context.subscriptions.push(disposable));
     // for some reason we can't perform the truncated version of this. I.E.
     // `.forEach(context.subscriptions.push)`
+    this.#_context = context;
     this.disposables.forEach(disposable => context.subscriptions.push(disposable));
     this.#_variables = new PublicPersistanceMap("variables");
     BasicAuthManager.touch();

@@ -47,6 +47,58 @@
         "command": "bsjs-push-pull.runTask",
         "title": "B6P: Run Task"
       }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "myExtensionSidebar",
+          "title": "B6P Quick Commands",
+          "icon": "src/main/resources/bluestepLogo.svg"
+        }
+      ]
+    },
+    "views": {
+      "myExtensionSidebar": [
+        {
+          "icon": "src/main/resources/bluestepLogo.svg",
+          "id": "b6pMenuView",
+          "name": "Menu"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "b6pMenuView",
+        "contents": "--- QUICK ---"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Pull Current](command:bsjs-push-pull.pullCurrent)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Push Current](command:bsjs-push-pull.pushCurrent)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Run Task](command:bsjs-push-pull.runTask)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "--- OTHER ---"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Pull New](command:bsjs-push-pull.pullScript)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Push Script](command:bsjs-push-pull.pushScript)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Update Credentials](command:bsjs-push-pull.updateCredentials)"
+      }
     ]
   },
   "scripts": {
