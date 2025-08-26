@@ -13,7 +13,6 @@ export function activate(context: vscode.ExtensionContext) {
 	}catch (error) {
 		console.trace("Error during activation:", error);
 	}
-	
 }
 
 

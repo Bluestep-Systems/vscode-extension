@@ -12,7 +12,4 @@ export default async function (): Promise<void> {
   console.log("workspace URI:", workspaceUri.toString());
   const { webdavId, domain } = await getFileMetaData({ workspaceUri: workspaceUri, curUri: activeEditorUri });
   pullScript(`https://${domain}/files/${webdavId}/`);
-
 }
-
-

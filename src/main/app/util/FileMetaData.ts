@@ -20,13 +20,3 @@ export async function getFileMetaData({ workspaceUri, curUri }: { workspaceUri: 
     domain: parentDirName
   };
 }
-
-function getInfoFromPath(path: string) {
-  const pathArr = path.split("/");
-  const webdavId = pathArr.pop();
-  const domain = pathArr.pop();
-  return {
-    webdavId,
-    domain
-  };
-}
