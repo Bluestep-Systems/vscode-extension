@@ -1,8 +1,17 @@
 {
   "name": "bsjs-push-pull",
-  "displayName": "bsjs-push-pull",
-  "description": "",
+  "displayName": "B6P - BlueStep JavaScript Push/Pull",
+  "description": "Sync JavaScript files with BlueStep systems via WebDAV",
   "version": "0.0.1",
+  "publisher": "bluestep-systems",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bluestep-systems/vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/bluestep-systems/vscode-extension/issues"
+  },
+  "homepage": "https://github.com/bluestep-systems/vscode-extension#readme",
   "engines": {
     "vscode": "^1.103.0"
   },
@@ -108,6 +117,10 @@
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package-extension": "node package-extension.js",
+    "clean": "rm -rf dist out *.vsix *.zip",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format-check": "prettier --check \"src/**/*.ts\"",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
@@ -116,18 +129,22 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.103.0",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
+    "archiver": "^7.0.1",
     "esbuild": "^0.25.8",
-    "eslint": "^9.32.0",
+    "eslint": "^9.34.0",
     "npm-run-all": "^4.1.5",
+    "prettier": "^3.4.2",
     "typescript": "^5.9.2"
   },
+  "license": "MIT",
   "dependencies": {
     "fast-xml-parser": "^4.5.3"
   }

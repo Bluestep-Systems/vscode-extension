@@ -1,5 +1,4 @@
 import { AuthManager, AuthType } from "../Auth";
-import JsonPath from "../JsonPath";
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { XMLParser } from 'fast-xml-parser';
 import PutObjVal from "./PutObjVal";

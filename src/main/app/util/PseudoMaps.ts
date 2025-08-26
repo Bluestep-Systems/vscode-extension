@@ -89,6 +89,9 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T>
   async touch(): Promise<void> {
     // Update the last accessed time
   }
+  public isInitialized(): boolean {
+    return this.initialized;
+  }
 }
 
 export enum PrivateKeys {
