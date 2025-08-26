@@ -39,8 +39,9 @@ export async function getScript({ url, webDavId, authManager, curLayer = {} }: G
     const responseObj: XMLResponse = parser.parse(await response.text());
     console.log("Response Object:", responseObj);
     const rawFiles = responseObj["D:multistatus"]["D:response"]
+      //TODO this only goes 4 layers deep
       .filter(terminal => {
-        // get something less fragile
+        // get something less fragile 
         return terminal["D:href"].indexOf("/snapshot/") === -1 && terminal["D:href"].indexOf("/.build/") === -1;
       }) 
       .map(terminal => {

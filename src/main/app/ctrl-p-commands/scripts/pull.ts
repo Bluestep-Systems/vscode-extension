@@ -3,6 +3,7 @@ import { getScript } from "../../util/tree";
 import {State} from "../../App";
 import { urlParser } from "../../util/URLParser";
 import { BasicAuthManager } from '../../util/Auth';
+import { Util } from '../../util';
 /**
  * TODO
  */
@@ -32,7 +33,7 @@ async function getStartingURL(overrideFormulaUri?: string) {
 }
 
 async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promise<void> {
-  const activeFolder = vscode.workspace.workspaceFolders![0]!;
+  const activeFolder = vscode.workspace.workspaceFolders?.[0];
   if (!activeFolder) {
     vscode.window.showErrorMessage('No active file found');
     return;
@@ -58,11 +59,14 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const creds = BasicAuthManager.getSingleton();
-    const contents = await fetch("https://" + sourceUrl.host + "/files/" + path, {
+    const authManager = BasicAuthManager.getSingleton();
+    const lookupUri = "https://" + sourceUrl.host + "/files/" + path;
+    Util.printLine();
+    console.log("fetching from:", lookupUri);
+    const contents = await fetch(lookupUri, {
       method: "GET",
       headers: {
-        "Authorization": `${await creds.authHeaderValue()}`
+        "Authorization": `${await authManager.authHeaderValue()}`
       }
     });
     vscode.workspace.fs.writeFile(ultimatePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));
