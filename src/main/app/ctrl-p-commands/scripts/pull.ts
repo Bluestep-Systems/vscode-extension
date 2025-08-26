@@ -1,20 +1,18 @@
 import * as vscode from 'vscode';
 import { getScript } from "../../util/tree";
-import {State} from "../../App";
-import { urlParser } from "../../util/URLParser";
+import { BsjsDavUrl } from "../../util/URLParser";
 import { BasicAuthManager } from '../../util/Auth';
 import { Util } from '../../util';
 /**
  * TODO
  */
 export default async function (overrideFormulaUri?: string): Promise<void> {
-  const urlObj = await getStartingURL(overrideFormulaUri);
-  if (urlObj === undefined) {
+  const url = await getStartingURL(overrideFormulaUri);
+  if (url === undefined) {
     return;
   }
-  const { url, webDavId } = urlObj;
   vscode.window.showInformationMessage(`Pulling formula from ${url.href}`);
-  const ScriptObject = await getScript({ url, webDavId, authManager: BasicAuthManager.getSingleton() });
+  const ScriptObject = await getScript({ url, webDavId: url.webDavId, authManager: BasicAuthManager.getSingleton() });
   if (ScriptObject === undefined) {
     return;
   }
@@ -29,7 +27,7 @@ async function getStartingURL(overrideFormulaUri?: string) {
     vscode.window.showErrorMessage('No formula URI provided');
     return;
   }
-  return urlParser(formulaURI);
+  return new BsjsDavUrl(formulaURI);
 }
 
 async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promise<void> {
