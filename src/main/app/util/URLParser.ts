@@ -1,28 +1,8 @@
-// Example URL "https://bst3.bluestep.net/files/1433697/draft/";
-
-export class BsjsDavUrl extends URL {
-  isReadOnly: boolean;
-  webDavId: string;
-
-  constructor(url: string) {
-    super(url);
-
-    const parts = this.pathname.split('/');
-    if (parts.length < 2) {
-      throw new Error(`Invalid URL ${url}, path must be of the form /files/{webDavId}[/...]`);
-    }
-    this.webDavId = parts[1];
-
-    switch (parts[0]) {
-      case "files":
-        this.isReadOnly = false;
-        break;
-      case "public":
-        this.isReadOnly = true;
-        break;
-      default:
-        throw new Error(`Invalid URL ${url}, path must start with 'files' or 'public'`);
-    }
-  }
-
+export function urlParser(str: string) {
+  //const str = "https://bst3.bluestep.net/files/1433697/draft/";
+  const url = new URL(str);
+  const match = url.pathname.match(/files\/(\d+)\/(.*)/);
+  const webDavId = match && match[1] || (() => { throw new Error("no webDavId"); })(); // id will be "1433697"
+  const trailing = match && match[2];
+  return { url, webDavId, trailing };
 }

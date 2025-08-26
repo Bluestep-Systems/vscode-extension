@@ -5,7 +5,6 @@ import { XMLParser } from 'fast-xml-parser';
 import PutObjVal from "./PutObjVal";
 import * as vscode from "vscode";
 import { urlParser } from "../URLParser";
-
 type GetScriptArg = {
   url: URL;
   authManager: AuthManager<AuthType>;
@@ -45,7 +44,7 @@ export async function getScript({ url, webDavId, authManager, curLayer = {} }: G
         return terminal["D:href"].indexOf("/snapshot/") === -1 && terminal["D:href"].indexOf("/.build/") === -1;
       }) 
       .map(terminal => {
-        const { url, webDavId, trailing } = urlParser(terminal["D:href"]);
+        const { webDavId, trailing } = urlParser(terminal["D:href"]);
 
         const newPath = `${webDavId}/${trailing}`; 
         const path = newPath.split("/");
