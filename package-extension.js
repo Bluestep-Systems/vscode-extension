@@ -74,19 +74,35 @@ function createVsix() {
 
     archive.pipe(output);
 
-    // Add files and directories
-    filesToInclude.forEach(item => {
-      if (fs.existsSync(item)) {
-        const stats = fs.statSync(item);
-        if (stats.isDirectory()) {
-          archive.directory(item, item);
-        } else {
-          archive.file(item, { name: item });
-        }
-      } else {
-        console.log(`⚠️  Skipping missing file/directory: ${item}`);
-      }
-    });
+    // Add package.json at root level
+    archive.file('package.json', { name: 'extension/package.json' });
+    
+    // Add other files
+    if (fs.existsSync('README.md')) {
+      archive.file('README.md', { name: 'extension/README.md' });
+    }
+    if (fs.existsSync('CHANGELOG.md')) {
+      archive.file('CHANGELOG.md', { name: 'extension/CHANGELOG.md' });
+    }
+    if (fs.existsSync('LICENSE')) {
+      archive.file('LICENSE', { name: 'extension/LICENSE' });
+    }
+    
+    // Add dist directory
+    if (fs.existsSync('dist')) {
+      archive.directory('dist/', 'extension/dist/');
+    }
+    
+    // Add resources
+    if (fs.existsSync('src/main/resources')) {
+      archive.directory('src/main/resources/', 'extension/src/main/resources/');
+    }
+    
+    // Add only production node_modules (simplified approach)
+    if (fs.existsSync('node_modules')) {
+      // Copy all node_modules for now - filtering will be done by npm ci --only=production
+      archive.directory('node_modules/', 'extension/node_modules/');
+    }
 
     archive.finalize();
   });
