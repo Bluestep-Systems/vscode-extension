@@ -56,6 +56,8 @@ export class PublicPersistanceMap<T extends SavableObject> extends PseudoMap<T> 
 }
 export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T> implements Persistable {
   readonly key: PrivateKeys;
+  // TODO: Implement support for tracking and storing metadata such as lastModified timestamp for PrivatePersistanceMap entries.
+  // lastModified: number;
   private initialized: boolean = false;
   constructor(key: PrivateKeys) {
     super();
@@ -65,6 +67,10 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T>
       this.obj = JSON.parse(jsonString || '{}');
       this.initialized = true;
     });
+    // State.context.secrets.get(this.key + "-metadata").then(jsonString => {
+    //   this.lastModified = JSON.parse(jsonString || '{}').lastModified || Date.now();
+    //   this.initialized = true;
+    // });
   }
   store(): void {
     console.log("PrivatePersistanceMap storing data with key:", this.key);
@@ -75,12 +81,16 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T>
     this.obj = {};
     bool && this.store();
   }
+  // TODO find a better way to do this in typescript
   // @Override
   get(key: string): T | undefined {
     return this.obj[key];
   }
   async touch(): Promise<void> {
     // Update the last accessed time
+  }
+  public isInitialized(): boolean {
+    return this.initialized;
   }
 }
 

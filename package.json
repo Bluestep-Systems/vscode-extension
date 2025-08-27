@@ -1,8 +1,17 @@
 {
   "name": "bsjs-push-pull",
-  "displayName": "bsjs-push-pull",
-  "description": "",
+  "displayName": "B6P - BlueStep JavaScript Push/Pull",
+  "description": "Sync JavaScript files with BlueStep systems via WebDAV",
   "version": "0.0.1",
+  "publisher": "bluestep-systems",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bluestep-systems/vscode-extension"
+  },
+  "bugs": {
+    "url": "https://github.com/bluestep-systems/vscode-extension/issues"
+  },
+  "homepage": "https://github.com/bluestep-systems/vscode-extension#readme",
   "engines": {
     "vscode": "^1.103.0"
   },
@@ -47,6 +56,58 @@
         "command": "bsjs-push-pull.runTask",
         "title": "B6P: Run Task"
       }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "myExtensionSidebar",
+          "title": "B6P Quick Commands",
+          "icon": "src/main/resources/bluestepLogo.svg"
+        }
+      ]
+    },
+    "views": {
+      "myExtensionSidebar": [
+        {
+          "icon": "src/main/resources/bluestepLogo.svg",
+          "id": "b6pMenuView",
+          "name": "Menu"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "b6pMenuView",
+        "contents": "--- QUICK ---"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Pull Current](command:bsjs-push-pull.pullCurrent)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Push Current](command:bsjs-push-pull.pushCurrent)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Run Task](command:bsjs-push-pull.runTask)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "--- OTHER ---"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Pull New](command:bsjs-push-pull.pullScript)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Push Script](command:bsjs-push-pull.pushScript)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Update Credentials](command:bsjs-push-pull.updateCredentials)"
+      }
     ]
   },
   "scripts": {
@@ -56,6 +117,10 @@
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
     "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "package-extension": "node package-extension.js",
+    "clean": "rm -rf dist out *.vsix *.zip",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format-check": "prettier --check \"src/**/*.ts\"",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
@@ -64,18 +129,21 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.103.0",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
+    "@typescript-eslint/eslint-plugin": "^8.41.0",
+    "@typescript-eslint/parser": "^8.41.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
+    "archiver": "^7.0.1",
     "esbuild": "^0.25.8",
-    "eslint": "^9.32.0",
+    "eslint": "^9.34.0",
     "npm-run-all": "^4.1.5",
     "typescript": "^5.9.2"
   },
+  "license": "MIT",
   "dependencies": {
     "fast-xml-parser": "^4.5.3"
   }

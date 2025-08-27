@@ -46,7 +46,6 @@ export const State = new class {
     this.#_context = null;
   }
 
-
   public isInitialized(): boolean {
     return this.#_context !== null;
   }
@@ -69,6 +68,7 @@ export const State = new class {
     if (this.#_context !== null) {
       throw new Error('Extension context is already set');
     }
+    this.disposables.forEach(disposable => context.subscriptions.push(disposable));
     // for some reason we can't perform the truncated version of this. I.E.
     // `.forEach(context.subscriptions.push)`
     this.#_context = context;

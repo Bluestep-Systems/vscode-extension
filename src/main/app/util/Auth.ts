@@ -22,12 +22,11 @@ export class BasicAuth implements AuthType {
     return { username: this.username, password: this.password };
   }
   toJSON() {
-    return JSON.stringify(new BasicAuth({ username: this.username, password: "***" }));
+    return JSON.stringify({ username: this.username, password: "***" });
   }
 }
 export abstract class AuthManager<T extends AuthType> {
   abstract persistanceCollection: PrivatePersistanceMap<SavableObject>;
-
   constructor() { }
   abstract getAuth(flag?: AUTH_FLAGS): Promise<T>
   abstract setAuth(auth: T, flag?: AUTH_FLAGS): void;

@@ -6,9 +6,16 @@ src/**
 .gitignore
 .yarnrc
 esbuild.js
+package-extension.js
 vsc-extension-quickstart.md
 **/tsconfig.json
 **/eslint.config.mjs
 **/*.map
 **/*.ts
 **/.vscode-test.*
+*.vsix
+*.zip
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json

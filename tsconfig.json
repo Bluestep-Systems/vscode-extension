@@ -5,12 +5,28 @@
 		"lib": [
 			"ES2022"
 		],
+		"outDir": "./dist",
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true, 
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
-		"noUnusedParameters": true
-	}
+		"noUnusedParameters": true,
+		"noUnusedLocals": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true
+	},
+	"include": [
+		"src/**/*"
+	],
+	"exclude": [
+		"node_modules",
+		"dist",
+		"out",
+		"**/*.test.ts"
+	]
 }
