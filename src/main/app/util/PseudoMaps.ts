@@ -56,7 +56,7 @@ export class PublicPersistanceMap<T extends SavableObject> extends PseudoMap<T> 
 }
 export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T> implements Persistable {
   readonly key: PrivateKeys;
-  //TODO 
+  // TODO: Implement support for tracking and storing metadata such as lastModified timestamp for PrivatePersistanceMap entries.
   // lastModified: number;
   private initialized: boolean = false;
   constructor(key: PrivateKeys) {
