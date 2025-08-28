@@ -3,23 +3,28 @@ import { getScript } from "../../util/tree";
 import { urlParser } from "../../util/data/URLParser";
 import { BasicAuthManager } from '../../services/Auth';
 import { Util } from '../../util';
+import { Alert } from '../../util/ui/Alert';
 /**
  * TODO
  */
 export default async function (overrideFormulaUri?: string): Promise<void> {
-  const urlObj = await getStartingURL(overrideFormulaUri);
-  if (urlObj === undefined) {
-    return;
-  }
-  const { url, webDavId } = urlObj;
-  vscode.window.showInformationMessage(`Pulling formula from ${url.href}`);
-  const ScriptObject = await getScript({ url, webDavId, authManager: BasicAuthManager.getSingleton() });
-  if (ScriptObject === undefined) {
-    return;
-  }
-  ScriptObject.rawFiles.forEach(file => {
-    createIndividualFileOrFolder(file, url);
-  });
+ try {
+   const urlObj = await getStartingURL(overrideFormulaUri);
+   if (urlObj === undefined) {
+     return;
+   }
+   const { url, webDavId } = urlObj;
+   const ScriptObject = await getScript({ url, webDavId, authManager: BasicAuthManager.getSingleton() });
+   if (ScriptObject === undefined) {
+     return;
+   }
+   ScriptObject.rawFilePaths.forEach(async path => {
+     await createIndividualFileOrFolder(path, url);
+   });
+   Alert.info('Pull complete!');
+ } catch (e) {
+   Alert.error(`Error pulling files: ${e}`);
+ }
 }
 
 async function getStartingURL(overrideFormulaUri?: string) {
@@ -40,6 +45,7 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
   const curPath = activeFolder.uri;
   const ultimatePathStr = curPath.fsPath + "/" + sourceUrl.host + "/" + path;
   const ultimatePath = vscode.Uri.file(ultimatePathStr);
+  
   const isDirectory = ultimatePath.toString().endsWith("/");
 
   if (isDirectory) {

@@ -10,7 +10,7 @@ type GetScriptArg = {
   curLayer?: PrimitiveNestedObject;
   webDavId: string;
 }
-type GetScriptRet = { structure: PrimitiveNestedObject; rawFiles: string[] } | undefined;
+type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: string[] } | undefined;
 export async function getScript({ url, webDavId, authManager, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
   try {
     const parser = new XMLParser();
@@ -36,12 +36,26 @@ export async function getScript({ url, webDavId, authManager, curLayer = {} }: G
     console.log("Response Status:", response.status);
     const responseObj: XMLResponse = parser.parse(await response.text());
     console.log("Response Object:", responseObj);
+    //TODO remove magic strings
     const rawFiles = responseObj["D:multistatus"]["D:response"]
       //TODO this only goes 4 layers deep
       .filter(terminal => {
-        // get something less fragile 
-        return terminal["D:href"].indexOf("/snapshot/") === -1 && terminal["D:href"].indexOf("/.build/") === -1;
-      }) 
+        // TODO examine this for fragility
+        let { trailing } = urlParser(terminal["D:href"]);
+        if (trailing === undefined) {
+          return false; // not pulling the root itself
+        }
+        const trailingParts = trailing.split("/");
+        // skip shapshot folder
+        if (trailingParts[0] === "snapshot") {
+          return false;
+        }
+        // skip our .build folder. The user for some reason may still want one in subsequent paths
+        if (trailingParts[1] === ".build") {
+          return false;
+        }
+        return true;
+      })
       .map(terminal => {
         const { webDavId, trailing } = urlParser(terminal["D:href"]);
 
@@ -59,7 +73,7 @@ export async function getScript({ url, webDavId, authManager, curLayer = {} }: G
     if (!response.ok) {
       throw new Error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
     }
-    return { structure: curLayer, rawFiles };
+    return { structure: curLayer, rawFilePaths: rawFiles };
   } catch (e) {
     console.trace(e);
     throw e;
