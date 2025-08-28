@@ -96,4 +96,5 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T>
 
 export enum PrivateKeys {
   BASIC_AUTH = 'basic_auth',
+  SESSIONS = 'b6p:sessions'
 }
