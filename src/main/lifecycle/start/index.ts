@@ -6,13 +6,12 @@ export default function (context: vscode.ExtensionContext) {
 
   try {
     console.log("B6P: Initializing state...");
-    context.secrets.delete('privates');
-    context.workspaceState.update('variables', {});
     State.initializeFromContext(context);
     
-    // Start automatic update checking (async, don't block startup)
     return;
     //TODO implement this properly
+    
+    // Start automatic update checking (async, don't block startup)
     setTimeout(async () => {
       try {
         console.log("B6P: Starting automatic update check...");

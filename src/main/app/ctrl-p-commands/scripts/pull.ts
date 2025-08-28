@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getScript } from "../../util/tree";
+import { getScript } from "../../util/data/getScript";
 import { urlParser } from "../../util/data/URLParser";
 import { BasicAuthManager } from '../../services/Auth';
 import { Util } from '../../util';

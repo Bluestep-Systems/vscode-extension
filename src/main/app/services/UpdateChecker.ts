@@ -35,59 +35,63 @@ export class UpdateChecker {
    * Check for updates if enough time has passed since last check
    */
   public async checkForUpdatesIfNeeded(): Promise<void> {
-    try {
-      const config = vscode.workspace.getConfiguration('bsjs-push-pull');
-      const updateCheckEnabled = config.get<boolean>('updateCheck.enabled', true);
-      
-      if (!updateCheckEnabled) {
-        return;
-      }
+    //TODO implement this properly
 
-      const lastCheck = this.context.globalState.get<number>(UpdateChecker.UPDATE_CHECK_KEY, 0);
-      const now = Date.now();
+    // try {
+    //   const config = vscode.workspace.getConfiguration('bsjs-push-pull');
+    //   const updateCheckEnabled = config.get<boolean>('updateCheck.enabled', true);
       
-      if (now - lastCheck < UpdateChecker.UPDATE_INTERVAL) {
-        return; // Not enough time has passed
-      }
+    //   if (!updateCheckEnabled) {
+    //     return;
+    //   }
 
-      await this.checkForUpdates();
-      await this.context.globalState.update(UpdateChecker.UPDATE_CHECK_KEY, now);
-    } catch (error) {
-      console.error('Error checking for updates:', error);
-    }
+    //   const lastCheck = this.context.globalState.get<number>(UpdateChecker.UPDATE_CHECK_KEY, 0);
+    //   const now = Date.now();
+      
+    //   if (now - lastCheck < UpdateChecker.UPDATE_INTERVAL) {
+    //     return; // Not enough time has passed
+    //   }
+
+    //   await this.checkForUpdates();
+    //   await this.context.globalState.update(UpdateChecker.UPDATE_CHECK_KEY, now);
+    // } catch (error) {
+    //   console.error('Error checking for updates:', error);
+    // }
   }
 
   /**
    * Force check for updates regardless of timing
    */
   public async checkForUpdates(): Promise<UpdateInfo | null> {
-    try {
-      const currentVersion = this.getCurrentVersion();
-      const latestRelease = await this.getLatestRelease();
+    //TODO implement this properly
+    return null;
+    // try {
+    //   const currentVersion = this.getCurrentVersion();
+    //   const latestRelease = await this.getLatestRelease();
       
-      if (!latestRelease) {
-        return null;
-      }
+    //   if (!latestRelease) {
+    //     return null;
+    //   }
 
-      const latestVersion = latestRelease.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
+    //   const latestVersion = latestRelease.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
       
-      if (this.isNewerVersion(latestVersion, currentVersion)) {
-        const updateInfo: UpdateInfo = {
-          version: latestVersion,
-          downloadUrl: this.getDownloadUrl(latestRelease),
-          releaseNotes: latestRelease.body,
-          publishedAt: latestRelease.published_at
-        };
+    //   if (this.isNewerVersion(latestVersion, currentVersion)) {
+    //     const updateInfo: UpdateInfo = {
+    //       version: latestVersion,
+    //       downloadUrl: this.getDownloadUrl(latestRelease),
+    //       releaseNotes: latestRelease.body,
+    //       publishedAt: latestRelease.published_at
+    //     };
 
-        await this.notifyUser(updateInfo);
-        return updateInfo;
-      }
+    //     await this.notifyUser(updateInfo);
+    //     return updateInfo;
+    //   }
 
-      return null;
-    } catch (error) {
-      console.error('Error checking for updates:', error);
-      throw error;
-    }
+    //   return null;
+    // } catch (error) {
+    //   console.error('Error checking for updates:', error);
+    //   throw error;
+    // }
   }
 
   /**
@@ -95,61 +99,64 @@ export class UpdateChecker {
    */
   private async getLatestRelease(): Promise<GitHubRelease | null> {
     return new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'api.github.com',
-        path: `/repos/${this.repoOwner}/${this.repoName}/releases/latest`,
-        method: 'GET',
-        headers: {
-          'User-Agent': 'B6P-VSCode-Extension',
-          'Accept': 'application/vnd.github.v3+json'
-        }
-      };
 
-      const req = https.request(options, (res) => {
-        let data = '';
+      //TODO implement this properly
+      return;
+      // const options = {
+      //   hostname: 'api.github.com',
+      //   path: `/repos/${this.repoOwner}/${this.repoName}/releases/latest`,
+      //   method: 'GET',
+      //   headers: {
+      //     'User-Agent': 'B6P-VSCode-Extension',
+      //     'Accept': 'application/vnd.github.v3+json'
+      //   }
+      // };
+
+      // const req = https.request(options, (res) => {
+      //   let data = '';
         
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
+      //   res.on('data', (chunk) => {
+      //     data += chunk;
+      //   });
 
-        res.on('end', () => {
-          try {
-            if (res.statusCode === 404) {
-              // No releases found
-              resolve(null);
-              return;
-            }
+      //   res.on('end', () => {
+      //     try {
+      //       if (res.statusCode === 404) {
+      //         // No releases found
+      //         resolve(null);
+      //         return;
+      //       }
 
-            if (res.statusCode !== 200) {
-              reject(new Error(`GitHub API returned status ${res.statusCode}`));
-              return;
-            }
+      //       if (res.statusCode !== 200) {
+      //         reject(new Error(`GitHub API returned status ${res.statusCode}`));
+      //         return;
+      //       }
 
-            const release: GitHubRelease = JSON.parse(data);
+      //       const release: GitHubRelease = JSON.parse(data);
             
-            // Filter out drafts and pre-releases by default
-            if (release.draft || release.prerelease) {
-              resolve(null);
-              return;
-            }
+      //       // Filter out drafts and pre-releases by default
+      //       if (release.draft || release.prerelease) {
+      //         resolve(null);
+      //         return;
+      //       }
 
-            resolve(release);
-          } catch (error) {
-            reject(new Error(`Failed to parse GitHub API response: ${error}`));
-          }
-        });
-      });
+      //       resolve(release);
+      //     } catch (error) {
+      //       reject(new Error(`Failed to parse GitHub API response: ${error}`));
+      //     }
+      //   });
+      // });
 
-      req.on('error', (error) => {
-        reject(new Error(`Failed to check for updates: ${error.message}`));
-      });
+      // req.on('error', (error) => {
+      //   reject(new Error(`Failed to check for updates: ${error.message}`));
+      // });
 
-      req.setTimeout(10000, () => {
-        req.destroy();
-        reject(new Error('Update check request timed out'));
-      });
+      // req.setTimeout(10000, () => {
+      //   req.destroy();
+      //   reject(new Error('Update check request timed out'));
+      // });
 
-      req.end();
+      // req.end();
     });
   }
 
@@ -166,75 +173,80 @@ export class UpdateChecker {
    * Compare version strings to determine if newVersion is newer than currentVersion
    */
   private isNewerVersion(newVersion: string, currentVersion: string): boolean {
-    const parseVersion = (version: string) => {
-      return version.split('.').map(num => parseInt(num, 10));
-    };
+    //TODO implement this properly
+    return false;
+    // const parseVersion = (version: string) => {
+    //   return version.split('.').map(num => parseInt(num, 10));
+    // };
 
-    const newParts = parseVersion(newVersion);
-    const currentParts = parseVersion(currentVersion);
+    // const newParts = parseVersion(newVersion);
+    // const currentParts = parseVersion(currentVersion);
 
-    // Ensure both arrays have the same length
-    const maxLength = Math.max(newParts.length, currentParts.length);
-    while (newParts.length < maxLength) {
-      newParts.push(0);
-    }
-    while (currentParts.length < maxLength) {
-      currentParts.push(0);
-    }
+    // // Ensure both arrays have the same length
+    // const maxLength = Math.max(newParts.length, currentParts.length);
+    // while (newParts.length < maxLength) {
+    //   newParts.push(0);
+    // }
+    // while (currentParts.length < maxLength) {
+    //   currentParts.push(0);
+    // }
 
-    for (let i = 0; i < maxLength; i++) {
-      if (newParts[i] > currentParts[i]) {
-        return true;
-      } else if (newParts[i] < currentParts[i]) {
-        return false;
-      }
-    }
+    // for (let i = 0; i < maxLength; i++) {
+    //   if (newParts[i] > currentParts[i]) {
+    //     return true;
+    //   } else if (newParts[i] < currentParts[i]) {
+    //     return false;
+    //   }
+    // }
 
-    return false; // Versions are equal
+    // return false; // Versions are equal
   }
 
   /**
    * Get download URL for the extension package from release assets
    */
   private getDownloadUrl(release: GitHubRelease): string {
-    // Look for .vsix file in assets
-    const vsixAsset = release.assets.find(asset => asset.name.endsWith('.vsix'));
-    if (vsixAsset) {
-      return vsixAsset.browser_download_url;
-    }
+    //TODO implement this properly
+    return "";
+    // // Look for .vsix file in assets
+    // const vsixAsset = release.assets.find(asset => asset.name.endsWith('.vsix'));
+    // if (vsixAsset) {
+    //   return vsixAsset.browser_download_url;
+    // }
 
-    // Fallback to release page
-    return `https://github.com/${this.repoOwner}/${this.repoName}/releases/tag/${release.tag_name}`;
+    // // Fallback to release page
+    // return `https://github.com/${this.repoOwner}/${this.repoName}/releases/tag/${release.tag_name}`;
   }
 
   /**
    * Show update notification to user
    */
   private async notifyUser(updateInfo: UpdateInfo): Promise<void> {
-    const config = vscode.workspace.getConfiguration('bsjs-push-pull');
-    const showNotifications = config.get<boolean>('updateCheck.showNotifications', true);
+    //TODO implement this properly
+    // const config = vscode.workspace.getConfiguration('bsjs-push-pull');
+    // const showNotifications = config.get<boolean>('updateCheck.showNotifications', true);
     
-    if (!showNotifications) {
-      return;
-    }
+    // if (!showNotifications) {
+    //   return;
+    // }
 
-    const message = `B6P Extension v${updateInfo.version} is available. You have v${this.getCurrentVersion()}.`;
-    const actions = ['Download', 'View Release Notes', 'Remind Later', 'Disable Updates'];
+    // const message = `B6P Extension v${updateInfo.version} is available. You have v${this.getCurrentVersion()}.`;
+    // const actions = ['Download', 'View Release Notes', 'Remind Later', 'Disable Updates'];
 
-    const selection = await vscode.window.showInformationMessage(message, ...actions);
+    // const selection = await vscode.window.showInformationMessage(message, ...actions);
 
-    switch (selection) {
-      case 'Download':
-        await this.openDownloadUrl(updateInfo.downloadUrl);
-        break;
-      case 'View Release Notes':
-        await this.showReleaseNotes(updateInfo);
-        break;
-      case 'Disable Updates':
-        await this.disableUpdateChecking();
-        break;
-      // 'Remind Later' or no selection - do nothing
-    }
+    // switch (selection) {
+    //   case 'Download':
+    //     await this.openDownloadUrl(updateInfo.downloadUrl);
+    //     break;
+    //   case 'View Release Notes':
+    //     await this.showReleaseNotes(updateInfo);
+    //     break;
+    //   case 'Disable Updates':
+    //     await this.disableUpdateChecking();
+    //     break;
+    //   // 'Remind Later' or no selection - do nothing
+    // }
   }
 
   /**

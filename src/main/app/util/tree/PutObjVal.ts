@@ -1,7 +1,11 @@
 import { PrimitiveNestedObject } from "../../../../../types";
 
-/** Adds a value to the object at the defined path */
-export default function(obj: PrimitiveNestedObject, path: string[], val: any, className: string) {
+/** 
+ * Adds a value to the object at the defined path 
+ * 
+ * Modified from BST methodology
+ */
+export default function (obj: PrimitiveNestedObject, path: string[], val: PrimitiveNestedObject, className: string) {
   let iteratedObj = obj;
   if (path.length === 1) {
     iteratedObj[path[0]] = val;
@@ -14,7 +18,7 @@ export default function(obj: PrimitiveNestedObject, path: string[], val: any, cl
     };
     if (iteratedObj[location] === undefined) {
       iteratedObj[location] = {};
-    } else if  (typeof iteratedObj[location] === className) {
+    } else if (typeof iteratedObj[location] === className) {
       iteratedObj[location] = { [`${iteratedObj[location]}`]: iteratedObj[location] };
     }
     iteratedObj = iteratedObj[location] as PrimitiveNestedObject;

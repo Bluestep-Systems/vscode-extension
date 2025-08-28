@@ -1,9 +1,9 @@
 import { AuthManager, AuthType } from "../../services/Auth";
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { XMLParser } from 'fast-xml-parser';
-import PutObjVal from "./PutObjVal";
-import * as vscode from "vscode";
-import { urlParser } from "../data/URLParser";
+import PutObjVal from "../tree/PutObjVal";
+import { urlParser } from "./URLParser";
+import { Alert } from "../ui/Alert";
 type GetScriptArg = {
   url: URL;
   authManager: AuthManager<AuthType>;
@@ -30,7 +30,7 @@ export async function getScript({ url, webDavId, authManager, curLayer = {} }: G
       "method": "PROPFIND"
     });
     if (!response.ok) {
-      vscode.window.showErrorMessage(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
+     Alert.error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
       return;
     }
     console.log("Response Status:", response.status);
@@ -65,7 +65,7 @@ export async function getScript({ url, webDavId, authManager, curLayer = {} }: G
           path.pop();
           PutObjVal(curLayer, path, {}, "string");
         } else {
-          const fileName = path.pop();
+          const fileName = path.pop() as string;
           PutObjVal(curLayer, path, { [`${fileName}`]: fileName }, "string");
         }
         return newPath;

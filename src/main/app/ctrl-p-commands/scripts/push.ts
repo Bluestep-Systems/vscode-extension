@@ -97,4 +97,5 @@ async function sendFile({ localFile, targetFormulaUri, creds }: { localFile: str
     throw new Error('Failed to send file');
   }
   console.log(resp);
+  return resp;
 }

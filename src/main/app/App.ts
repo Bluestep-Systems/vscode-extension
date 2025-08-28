@@ -79,7 +79,7 @@ export const State = new class {
   }
 
   public async saveState() {
-    this.context.workspaceState.update('variables', this.variables);
+    this.variables.store();
   }
 }();
 

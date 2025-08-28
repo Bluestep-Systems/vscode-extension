@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { UpdateChecker } from '../../services/UpdateChecker';
 import { State } from '../../App';
+import { Alert } from '../../util/ui/Alert';
 
 export default async function checkForUpdates(): Promise<void> {
   try {
@@ -13,10 +14,10 @@ export default async function checkForUpdates(): Promise<void> {
       progress.report({ increment: 0 });
 
       if (!State.isInitialized()) {
-        throw new Error('Extension is not properly initialized');
+        Alert.info("Extension state not initialized. Cannot check for updates.");
       }
 
-      progress.report({ increment: 50, message: "Contacting GitHub..." });
+      progress.report({ increment: 50, message: "Contacting XXX..." });
 
       const updateChecker = new UpdateChecker(State.context);
       
@@ -27,14 +28,13 @@ export default async function checkForUpdates(): Promise<void> {
       progress.report({ increment: 100 });
 
       if (!updateInfo) {
-        vscode.window.showInformationMessage('You are running the latest version of B6P Extension.');
+        Alert.info('You are running the latest version of B6P Extension!');
       }
-      // If update is found, the UpdateChecker will handle showing the notification
     });
 
   } catch (error) {
     console.error('Error checking for updates:', error);
-    vscode.window.showErrorMessage(
+    Alert.error(
       `Failed to check for updates: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }
