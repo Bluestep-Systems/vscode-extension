@@ -7,12 +7,10 @@ const archiver = require('archiver');
 
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 const extensionName = packageJson.name;
-const tmpVersion = packageJson.version.split(".");
-tmpVersion[2] = parseInt(tmpVersion[2]) + 1;
-const version = tmpVersion.join(".");
-packageJson.version = version;
-fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2));
+const version = packageJson.version;
+
 const vsixFileName = `${extensionName}-${version}.vsix`;
+
 
 console.log(`📦 Packaging VS Code extension: ${extensionName} v${version}`);
 
