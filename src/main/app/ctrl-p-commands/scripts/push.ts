@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { AuthManager, AuthType, BasicAuthManager } from '../../services/Auth';
+import { Util } from '../../util';
+import { urlParser } from '../../util/data/URLParser';
 /**
  * TODO
  */
@@ -9,7 +11,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     vscode.window.showErrorMessage('No source path provided');
     return;
   }
-  console.log("Active Editor URI:", activeEditorUri.toString());
+  console.log(Util.printLine({ ret: true }), "Active Editor URI:", activeEditorUri.toString());
   const targetFormulaUri = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
   if (targetFormulaUri === undefined) {
     vscode.window.showErrorMessage('No target URI provided');
@@ -23,9 +25,6 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
   }
   console.log("sourceFolder", sourceFolder);
   const sourceFolderUri = sourceFolder.substring('file://'.length);
-  const sfs = sourceFolder.split("/");
-  const sourceId = sfs.pop()!;
-  const sourceHost = sfs.pop()!;
   if (!sourceFolder) {
     vscode.window.showErrorMessage('No source folder found');
     return;
@@ -35,7 +34,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     .then(async node => await tunnelNode(node, { nodeURI: sourceFolderUri }));
 
   for (const file of fileList) {
-    sendFile({ file, sourceId, host: sourceHost, targetFormulaUri, creds: BasicAuthManager.getSingleton() });
+    sendFile({ localFile: file, targetFormulaUri, creds: BasicAuthManager.getSingleton() });
   }
 }
 async function tunnelNode(node: [string, vscode.FileType][], {
@@ -56,15 +55,19 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   }));
   return pathList;
 }
+async function sendFile({ localFile, targetFormulaUri, creds }: { localFile: string; targetFormulaUri: string; creds: AuthManager<AuthType>; }) {
+  if (localFile.includes("/declarations/")) {
+    console.log("skipping a declarations file");
+    return;
+  }
+  const { webDavId, url } = urlParser(targetFormulaUri);
+  const desto = localFile.split(url.host + "/" + webDavId)[1]!;
+  url.pathname = `/files/${webDavId}/${desto}`;
+  console.log("Destination:", url.toString());
 
-async function sendFile({ file: localFile, targetFormulaUri, sourceId, host: sourceHost, creds }: { file: string; targetFormulaUri: string; sourceId: string; host: string; creds: AuthManager<AuthType>; }) {
-
-  const targetUrl = new URL(targetFormulaUri.split("/draft/")[0]);
-  const desto = localFile.split(sourceHost + "/" + sourceId)[1]!;
-  targetUrl.pathname += desto;
-  console.log("Destination:", targetUrl.toString());
+  //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(vscode.Uri.file(localFile));
-  const resp = await fetch(targetUrl.toString(), {
+  const resp = await fetch(url.toString(), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
