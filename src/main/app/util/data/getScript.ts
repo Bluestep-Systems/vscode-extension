@@ -4,6 +4,7 @@ import { XMLParser } from 'fast-xml-parser';
 import PutObjVal from "../tree/PutObjVal";
 import { urlParser } from "./URLParser";
 import { Alert } from "../ui/Alert";
+import { App } from "../../App";
 type GetScriptArg = {
   url: URL;
   authManager: AuthManager<AuthType>;
@@ -14,9 +15,8 @@ type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: string[] }
 export async function getScript({ url, webDavId, authManager, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
   try {
     const parser = new XMLParser();
-    console.log("Fetching script from URL:", url.href);
     url.pathname = `/files/${webDavId}/`;
-    console.log("Fetching script from URL:", url.href);
+    App.logger.info("Fetching script from URL:", url.href);
     const response = await fetch(url, {
       //TODO review these
       "headers": {
@@ -33,9 +33,9 @@ export async function getScript({ url, webDavId, authManager, curLayer = {} }: G
      Alert.error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
       return;
     }
-    console.log("Response Status:", response.status);
+    App.logger.info("Response Status:", response.status);
     const responseObj: XMLResponse = parser.parse(await response.text());
-    console.log("Response Object:", responseObj);
+    App.logger.info("Response Object:", responseObj);
     //TODO remove magic strings
     const rawFiles = responseObj["D:multistatus"]["D:response"]
       //TODO this only goes 4 layers deep

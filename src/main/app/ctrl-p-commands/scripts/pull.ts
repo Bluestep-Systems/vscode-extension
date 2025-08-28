@@ -4,6 +4,7 @@ import { urlParser } from "../../util/data/URLParser";
 import { BasicAuthManager } from '../../services/Auth';
 import { Util } from '../../util';
 import { Alert } from '../../util/ui/Alert';
+import { App } from '../../App';
 /**
  * TODO
  */
@@ -67,7 +68,7 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
     const authManager = BasicAuthManager.getSingleton();
     const lookupUri = "https://" + sourceUrl.host + "/files/" + path;
     Util.printLine();
-    console.log("fetching from:", lookupUri);
+    App.logger.info("fetching from:", lookupUri);
     const contents = await fetch(lookupUri, {
       method: "GET",
       headers: {

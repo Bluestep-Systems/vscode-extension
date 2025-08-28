@@ -1,16 +1,16 @@
 import * as vscode from 'vscode';
-import { State } from '../../app/App';
+import { App } from '../../app/App';
 import { UpdateChecker } from '../../app/services/UpdateChecker';
 
 export default function (context: vscode.ExtensionContext) {
 
   try {
-    console.log("B6P: Initializing state...");
-    State.initializeFromContext(context);
     
+    App.initializeFromContext(context);
+    App.logger.info("B6P: App initialized");
     return;
     //TODO implement this properly
-    
+
     // Start automatic update checking (async, don't block startup)
     setTimeout(async () => {
       try {

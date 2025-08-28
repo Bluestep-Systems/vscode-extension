@@ -1,5 +1,5 @@
 import type { SavableObject } from "../../../../../types";
-import { State } from "../../App";
+import { App } from "../../App";
 
 export abstract class PseudoMap<T> {
   protected obj: Record<string, T> = {};
@@ -42,12 +42,12 @@ export class PublicPersistanceMap<T extends SavableObject> extends PseudoMap<T> 
   constructor(key: string) {
     super();
     this.key = key;
-    console.log("PublicPersistanceMap initialized with key:", key);
-    this.obj = State.context.workspaceState.get<Record<string, T>>(this.key, {});
+    App.logger.info("PublicPersistanceMap initialized with key:", key);
+    this.obj = App.context.workspaceState.get<Record<string, T>>(this.key, {});
   }
   store(): void {
-    console.log("PublicPersistanceMap storing data with key:", this.key);
-    State.context.workspaceState.update(this.key, this.obj);
+    App.logger.info("PublicPersistanceMap storing data with key:", this.key);
+    App.context.workspaceState.update(this.key, this.obj);
   }
   clear(bool?: boolean): void {
     this.obj = {};
@@ -62,8 +62,8 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T>
   constructor(key: PrivateKeys) {
     super();
     this.key = key;
-    console.log("PrivatePersistanceMap loaded data for key:", this.key);
-    State.context.secrets.get(this.key).then(jsonString => {
+    App.logger.info("PrivatePersistanceMap loaded data for key:", this.key);
+    App.context.secrets.get(this.key).then(jsonString => {
       this.obj = JSON.parse(jsonString || '{}');
       this.initialized = true;
     });
@@ -73,9 +73,9 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T>
     // });
   }
   store(): void {
-    console.log("PrivatePersistanceMap storing data with key:", this.key);
-    State.context.secrets.store(this.key, JSON.stringify(this.obj));
-    State.saveState();
+    App.logger.info("PrivatePersistanceMap storing data with key:", this.key);
+    App.context.secrets.store(this.key, JSON.stringify(this.obj));
+    App.saveState();
   }
   clear(bool?: boolean): void {
     this.obj = {};

@@ -78,6 +78,10 @@
       {
         "command": "bsjs-push-pull.runTask",
         "title": "B6P: Run Task"
+      },
+      {
+        "command": "bsjs-push-pull.notify",
+        "title": "B6P: Notify"
       }
     ],
     "viewsContainers": {
@@ -101,7 +105,7 @@
     "viewsWelcome": [
       {
         "view": "b6pMenuView",
-        "contents": "--- QUICK ---"
+        "contents": "--- Quick Tasks ---"
       },
       {
         "view": "b6pMenuView",
@@ -117,7 +121,7 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "--- OTHER ---"
+        "contents": "--- Main ---"
       },
       {
         "view": "b6pMenuView",
@@ -133,7 +137,23 @@
       },
       {
         "view": "b6pMenuView",
+        "contents": "---- UNDER DEVELOPMENT ----"
+      },
+      {
+        "view": "b6pMenuView",
         "contents": "[Check for Updates](command:bsjs-push-pull.checkForUpdates)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Quick Deploy to Template](command:bsjs-push-pull.notify)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[GOTO BlueSync](command:bsjs-push-pull.notify)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Trigger BlueSync Task](command:bsjs-push-pull.notify)"
       }
     ]
   },

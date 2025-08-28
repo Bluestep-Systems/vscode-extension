@@ -4,6 +4,7 @@ import { Util } from '../../util';
 import { Alert } from '../../util/ui/Alert';
 import * as path from 'path';
 import { urlParser } from '../../util/data/URLParser';
+import { App } from '../../App';
 /**
  * TODO
  */
@@ -26,7 +27,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       Alert.error('target URI not valid');
       return;
     }
-    console.log("sourceFolder", sourceFolder);
+    App.logger.info("sourceFolder", sourceFolder);
     const sourceFolderUri = sourceFolder.substring('file://'.length);
     if (!sourceFolder) {
       Alert.error('No source folder found');
@@ -81,7 +82,7 @@ async function sendFile({ localFile, targetFormulaUri, creds }: { localFile: str
     .split(url.host + path.sep + webDavId)[1]!
     .replaceAll(path.sep, "/");
   url.pathname = `/files/${webDavId}${desto}`;
-  console.log("Destination:", url.toString());
+  App.logger.info("Destination:", url.toString());
 
   //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(vscode.Uri.file(localFile));
