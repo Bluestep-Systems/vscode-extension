@@ -34,7 +34,16 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     .then(async node => await tunnelNode(node, { nodeURI: sourceFolderUri }));
 
   for (const file of fileList) {
-    sendFile({ localFile: file, targetFormulaUri, creds: BasicAuthManager.getSingleton() });
+    /**
+     * NOTE:
+     * 
+     * we want to `await` each one here so that they run sequentially, and not in parallel.
+     *
+     * This
+     * (1) prevents us from overloading the server with the plurality of requests
+     * (2) prevents duplicate folders from being created by the webdav PUT method.
+     */
+    await sendFile({ localFile: file, targetFormulaUri, creds: BasicAuthManager.getSingleton() });
   }
 }
 async function tunnelNode(node: [string, vscode.FileType][], {
