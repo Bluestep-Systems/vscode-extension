@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { UpdateChecker } from '../../util/UpdateChecker';
+import { UpdateChecker } from '../../services/UpdateChecker';
 import { State } from '../../App';
 
 export default async function checkForUpdates(): Promise<void> {

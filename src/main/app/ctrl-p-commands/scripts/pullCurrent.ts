@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getFileMetaData } from '../../util/FileMetaData';
+import { getFileMetaData } from '../../util/data/FileMetaData';
 import pullScript from '../scripts/pull';
 export default async function (): Promise<void> {
   const workspaceUri = vscode.workspace.workspaceFolders![0]!.uri;

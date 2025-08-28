@@ -1,20 +1,20 @@
 import * as vscode from 'vscode';
-import fetchScript from "./pullCurrent";
-import pushScript from "./pushCurrent";
-export default function() {
+import pull from "./pull";
+import push from "./pull";
+export default function () {
 
     // #region eval variables
     // these are seemingly unused variables/properties that are specifically left so 
     // that they are accessible in the eval scope
     const B6P = {
         activeEditorDocument: vscode.window.activeTextEditor!.document,
-        pull: fetchScript,
-        push: pushScript,
+        pull,
+        push,
         alert
     };
     // #endregion
     try {
-        eval(B6P.activeEditorDocument.getText());        
+        eval(B6P.activeEditorDocument.getText());
     } catch (error) {
         vscode.window.showInformationMessage('horay!');
         vscode.window.showErrorMessage(`Error executing script: ${error}`);

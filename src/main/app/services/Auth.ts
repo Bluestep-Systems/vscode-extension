@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { PrivateKeys, PrivatePersistanceMap } from "./PseudoMaps";
+import { PrivateKeys, PrivatePersistanceMap } from "../../app/util/data/PseudoMaps";
 import { SavableObject } from '../../../../types';
 
 export interface AuthType {

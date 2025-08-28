@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import lifeCycle from './lifecycle-control';
+import lifeCycle from './lifecycle';
 
 /**
  * This method is called when the extension is activated. Triggers once on load.

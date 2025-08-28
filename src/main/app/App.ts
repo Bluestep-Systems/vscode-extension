@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import type { ReadOnlyMap, SavableObject } from '../../../types';
-import { PublicPersistanceMap } from './util/PseudoMaps';
+import { PublicPersistanceMap } from './util/data/PseudoMaps';
 import ctrlPCommands from './ctrl-p-commands';
-import { BasicAuthManager } from './util/Auth';
+import { BasicAuthManager } from './services/Auth';
 
 
 export const State = new class {

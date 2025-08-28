@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { getScript } from "../../util/tree";
-import { urlParser } from "../../util/URLParser";
-import { BasicAuthManager } from '../../util/Auth';
+import { urlParser } from "../../util/data/URLParser";
+import { BasicAuthManager } from '../../services/Auth';
 import { Util } from '../../util';
 /**
  * TODO

@@ -1,9 +1,9 @@
-import { AuthManager, AuthType } from "../Auth";
+import { AuthManager, AuthType } from "../../services/Auth";
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { XMLParser } from 'fast-xml-parser';
 import PutObjVal from "./PutObjVal";
 import * as vscode from "vscode";
-import { urlParser } from "../URLParser";
+import { urlParser } from "../data/URLParser";
 type GetScriptArg = {
   url: URL;
   authManager: AuthManager<AuthType>;

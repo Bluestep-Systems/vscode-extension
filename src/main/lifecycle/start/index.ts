@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { State } from '../../app/App';
-import { UpdateChecker } from '../../app/util/UpdateChecker';
+import { UpdateChecker } from '../../app/services/UpdateChecker';
 
 export default function (context: vscode.ExtensionContext) {
   try {
