@@ -1,3 +1,6 @@
+//TODO remove this after we're done
+//@ts-nocheck
+
 import * as vscode from 'vscode';
 import * as https from 'https';
 
@@ -36,6 +39,8 @@ export class UpdateChecker {
    */
   public async checkForUpdatesIfNeeded(): Promise<void> {
     //TODO implement this properly
+    // NOTE: THERE IS A //@ts-nocheck on top that you
+    // need to remove when we get around to implementing this!!!!
 
     // try {
     //   const config = vscode.workspace.getConfiguration('bsjs-push-pull');
@@ -64,6 +69,8 @@ export class UpdateChecker {
    */
   public async checkForUpdates(): Promise<UpdateInfo | null> {
     //TODO implement this properly
+    // NOTE: THERE IS A //@ts-nocheck on top that you
+    // need to remove when we get around to implementing this!!!!
     return null;
     // try {
     //   const currentVersion = this.getCurrentVersion();
@@ -101,6 +108,8 @@ export class UpdateChecker {
     return new Promise((resolve, reject) => {
 
       //TODO implement this properly
+      // NOTE: THERE IS A //@ts-nocheck on top that you
+      // need to remove when we get around to implementing this!!!!
       return;
       // const options = {
       //   hostname: 'api.github.com',
@@ -174,6 +183,8 @@ export class UpdateChecker {
    */
   private isNewerVersion(newVersion: string, currentVersion: string): boolean {
     //TODO implement this properly
+    // NOTE: THERE IS A //@ts-nocheck on top that you
+    // need to remove when we get around to implementing this!!!!
     return false;
     // const parseVersion = (version: string) => {
     //   return version.split('.').map(num => parseInt(num, 10));
@@ -207,6 +218,8 @@ export class UpdateChecker {
    */
   private getDownloadUrl(release: GitHubRelease): string {
     //TODO implement this properly
+    // NOTE: THERE IS A //@ts-nocheck on top that you
+    // need to remove when we get around to implementing this!!!!
     return "";
     // // Look for .vsix file in assets
     // const vsixAsset = release.assets.find(asset => asset.name.endsWith('.vsix'));
@@ -223,6 +236,10 @@ export class UpdateChecker {
    */
   private async notifyUser(updateInfo: UpdateInfo): Promise<void> {
     //TODO implement this properly
+    // NOTE: THERE IS A //@ts-nocheck on top that you
+    // need to remove when we get around to implementing this!!!!
+
+
     // const config = vscode.workspace.getConfiguration('bsjs-push-pull');
     // const showNotifications = config.get<boolean>('updateCheck.showNotifications', true);
     
