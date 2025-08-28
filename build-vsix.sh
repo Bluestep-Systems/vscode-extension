@@ -1,4 +1,13 @@
+#!/bin/bash
+set -e
+cd $(dirname ${0})
 npm update
 npm install
 npm run package-extension
-mv bsjs-push-pull-0.0.1.vsix ./packages/
+mv bsjs-push-pull-*.vsix ./packages/
+echo "==============================="
+echo ""
+echo "Build complete!"
+echo "TODO. AUTO PUSH UPDATE TO BLUEHQ"
+echo ""
+echo "RELOAD EDITOR SINCE IT THE BUILD SCRIPT MESSES WITH DEVELOPER INSTALLS"
