@@ -12,6 +12,10 @@
     "url": "https://github.com/bluestep-systems/vscode-extension/issues"
   },
   "homepage": "https://github.com/bluestep-systems/vscode-extension#readme",
+  "galleryBanner": {
+    "color": "#C80000",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.103.0"
   },
@@ -23,6 +27,21 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "B6P - BlueStep JavaScript Push/Pull",
+      "properties": {
+        "bsjs-push-pull.updateCheck.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic update checking"
+        },
+        "bsjs-push-pull.updateCheck.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show update notifications"
+        }
+      }
+    },
     "commands": [
       {
         "command": "bsjs-push-pull.pushScript",
@@ -43,6 +62,10 @@
       {
         "command": "bsjs-push-pull.updateCredentials",
         "title": "B6P: Update Credentials"
+      },
+      {
+        "command": "bsjs-push-pull.checkForUpdates",
+        "title": "B6P: Check for Updates"
       },
       {
         "command": "bsjs-push-pull.report",
@@ -107,6 +130,10 @@
       {
         "view": "b6pMenuView",
         "contents": "[Update Credentials](command:bsjs-push-pull.updateCredentials)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Check for Updates](command:bsjs-push-pull.checkForUpdates)"
       }
     ]
   },

@@ -9,13 +9,18 @@ export default function() {
     const B6P = {
         activeEditorDocument: vscode.window.activeTextEditor!.document,
         pull: fetchScript,
-        push: pushScript
+        push: pushScript,
+        alert
     };
     // #endregion
     try {
         eval(B6P.activeEditorDocument.getText());        
     } catch (error) {
+        vscode.window.showInformationMessage('horay!');
         vscode.window.showErrorMessage(`Error executing script: ${error}`);
         vscode.window.activeTerminal?.sendText(`Error executing script: ${error}`);
     }
+}
+function alert(str: string) {
+    vscode.window.showInformationMessage(str);
 }
