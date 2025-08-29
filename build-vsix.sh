@@ -77,8 +77,8 @@ mv bsjs-push-pull-*.vsix ./packages/
 if [[ "$GIT_MODE" == true ]]; then
   echo "📝 Git mode: Performing git operations"
   
-  TAG="$(../gittag)"
-  # Add all changes
+  TAG="$(./gittag.sh)"
+  # Add all git changes
   git add .
   
   # Commit with version tag
