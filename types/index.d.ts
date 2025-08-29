@@ -48,3 +48,8 @@ export type XMLResponse = {
     }[];
   };
 }
+export type SessionData = {
+  lastRefresh: number;
+  JSESSIONID: string;
+  INGRESSCOOKIE: string;
+}

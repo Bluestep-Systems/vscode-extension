@@ -1,23 +1,22 @@
-import { AuthManager, AuthType } from "../../services/Auth";
-import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { XMLParser } from 'fast-xml-parser';
-import PutObjVal from "../tree/PutObjVal";
-import { urlParser } from "./URLParser";
-import { Alert } from "../ui/Alert";
+import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
+import { SessionManager } from "../../services/SessionManager";
+import PutObjVal from "../tree/PutObjVal";
+import { Alert } from "../ui/Alert";
+import { urlParser } from "./URLParser";
 type GetScriptArg = {
   url: URL;
-  authManager: AuthManager<AuthType>;
   curLayer?: PrimitiveNestedObject;
   webDavId: string;
 }
 type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: string[] } | undefined;
-export async function getScript({ url, webDavId, authManager, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
+export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
   try {
     const parser = new XMLParser();
     url.pathname = `/files/${webDavId}/`;
     App.logger.info("Fetching script from URL:", url.href);
-    const response = await fetch(url, {
+    const response = await SessionManager.getInstance().fetch(url, {
       //TODO review these
       "headers": {
         "accept": "*/*",
@@ -25,7 +24,6 @@ export async function getScript({ url, webDavId, authManager, curLayer = {} }: G
         "cache-control": "no-cache",
         "pragma": "no-cache",
         "upgrade-insecure-requests": "1",
-        "authorization": `${await authManager.authHeaderValue()}`
       },
       "method": "PROPFIND"
     });

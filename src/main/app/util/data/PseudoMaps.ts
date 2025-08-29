@@ -14,13 +14,18 @@ export abstract class PseudoMap<T> {
   has(key: string): boolean {
     return key in this.obj;
   }
-  set(key: string, value: T): void {
+  set(key: string, value: T): this {
     this.obj[key] = value;
+    return this;
   }
   forEach(callback: (element: T, key: string) => void): void {
     for (const key in this.obj) {
       callback(this.obj[key], key);
     }
+  }
+  delete(key: string): this {
+    delete this.obj[key];
+    return this;
   }
   toJSON(): string {
     return JSON.stringify(this.obj);
@@ -34,7 +39,7 @@ export abstract class PseudoMap<T> {
 interface Persistable {
   readonly key: string;
   store(): void;
-  clear(bool?: boolean): void;
+  clear(): void;
 }
 
 export class PublicPersistanceMap<T extends SavableObject> extends PseudoMap<T> implements Persistable {
@@ -45,13 +50,19 @@ export class PublicPersistanceMap<T extends SavableObject> extends PseudoMap<T> 
     App.logger.info("PublicPersistanceMap initialized with key:", key);
     this.obj = App.context.workspaceState.get<Record<string, T>>(this.key, {});
   }
+  // @Override
+  set(key: string, value: T): this {
+    this.obj[key] = value;
+    this.store();
+    return this;
+  }
   store(): void {
     App.logger.info("PublicPersistanceMap storing data with key:", this.key);
     App.context.workspaceState.update(this.key, this.obj);
   }
-  clear(bool?: boolean): void {
+  clear(): void {
     this.obj = {};
-    bool && this.store();
+    this.store();
   }
 }
 export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T> implements Persistable {
@@ -77,14 +88,15 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T>
     App.context.secrets.store(this.key, JSON.stringify(this.obj));
     App.saveState();
   }
-  clear(bool?: boolean): void {
+  clear(): void {
     this.obj = {};
-    bool && this.store();
+    this.store();
   }
-  // TODO find a better way to do this in typescript
   // @Override
-  get(key: string): T | undefined {
-    return this.obj[key];
+  set(key: string, value: T): this {
+    this.obj[key] = value;
+    this.store();
+    return this;
   }
   async touch(): Promise<void> {
     // Update the last accessed time

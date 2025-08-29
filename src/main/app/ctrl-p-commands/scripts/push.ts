@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { AuthManager, AuthType, BasicAuthManager } from '../../services/Auth';
 import { Util } from '../../util';
 import { Alert } from '../../util/ui/Alert';
 import * as path from 'path';
 import { urlParser } from '../../util/data/URLParser';
 import { App } from '../../App';
+import { SessionManager } from '../../services/SessionManager';
 /**
  * TODO
  */
@@ -47,7 +47,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
        * (1) prevents us from overloading the server with the plurality of requests
        * (2) prevents duplicate folders from being created by the webdav PUT method.
        */
-      await sendFile({ localFile: file, targetFormulaUri, creds: BasicAuthManager.getSingleton() });
+      await sendFile({ localFile: file, targetFormulaUri });
     }
     Alert.info('Push complete!');
   } catch (e) {
@@ -72,7 +72,7 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   }));
   return pathList;
 }
-async function sendFile({ localFile, targetFormulaUri, creds }: { localFile: string; targetFormulaUri: string; creds: AuthManager<AuthType>; }) {
+async function sendFile({ localFile, targetFormulaUri }: { localFile: string; targetFormulaUri: string; }) {
   if (localFile.includes(`${path.sep}declarations${path.sep}`)) {
     console.log("skipping declarations file");
     return;
@@ -86,11 +86,10 @@ async function sendFile({ localFile, targetFormulaUri, creds }: { localFile: str
 
   //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(vscode.Uri.file(localFile));
-  const resp = await fetch(url.toString(), {
+  const resp = await SessionManager.getInstance().fetch(url.toString(), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `${await creds.authHeaderValue()}`
     },
     body: fileContents
   });

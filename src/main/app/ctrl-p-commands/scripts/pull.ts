@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
+import { App } from '../../App';
+import { SessionManager } from '../../services/SessionManager';
+import { Util } from '../../util';
 import { getScript } from "../../util/data/getScript";
 import { urlParser } from "../../util/data/URLParser";
-import { BasicAuthManager } from '../../services/Auth';
-import { Util } from '../../util';
 import { Alert } from '../../util/ui/Alert';
-import { App } from '../../App';
 /**
  * TODO
  */
@@ -15,7 +15,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
      return;
    }
    const { url, webDavId } = urlObj;
-   const ScriptObject = await getScript({ url, webDavId, authManager: BasicAuthManager.getSingleton() });
+   const ScriptObject = await getScript({ url, webDavId });
    if (ScriptObject === undefined) {
      return;
    }
@@ -65,15 +65,11 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const authManager = BasicAuthManager.getSingleton();
     const lookupUri = "https://" + sourceUrl.host + "/files/" + path;
     Util.printLine();
     App.logger.info("fetching from:", lookupUri);
-    const contents = await fetch(lookupUri, {
+    const contents = await SessionManager.getInstance().fetch(lookupUri, {
       method: "GET",
-      headers: {
-        "Authorization": `${await authManager.authHeaderValue()}`
-      }
     });
     vscode.workspace.fs.writeFile(ultimatePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));
   }

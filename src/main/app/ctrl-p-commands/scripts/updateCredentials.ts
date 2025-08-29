@@ -3,8 +3,9 @@ import * as vscode from 'vscode';
 import { BasicAuthManager } from '../../services/Auth';
 
 export default async function (): Promise<void> {
+  const authManager = BasicAuthManager.getSingleton();
   try {
-    const creds = await BasicAuthManager.getSingleton().getAuth();
+    const creds = await authManager.getAuth();
     const oldUsername = creds.username;
     const oldPassword = creds.password;
     const newUsername = await vscode.window.showInputBox({ prompt: 'Enter new username', placeHolder: oldUsername + " (Enter to Keep)" });
@@ -30,7 +31,7 @@ export default async function (): Promise<void> {
     } else {
       vscode.window.showInformationMessage("Credentials Updated!");
     }
-    BasicAuthManager.getSingleton().setAuth(creds);
+    authManager.setAuth(creds);
   } catch (error) {
     console.trace("Error getting user credentials:", error);
   }
