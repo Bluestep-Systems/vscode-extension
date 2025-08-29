@@ -4,24 +4,25 @@ import { SessionManager } from '../../services/SessionManager';
 import { Util } from '../../util';
 import { urlParser } from '../../util/data/URLParser';
 import { Alert } from '../../util/ui/Alert';
+import * as path from 'path';
 /**
  * TODO
  */
-export default async function (overrideFormulaUri?: string): Promise<void> {
+type SourceOps = { sourceOrigin: string, topId: string };
+export default async function (overrideFormulaUri?: string, sourceOps?: SourceOps): Promise<void> {
   try {
-    const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
-    if (activeEditorUri === undefined) {
+    const sourceEditorUri = await getOurUri(sourceOps);
+    if (sourceEditorUri === undefined) {
       Alert.error('No source path provided');
       return;
     }
-    App.logger.info(Util.printLine({ ret: true }) as string, "Active Editor URI:", activeEditorUri.toString());
-    console.log(Util.printLine({ ret: true }), "Active Editor URI:", activeEditorUri.toString());
+    App.logger.info(Util.printLine({ ret: true }) as string, "Active Editor URI:", sourceEditorUri.toString());
     const targetFormulaUri = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
     if (targetFormulaUri === undefined) {
       Alert.error('No target formula URI provided');
       return;
     }
-    const matcher = activeEditorUri.toString().match(/(.*\/\d+)\//);
+    const matcher = sourceEditorUri.toString().match(/(.*\/\d+)\//);
     const sourceFolder = matcher ? matcher[1] : null;
     if (sourceFolder === null) {
       Alert.error('target URI not valid');
@@ -113,4 +114,102 @@ function uriStringToFilePath(uriString: string): string {
   path = decodeURIComponent(path);
 
   return path;
+}
+
+async function getOurUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
+  if (!sourceOps) {
+    return vscode.window.activeTextEditor?.document.uri || (() => { throw new Error("No active editor found"); })();
+  }
+  const { sourceOrigin, topId } = sourceOps;
+  const url = new URL(sourceOrigin);
+  let found = false;
+  const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
+  const wsDir = await vscode.workspace.fs.readDirectory(curWorkspaceFolder.uri);
+  
+  const folderUri = wsDir.reduce(
+    (a, [subFolderName]) => {
+      const subFolderPath = path.join(curWorkspaceFolder.uri.fsPath, subFolderName);
+      console.log("Checking subfolder:", subFolderPath);
+      if (subFolderPath.includes(url.host)) {
+        if (found) {
+          throw new Error("Multiple folders found for source origin");
+        }
+        found = true;
+        return vscode.Uri.file(subFolderPath);
+      }
+      return a;
+    },
+    undefined as vscode.Uri | undefined
+  );
+  if (!folderUri) {
+    throw new Error("No folder found for source origin");
+  }
+  const id = new Id(topId);
+  const nodes = await vscode.workspace.fs.readDirectory(folderUri);
+  const ret = await findFileContainingId(nodes, folderUri, id);
+  console.log("Found file:", ret);
+  if (!ret) {
+    throw new Error("No matching file found");
+  }
+  return ret;
+}
+
+class Id {
+  classId: string;
+  seqnum: string;
+  altIdKey?: string;
+  constructor(id: string) {
+    // write a regex that takes id in the following patterh `363769__FID_dummyTestEndpoint` and extracts a regex
+    const match = id.match(/^(\d+)__(\w*)_(.+)$/);
+    if (match) {
+      this.classId = match[1];
+      this.altIdKey = match[2];
+      this.seqnum = match[3];
+    } else {
+      throw new Error("Invalid ID format");
+    }
+  }
+  private toSearchableString() {
+    console.log(JSON.stringify(this));
+    const ret = `${this.altIdKey}=${this.seqnum}`;
+    console.log("Searchable string:", ret);
+    return ret;
+  }
+  async isContainedIn(uri: vscode.Uri): Promise<boolean> {
+    const fileContent = await vscode.workspace.fs.readFile(uri);
+    const textContent = new TextDecoder().decode(fileContent);
+    console.log("File content:", textContent);
+    if (textContent.includes(this.toSearchableString())) {
+      console.log("Found matching string in file");
+      return true;
+    }
+    console.log("Did not find matching string in file");
+    return false;
+  }
+}
+
+async function findFileContainingId(nodes: [string, vscode.FileType][], folderUri: vscode.Uri, id: Id): Promise<vscode.Uri | null> {
+  console.log("Searching for ID:", id);
+  console.log("In folder:", folderUri.fsPath);
+  console.log("nodes:", nodes);
+  for (const [name, type] of nodes) {
+    if (type === vscode.FileType.Directory) {
+      const nestedFolderUri = vscode.Uri.file(path.join(folderUri.fsPath, name));
+
+      try {
+        console.log("Looking in folder:", nestedFolderUri.fsPath);
+        const files = await vscode.workspace.findFiles(new vscode.RelativePattern(nestedFolderUri, '**/metadata.json'));
+        console.log("Found files:", files);
+        for (const file of files) {
+          const isContained = await id.isContainedIn(file);
+          if (isContained) {
+            return file;
+          }
+        }
+      } catch (error) {
+        Alert.warning(`Error reading directory ${nestedFolderUri.fsPath}: ${error}`);
+      }
+    }
+  }
+  return null;
 }

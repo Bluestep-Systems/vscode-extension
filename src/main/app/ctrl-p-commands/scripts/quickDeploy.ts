@@ -3,22 +3,26 @@ import { SessionManager } from "../../services/SessionManager";
 import { PrivateKeys, PrivatePersistanceMap } from "../../util/data/PseudoMaps";
 import { Alert } from "../../util/ui/Alert";
 import push from "./push";
-declare function getArgs(): { origins: string[], topId: string };
 export default async function (): Promise<void> {
   const curText = vscode.window.activeTextEditor!.document.getText();
-  eval(curText);
+  const getArgs = eval(curText) as (() => { origins: string[], topIds: string[], sourceOrigin: string });
+
   if (typeof getArgs !== 'function') {
+    console.log(curText);
+    console.log("type", typeof getArgs);
     Alert.error("getArgs is not a function!");
   }
-  const { origins, topId } = getArgs();
+  const { origins, topIds, sourceOrigin } = getArgs();
   console.log("Quick Deploy triggered");
   origins.forEach(async (origin) => {
-    const webDavId = await getScriptWebdavId(origin, topId);
-    if (webDavId !== null) {
-      push(`${origin}/files/${webDavId}/`);
-    } else {
-      Alert.error(`Could not find script at ${origin} with topId ${topId}`);
-    }
+    topIds.forEach(async topId => {
+      const webDavId = await getScriptWebdavId(origin, topId);
+      if (webDavId !== null) {
+        push(`${origin}/files/${webDavId}/`, { sourceOrigin, topId });
+      } else {
+        Alert.error(`Could not find script at ${origin} with topId ${topId}`);
+      }
+    });
   });
 }
 async function getScriptWebdavId(origin: string, topId: string): Promise<string | null> {
