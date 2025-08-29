@@ -19,7 +19,7 @@ while [[ $# -gt 0 ]]; do
       GIT_MODE=true
       shift # past argument
       ;;
-    -c|--clean)
+    -k|--clean)
       CLEAN=true
       # Check if next argument is a number
       if [[ $# -gt 1 && $2 =~ ^[0-9]+$ ]]; then
@@ -28,12 +28,12 @@ while [[ $# -gt 0 ]]; do
       fi
       shift # past argument
       ;;
-    -c*)
-      # Handle -c5 format (number directly attached)
+    -k*)
+      # Handle -k5 format (number directly attached)
       CLEAN=true
-      KEEP_COUNT="${1#-c}"
+      KEEP_COUNT="${1#-k}"
       if [[ ! "$KEEP_COUNT" =~ ^[0-9]+$ ]]; then
-        echo "Error: Invalid number format for -c option: $KEEP_COUNT"
+        echo "Error: Invalid number format for -k option: $KEEP_COUNT"
         exit 1
       fi
       shift # past argument
@@ -43,9 +43,9 @@ while [[ $# -gt 0 ]]; do
       echo "Options:"
       echo "  -r, --release         Increment version and install dependencies for release"
       echo "  -g, --git             Perform git operations (commit, tag, push)"
-      echo "  -c[N], -c [N], --clean [N]"
+      echo "  -k[N], -k [N], --clean [N]"
       echo "                        Keep only the N most recent versions (default: 1)"
-      echo "                        Examples: -c (keep 1), -c3 (keep 3), --clean 5"
+      echo "                        Examples: -k (keep 1), -k3 (keep 3), --clean 5"
       echo "  -h, --help            Show this help message"
       exit 0
       ;;
