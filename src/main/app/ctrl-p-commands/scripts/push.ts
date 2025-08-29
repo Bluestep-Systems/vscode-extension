@@ -101,7 +101,7 @@ async function sendFile({ localFile, targetFormulaUri }: { localFile: string; ta
   if (!resp.ok) {
     throw new Error('Failed to send file');
   }
-  console.log(resp);
+  App.logger.info("File sent successfully:", localFile);
   return resp;
 }
 
@@ -129,7 +129,6 @@ async function getOurUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
   const folderUri = wsDir.reduce(
     (a, [subFolderName]) => {
       const subFolderPath = path.join(curWorkspaceFolder.uri.fsPath, subFolderName);
-      console.log("Checking subfolder:", subFolderPath);
       if (subFolderPath.includes(url.host)) {
         if (found) {
           throw new Error("Multiple folders found for source origin");
@@ -147,7 +146,6 @@ async function getOurUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
   const id = new Id(topId);
   const nodes = await vscode.workspace.fs.readDirectory(folderUri);
   const ret = await findFileContainingId(nodes, folderUri, id);
-  console.log("Found file:", ret);
   if (!ret) {
     throw new Error("No matching file found");
   }
@@ -170,36 +168,25 @@ class Id {
     }
   }
   private toSearchableString() {
-    console.log(JSON.stringify(this));
-    const ret = `${this.altIdKey}=${this.seqnum}`;
-    console.log("Searchable string:", ret);
-    return ret;
+    return `${this.altIdKey}=${this.seqnum}`;
   }
   async isContainedIn(uri: vscode.Uri): Promise<boolean> {
     const fileContent = await vscode.workspace.fs.readFile(uri);
     const textContent = new TextDecoder().decode(fileContent);
-    console.log("File content:", textContent);
     if (textContent.includes(this.toSearchableString())) {
-      console.log("Found matching string in file");
       return true;
     }
-    console.log("Did not find matching string in file");
     return false;
   }
 }
 
 async function findFileContainingId(nodes: [string, vscode.FileType][], folderUri: vscode.Uri, id: Id): Promise<vscode.Uri | null> {
-  console.log("Searching for ID:", id);
-  console.log("In folder:", folderUri.fsPath);
-  console.log("nodes:", nodes);
   for (const [name, type] of nodes) {
     if (type === vscode.FileType.Directory) {
       const nestedFolderUri = vscode.Uri.file(path.join(folderUri.fsPath, name));
 
       try {
-        console.log("Looking in folder:", nestedFolderUri.fsPath);
         const files = await vscode.workspace.findFiles(new vscode.RelativePattern(nestedFolderUri, '**/metadata.json'));
-        console.log("Found files:", files);
         for (const file of files) {
           const isContained = await id.isContainedIn(file);
           if (isContained) {
