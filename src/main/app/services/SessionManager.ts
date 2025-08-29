@@ -5,15 +5,14 @@ import { BasicAuthManager } from "./Auth";
 export class SessionManager {
   private static MILLIS_IN_A_MINUTE = 1000 * 60;
   private static SESSION_DURATION = SessionManager.MILLIS_IN_A_MINUTE * 45;
-  public static sessions: PrivatePersistanceMap<SessionData>;
-
+  private static sessions: PrivatePersistanceMap<SessionData>;
   private static instance: SessionManager | null = null;
   private curDomain: string | null = null;
   private constructor() {
     SessionManager.sessions = new PrivatePersistanceMap(PrivateKeys.SESSIONS);
   }
 
-  public static getInstance(): SessionManager {
+  public static getSingleton(): SessionManager {
     if (this.instance === null) {
       this.instance = new SessionManager();
     }
@@ -22,11 +21,9 @@ export class SessionManager {
 
   public processResponse(response: Response): Response {
     const cookies = response.headers.get("set-cookie");
-    console.log("RESPONSE COOKIES", cookies);
     const responderUrl = new URL(response.url);
     if (cookies) {
-      const cookieMap = this.parseCookies(cookies);
-      console.log("Parsed Cookies", cookieMap);
+      const cookieMap = this.parseCookies(response.headers);
       const sessionData: SessionData = {
         lastRefresh: Date.now(),
         JSESSIONID: cookieMap.get("JSESSIONID") 
@@ -74,26 +71,39 @@ export class SessionManager {
     }
     SessionManager.sessions.delete(domain);
   }
-  private parseCookies(cookies: string): Map<string, string> {
+
+  /**
+   * NOTE: this is not a proper cookie parser since we
+   * do not care about attributes like `Secure` and `HttpOnly`
+   * in this extension (yet). In the event that we do need such parsing
+   * we should implement a more robust method and/or find some external library
+   * @param cookies
+   * @returns
+   */
+  private parseCookies(headers: Headers): Map<string, string> {
     const cookieMap = new Map<string, string>();
-    
-    // Split by comma to handle multiple Set-Cookie headers
+
+    const cookies = headers.get("set-cookie");
+    if (!cookies) {
+      return cookieMap;
+    }
+    // this regex will split on commas when there is a cookie ahead of it
+    // it is because the response.headers.get("set-cookie") can return multiple
+    // instances of the set-cookie header, but are separated by a comma
     const cookieStrings = cookies.split(/,(?=[^;]+=[^;])/);
     console.log("Cookie Strings", cookieStrings);
     cookieStrings.forEach(cookieString => {
-      // Split by semicolon to separate cookie value from attributes
       const parts = cookieString.split(";").map(part => part.trim());
       
       if (parts.length > 0) {
-        // First part is the actual cookie name=value
         const cookiePart = parts[0];
         const equalIndex = cookiePart.indexOf("=");
         
         if (equalIndex > 0) {
           const name = cookiePart.substring(0, equalIndex).trim();
           const value = cookiePart.substring(equalIndex + 1).trim();
-          
-          // Only store if we have both name and value
+
+          // we only care about name=value pairs
           if (name && value) {
             cookieMap.set(name, value);
           }

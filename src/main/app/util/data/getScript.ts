@@ -16,7 +16,7 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
     const parser = new XMLParser();
     url.pathname = `/files/${webDavId}/`;
     App.logger.info("Fetching script from URL:", url.href);
-    const response = await SessionManager.getInstance().fetch(url, {
+    const response = await SessionManager.getSingleton().fetch(url, {
       //TODO review these
       "headers": {
         "accept": "*/*",

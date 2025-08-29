@@ -68,7 +68,7 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
     const lookupUri = "https://" + sourceUrl.host + "/files/" + path;
     Util.printLine();
     App.logger.info("fetching from:", lookupUri);
-    const contents = await SessionManager.getInstance().fetch(lookupUri, {
+    const contents = await SessionManager.getSingleton().fetch(lookupUri, {
       method: "GET",
     });
     vscode.workspace.fs.writeFile(ultimatePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));

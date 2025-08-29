@@ -86,7 +86,7 @@ async function sendFile({ localFile, targetFormulaUri }: { localFile: string; ta
 
   //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(vscode.Uri.file(localFile));
-  const resp = await SessionManager.getInstance().fetch(url.toString(), {
+  const resp = await SessionManager.getSingleton().fetch(url.toString(), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
