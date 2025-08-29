@@ -121,11 +121,15 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Run Task](command:bsjs-push-pull.runTask)"
+        "contents": "[Quick Deploy](command:bsjs-push-pull.quickDeploy)"
       },
       {
         "view": "b6pMenuView",
         "contents": "--- Main ---"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Run Task](command:bsjs-push-pull.runTask)"
       },
       {
         "view": "b6pMenuView",
@@ -146,10 +150,6 @@
       {
         "view": "b6pMenuView",
         "contents": "[Check for Updates](command:bsjs-push-pull.checkForUpdates)"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Quick Deploy](command:bsjs-push-pull.quickDeploy)"
       },
       {
         "view": "b6pMenuView",
