@@ -99,7 +99,17 @@ async function sendFile({ localFile, targetFormulaUri }: { localFile: string; ta
     body: fileContents
   });
   if (!resp.ok) {
-    throw new Error('Failed to send file');
+    const details = `
+========
+========
+status: ${resp.status}
+statusText: ${resp.statusText}
+========
+========
+text: ${await resp.text()}
+========
+========`;
+    throw new Error('Failed to send file' + details);
   }
   App.logger.info("File sent successfully:", localFile);
   return resp;
