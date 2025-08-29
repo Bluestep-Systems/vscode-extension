@@ -40,6 +40,11 @@ if [[ "$RELEASE_MODE" == true ]]; then
   npm install #the install is mostly just to update package-lock.json
 fi
 
+npm run package-extension
+
+#this can probably be done inside the package-extension.js directly instead of us doing it here
+mv bsjs-push-pull-*.vsix ./packages/
+
 # Git mode: perform git operations
 if [[ "$GIT_MODE" == true ]]; then
   echo "📝 Git mode: Performing git operations"
@@ -58,11 +63,6 @@ if [[ "$GIT_MODE" == true ]]; then
   git push origin ${TAG}
   git push origin "v${VERSION}" || echo "Tag already pushed"
 fi
-
-npm run package-extension
-
-#this can probably be done inside the package-extension.js directly instead of us doing it here
-mv bsjs-push-pull-*.vsix ./packages/
 
 echo ""
 echo ""
