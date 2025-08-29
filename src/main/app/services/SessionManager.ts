@@ -4,7 +4,7 @@ import { BasicAuthManager } from "./Auth";
 
 export class SessionManager {
   private static MILLIS_IN_A_MINUTE = 1000 * 60;
-  private static SESSION_DURATION = SessionManager.MILLIS_IN_A_MINUTE * 45;
+  private static SESSION_DURATION = SessionManager.MILLIS_IN_A_MINUTE * 5; // 5 minutes
   private static sessions: PrivatePersistanceMap<SessionData>;
   private static instance: SessionManager | null = null;
   private curDomain: string | null = null;
@@ -42,7 +42,7 @@ export class SessionManager {
     const url = new URL(urlString);
     const sessionData = SessionManager.sessions.get(url.origin);
 
-    if (sessionData && sessionData.lastRefresh > Date.now() - SessionManager.SESSION_DURATION) {
+    if (sessionData && (sessionData.lastRefresh > (Date.now() - SessionManager.SESSION_DURATION))) {
       console.log("Using cached session data");
       options = {
         ...options,

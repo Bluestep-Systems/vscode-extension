@@ -82,6 +82,10 @@
       {
         "command": "bsjs-push-pull.notify",
         "title": "B6P: Notify"
+      },
+      {
+        "command": "bsjs-push-pull.quickDeploy",
+        "title": "B6P: Quick Deploy"
       }
     ],
     "viewsContainers": {
@@ -145,7 +149,7 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Quick Deploy to Template](command:bsjs-push-pull.notify)"
+        "contents": "[Quick Deploy](command:bsjs-push-pull.quickDeploy)"
       },
       {
         "view": "b6pMenuView",

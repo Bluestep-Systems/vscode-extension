@@ -6,4 +6,5 @@ import updateCredentials from "./scripts/updateCredentials";
 import runTask from "./scripts/runTask";
 import checkForUpdates from "./scripts/checkForUpdates";
 import notify from "./scripts/notify";
-export default { pullScript, pushScript, pullCurrent, pushCurrent, updateCredentials, runTask, checkForUpdates, notify };
+import quickDeploy from "./scripts/quickDeploy";
+export default { pullScript, pushScript, pullCurrent, pushCurrent, updateCredentials, runTask, checkForUpdates, notify, quickDeploy };

@@ -25,9 +25,9 @@ export default function (context: vscode.ExtensionContext) {
     
     //we don't know if this is a string, an error wrapper or whatever
     // so sadly `any` is the only appropriate catch type
-  } catch (error: any) {
+  } catch (error) {
     console.trace(error);
-    vscode.window.showErrorMessage('Failed to initialize extension: ' + (error.stack ? error.stack : ''), { modal: true });
+    vscode.window.showErrorMessage('Failed to initialize extension: ' + (error instanceof Error ? error.stack : error), { modal: true });
 
     // rethrow until we know for sure we don't need to.
     throw error;
