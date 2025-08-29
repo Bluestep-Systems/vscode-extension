@@ -6,7 +6,7 @@ cd $(dirname ${0})
 RELEASE_MODE=false
 GIT_MODE=false
 CLEAN=false
-KEEP_COUNT=1
+KEEP_COUNT=5
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do

@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
-import { Util } from '../../util';
-import { Alert } from '../../util/ui/Alert';
-import * as path from 'path';
-import { urlParser } from '../../util/data/URLParser';
 import { App } from '../../App';
 import { SessionManager } from '../../services/SessionManager';
+import { Util } from '../../util';
+import { urlParser } from '../../util/data/URLParser';
+import { Alert } from '../../util/ui/Alert';
 /**
  * TODO
  */
@@ -15,6 +14,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       Alert.error('No source path provided');
       return;
     }
+    App.logger.info(Util.printLine({ ret: true }) as string, "Active Editor URI:", activeEditorUri.toString());
     console.log(Util.printLine({ ret: true }), "Active Editor URI:", activeEditorUri.toString());
     const targetFormulaUri = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
     if (targetFormulaUri === undefined) {
@@ -28,14 +28,17 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       return;
     }
     App.logger.info("sourceFolder", sourceFolder);
-    const sourceFolderUri = sourceFolder.substring('file://'.length);
     if (!sourceFolder) {
       Alert.error('No source folder found');
       return;
     }
+    App.logger.info("Source folder URI:", sourceFolder);
+    const sourceFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
+    const readDir = sourceFolderUri;
+    App.logger.info("Reading directory:", readDir.toString());
     const fileList = await vscode.workspace.fs
-      .readDirectory(vscode.Uri.file(sourceFolderUri))
-      .then(async node => await tunnelNode(node, { nodeURI: sourceFolderUri }));
+      .readDirectory(readDir)
+      .then(async node => await tunnelNode(node, { nodeURI: uriStringToFilePath(sourceFolder) }));
 
     for (const file of fileList) {
       /**
@@ -73,14 +76,15 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   return pathList;
 }
 async function sendFile({ localFile, targetFormulaUri }: { localFile: string; targetFormulaUri: string; }) {
-  if (localFile.includes(`${path.sep}declarations${path.sep}`)) {
+  if (localFile.includes(`/declarations/`)) {
     console.log("skipping declarations file");
     return;
   }
+  App.logger.info("Preparing to send file:", localFile);
+  App.logger.info("To target formula URI:", targetFormulaUri);
   const { webDavId, url } = urlParser(targetFormulaUri);
   const desto = localFile
-    .split(url.host + path.sep + webDavId)[1]!
-    .replaceAll(path.sep, "/");
+    .split(url.host + "/" + webDavId)[1];
   url.pathname = `/files/${webDavId}${desto}`;
   App.logger.info("Destination:", url.toString());
 
@@ -98,4 +102,15 @@ async function sendFile({ localFile, targetFormulaUri }: { localFile: string; ta
   }
   console.log(resp);
   return resp;
+}
+
+
+function uriStringToFilePath(uriString: string): string {
+  // Remove the file:// protocol prefix if present
+  let path = uriString.replace(/^file:\/\/\/?/, '');
+
+  // URL decode the string to handle encoded characters like %3A
+  path = decodeURIComponent(path);
+
+  return path;
 }
