@@ -91,7 +91,7 @@ async function sendFile({ localFile, targetFormulaUri }: { localFile: string; ta
 
   //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(vscode.Uri.file(localFile));
-  const resp = await SessionManager.getSingleton().fetch(url.toString(), {
+  const resp = await SessionManager.fetch(url.toString(), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ async function getOurUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
   const wsDir = await vscode.workspace.fs.readDirectory(curWorkspaceFolder.uri);
   
   const folderUri = wsDir.reduce(
-    (a, [subFolderName]) => {
+    (curValue, [subFolderName, _fileType]) => {
       const subFolderPath = path.join(curWorkspaceFolder.uri.fsPath, subFolderName);
       if (subFolderPath.includes(url.host)) {
         if (found) {
@@ -146,7 +146,7 @@ async function getOurUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
         found = true;
         return vscode.Uri.file(subFolderPath);
       }
-      return a;
+      return curValue;
     },
     undefined as vscode.Uri | undefined
   );

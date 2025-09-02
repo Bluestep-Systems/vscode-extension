@@ -49,7 +49,8 @@ export type XMLResponse = {
   };
 }
 export type SessionData = {
-  lastRefresh: number;
-  JSESSIONID: string;
-  INGRESSCOOKIE: string;
+  lastTouched: number;
+  JSESSIONID: string | null;
+  INGRESSCOOKIE: string | null;
+  lastCsrfToken: string | null;
 }

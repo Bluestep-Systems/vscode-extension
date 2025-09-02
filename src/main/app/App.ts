@@ -3,6 +3,7 @@ import type {  ReadOnlyMap, SavableObject } from '../../../types';
 import { PublicPersistanceMap } from './util/data/PseudoMaps';
 import ctrlPCommands from './ctrl-p-commands';
 import { BasicAuthManager } from './services/Auth';
+import { SessionManager } from './services/SessionManager';
 
 
 export const App = new class {
@@ -93,6 +94,7 @@ export const App = new class {
     this.context.subscriptions.push(this.#_outputChannel);
     this.#_variables = new PublicPersistanceMap("variables");
     BasicAuthManager.touch();
+    SessionManager.init();
   }
 
   public async saveState() {
