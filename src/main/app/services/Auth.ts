@@ -49,12 +49,6 @@ export const BasicAuthManager = new class extends Manager {
   public async initChildren(): Promise<void> {
     return void 0;
   }
-  public get logger() {
-    if (!this.parent) {
-      throw new Error("AuthManager has no parent, cannot get logger");
-    }
-    return this.parent.logger;
-  }
 
   public save() {
     this.persistance.store();

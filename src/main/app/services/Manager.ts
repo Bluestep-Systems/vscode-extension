@@ -12,5 +12,4 @@ export abstract class Manager {
   abstract init(contextOrManager: vscode.ExtensionContext | Manager): this;
   abstract initChildren(): void;
   abstract save(): void;
-  abstract get logger(): vscode.LogOutputChannel;
 }

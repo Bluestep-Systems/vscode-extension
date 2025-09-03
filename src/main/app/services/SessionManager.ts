@@ -36,12 +36,7 @@ export const SessionManager = new class extends Manager {
     }
     return this.parent.context;
   }
-  public get logger() {
-    if (!this.parent) {
-      throw new Error("SessionManager has no parent, cannot get logger");
-    }
-    return this.parent.logger;
-  }
+
 
 
   save() {
