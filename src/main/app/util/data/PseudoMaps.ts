@@ -19,9 +19,9 @@ export class PseudoMap<T> {
     this.obj[key] = value;
     return this;
   }
-  forEach(callback: (element: T, key: string) => void): void {
+  forEach(callback: (arg: [key: string, value: T]) => void): void {
     for (const key in this.obj) {
-      callback(this.obj[key], key);
+      callback([key, this.obj[key]]);
     }
   }
   delete(key: string): this {
@@ -37,7 +37,7 @@ export class PseudoMap<T> {
 };
 
 
-abstract class PersistableMap<T extends SavableObject> extends PseudoMap<T> {
+export abstract class PersistableMap<T extends SavableObject> extends PseudoMap<T> {
   readonly key: string;
   readonly context: vscode.ExtensionContext;
   constructor(key: string, context: vscode.ExtensionContext) {

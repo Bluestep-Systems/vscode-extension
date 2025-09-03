@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { PrivateKeys, PrivatePersistanceMap } from "../../app/util/data/PseudoMaps";
-import { Manager } from './Manager';
+import { StatefulNode } from './StatefulNode';
 
 type BasicAuthParams = { username: string; password: string; };
 export class BasicAuth {
@@ -19,21 +19,22 @@ export class BasicAuth {
   }
 }
 
-export const BasicAuthManager = new class extends Manager {
+export const BasicAuthManager = new class extends StatefulNode {
 
-  private _persistance: PrivatePersistanceMap<BasicAuthParams> | null = null;
+  private _flagMap: PrivatePersistanceMap<BasicAuthParams> | null = null;
   private readonly DEFAULT_FLAG = "default";
   private CUR_FLAG: string = this.DEFAULT_FLAG;
-  #parent: Manager | null = null;
+  #parent: StatefulNode | null = null;
 
-  public init(parent: Manager) {
+  public init(parent: StatefulNode) {
     this.#parent = parent;
-    if (this._persistance) {
+    if (this._flagMap) {
       throw new Error("only one auth manager may be initialized");
     }
-    this._persistance = new PrivatePersistanceMap(PrivateKeys.BASIC_AUTH, this.context);
+    this._flagMap = new PrivatePersistanceMap(PrivateKeys.BASIC_AUTH, this.context);
     return this;
   }
+
   public get parent() {
     if (!this.#parent) {
       throw new Error("AuthManager not initialized");
@@ -54,11 +55,11 @@ export const BasicAuthManager = new class extends Manager {
     this.persistance.store();
   }
 
-  private get persistance(): PrivatePersistanceMap<BasicAuthParams> {
-    if (!this._persistance) {
+  public get persistance(): PrivatePersistanceMap<BasicAuthParams> {
+    if (!this._flagMap) {
       throw new Error('AuthManager not initialized');
     }
-    return this._persistance;
+    return this._flagMap;
   }
 
   public clear() {

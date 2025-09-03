@@ -3,14 +3,14 @@ import type {  ReadOnlyMap, SavableObject } from '../../../types';
 import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
 import ctrlPCommands from './ctrl-p-commands';
 import { SessionManager } from './services/SessionManager';
-import { Manager } from './services/Manager';
+import { StatefulNode } from './services/StatefulNode';
 
 
-export const App = new class implements Manager {
+export const App = new class implements StatefulNode {
   #_context: vscode.ExtensionContext | null;
   #_settings: PublicPersistanceMap<SavableObject> | null = null;
   #_outputChannel: vscode.LogOutputChannel | null = null;
-  parent: Manager | null = null;
+  parent: StatefulNode | null = null;
   placeHolder() {
     return this;
   }
@@ -64,6 +64,9 @@ export const App = new class implements Manager {
     return this.#_context!;
   }
 
+  public get persistance() {
+    return this.settings;
+  }
 
   public get settings() {
     if (this.#_settings === null) {
