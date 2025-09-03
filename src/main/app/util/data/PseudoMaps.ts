@@ -1,7 +1,8 @@
 import type { SavableObject } from "../../../../../types";
+import * as vscode from "vscode";
 import { App } from "../../App";
 
-export abstract class PseudoMap<T> {
+export class PseudoMap<T> {
   protected obj: Record<string, T> = {};
   constructor(initialData?: Record<string, T>) {
     if (initialData) {
@@ -36,78 +37,68 @@ export abstract class PseudoMap<T> {
 };
 
 
-interface Persistable {
+abstract class PersistableMap<T extends SavableObject> extends PseudoMap<T> {
   readonly key: string;
-  store(): void;
-  clear(): void;
-}
-
-export class PublicPersistanceMap<T extends SavableObject> extends PseudoMap<T> implements Persistable {
-  readonly key: string;
-  constructor(key: string) {
+  readonly context: vscode.ExtensionContext;
+  constructor(key: string, context: vscode.ExtensionContext) {
     super();
     this.key = key;
-    App.logger.info("PublicPersistanceMap initialized with key:", key);
-    this.obj = App.context.workspaceState.get<Record<string, T>>(this.key, {});
+    this.context = context;
   }
   // @Override
   set(key: string, value: T): this {
-    this.obj[key] = value;
+    super.set(key, value);
     this.store();
     return this;
   }
+  clear(): void {
+    this.obj = {};
+    this.store();
+  }
+  abstract store(): void;
+}
+
+export class PublicPersistanceMap<T extends SavableObject> extends PersistableMap<T> {
+  constructor(key: PublicKeys, context: vscode.ExtensionContext) {
+    super(key, context);
+    this.obj = App.context.workspaceState.get<Record<string, T>>(this.key, {});
+  }
+
+  // @Override
   store(): void {
     App.logger.info("PublicPersistanceMap storing data with key:", this.key);
     App.context.workspaceState.update(this.key, this.obj);
   }
-  clear(): void {
-    this.obj = {};
-    this.store();
-  }
+
+
 }
-export class PrivatePersistanceMap<T extends SavableObject> extends PseudoMap<T> implements Persistable {
-  readonly key: PrivateKeys;
-  // TODO: Implement support for tracking and storing metadata such as lastModified timestamp for PrivatePersistanceMap entries.
-  // lastModified: number;
-  private initialized: boolean = false;
-  constructor(key: PrivateKeys) {
-    super();
-    this.key = key;
-    App.logger.info("PrivatePersistanceMap loaded data for key:", this.key);
+export class PrivatePersistanceMap<T extends SavableObject> extends PersistableMap<T> {
+  constructor(key: PrivateKeys, context: vscode.ExtensionContext) {
+    super(key, context);
     App.context.secrets.get(this.key).then(jsonString => {
       this.obj = JSON.parse(jsonString || '{}');
-      this.initialized = true;
     });
-    // State.context.secrets.get(this.key + "-metadata").then(jsonString => {
-    //   this.lastModified = JSON.parse(jsonString || '{}').lastModified || Date.now();
-    //   this.initialized = true;
-    // });
   }
   store(): void {
     App.logger.info("PrivatePersistanceMap storing data with key:", this.key);
     App.context.secrets.store(this.key, JSON.stringify(this.obj));
-    App.saveState();
-  }
-  clear(): void {
-    this.obj = {};
-    this.store();
-  }
-  // @Override
-  set(key: string, value: T): this {
-    this.obj[key] = value;
-    this.store();
-    return this;
-  }
-  async touch(): Promise<void> {
-    // Update the last accessed time
-  }
-  public isInitialized(): boolean {
-    return this.initialized;
   }
 }
 
 export enum PrivateKeys {
-  BASIC_AUTH = 'basic_auth',
-  SESSIONS = 'b6p:sessions',
-  SESSION_TOKENS = 'b6p:session_tokens'
+  /**
+   * key for the data we persist for the basic auth map
+   */
+  BASIC_AUTH = 'b6p:basic_auth',
+  /**
+   * key for the data we persist for the existing sessions map
+   */
+  SESSIONS = 'b6p:sessions'
+}
+
+export enum PublicKeys {
+  /**
+   * TODO
+   */
+  SETTINGS = 'b6p:user_settings',
 }

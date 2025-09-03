@@ -1,23 +1,16 @@
 import * as vscode from 'vscode';
 import { PrivateKeys, PrivatePersistanceMap } from "../../app/util/data/PseudoMaps";
-import { SavableObject } from '../../../../types';
+import { Manager } from './Manager';
 
-export interface AuthType {
-}
-type BasicAuthConstructorValue = { username: string; password: string };
-export class BasicAuth implements AuthType {
+type BasicAuthParams = { username: string; password: string; };
+export class BasicAuth {
   username: string;
   password: string;
-  constructor({ username, password }: BasicAuthConstructorValue) {
+  constructor({ username, password }: BasicAuthParams) {
     this.username = username;
     this.password = password;
   }
-  getUserName(): string {
-    return this.username;
-  }
-  getPassword(): string {
-    return this.password;
-  }
+
   toSavableObject() {
     return { username: this.username, password: this.password };
   }
@@ -25,74 +18,97 @@ export class BasicAuth implements AuthType {
     return JSON.stringify({ username: this.username, password: "***" });
   }
 }
-export abstract class AuthManager<T extends AuthType> {
-  abstract persistanceCollection: PrivatePersistanceMap<SavableObject>;
-  constructor() { }
-  abstract getAuth(flag?: AUTH_FLAGS): Promise<T>
-  abstract setAuth(auth: T, flag?: AUTH_FLAGS): void;
-  abstract getDefaultAuth(): Promise<T>
-  abstract authHeaderValue(): Promise<string>;
-  abstract newCredentials(): Thenable<AuthManager<T>>;
-}
 
-export class BasicAuthManager extends AuthManager<BasicAuth> {
-  persistanceCollection: PrivatePersistanceMap<SavableObject> = new PrivatePersistanceMap(PrivateKeys.BASIC_AUTH);
-  FLAG: AUTH_FLAGS;
-  private static singleton: BasicAuthManager | null = null;
+export const BasicAuthManager = new class extends Manager {
 
-  static getSingleton() {
-    if (!this.singleton) {
-      this.singleton = new BasicAuthManager();
+  private _persistance: PrivatePersistanceMap<BasicAuthParams> | null = null;
+  private readonly DEFAULT_FLAG = "default";
+  private CUR_FLAG: string = this.DEFAULT_FLAG;
+  #parent: Manager | null = null;
+
+  public init(parent: Manager) {
+    this.#parent = parent;
+    if (this._persistance) {
+      throw new Error("only one auth manager may be initialized");
     }
-    return this.singleton;
+    this._persistance = new PrivatePersistanceMap(PrivateKeys.BASIC_AUTH, this.context);
+    return this;
   }
-  private constructor() {
-    super();
-    this.FLAG = AUTH_FLAGS.DEFAULT;
-    this.persistanceCollection.touch();
+  public get parent() {
+    if (!this.#parent) {
+      throw new Error("AuthManager not initialized");
+    }
+    return this.#parent;
+  }
+  public get context() {
+    if (!this.parent.context) {
+      throw new Error("AuthManager not initialized");
+    }
+    return this.parent.context;
+  }
+  public async initChildren(): Promise<void> {
+    return void 0;
+  }
+  public get logger() {
+    if (!this.parent) {
+      throw new Error("AuthManager has no parent, cannot get logger");
+    }
+    return this.parent.logger;
   }
 
-  /**
-   * Ensure the singleton is initialized
-   */
-  static touch(): void {
-    BasicAuthManager.getSingleton();
+  public save() {
+    this.persistance.store();
   }
 
-  async getAuth(flag: AUTH_FLAGS = this.FLAG): Promise<BasicAuth> {
-    const existingAuth = this.persistanceCollection.get(flag);
+  private get persistance(): PrivatePersistanceMap<BasicAuthParams> {
+    if (!this._persistance) {
+      throw new Error('AuthManager not initialized');
+    }
+    return this._persistance;
+  }
+
+  public clear() {
+    this.persistance.clear();
+  }
+
+  public setFlag(flag?: string) {
+    this.CUR_FLAG = flag || this.DEFAULT_FLAG;
+  }
+
+  public async getAuth(flag: string = this.CUR_FLAG): Promise<BasicAuth> {
+    const existingAuth = this.persistance.get(flag);
     if (!existingAuth) {
       vscode.window.showInformationMessage('No existing credentials found, please enter new credentials.');
-      return (await this.newCredentials()).getAuth();
+      await this.getNewCredentials(flag);
+      return this.getAuth(flag);
     } else {
-      return new BasicAuth(existingAuth as unknown as BasicAuthConstructorValue);
+      return new BasicAuth(existingAuth);
     }
-
   }
 
-  setAuth(auth: BasicAuth, flag: AUTH_FLAGS = this.FLAG) {
-    this.persistanceCollection.set(flag, auth.toSavableObject());
-    this.save();
+
+  public hasAuth(flag: string = this.CUR_FLAG): boolean {
+    return this.persistance.has(flag);
   }
 
-  async getDefaultAuth(): Promise<BasicAuth> {
-    return await this.getAuth(AUTH_FLAGS.DEFAULT);
+  public setAuth(auth: BasicAuth, flag: string = this.CUR_FLAG) {
+    this.persistance.set(flag, auth.toSavableObject());
   }
 
-  private save() {
-    this.persistanceCollection.store();
+  public async getDefaultAuth(): Promise<BasicAuth> {
+    return await this.getAuth(this.DEFAULT_FLAG);
   }
 
-  async toBase64() {
-    const auth = await this.getAuth();
+  public async toBase64(flag: string = this.CUR_FLAG) {
+    const auth = await this.getAuth(flag);
     return auth ? Buffer.from(`${auth.username}:${auth.password}`).toString('base64') : '';
   }
 
-  async authHeaderValue() {
+  public async authHeaderValue() {
     return `Basic ${await this.toBase64()}`;
   }
 
-  async newCredentials(): Promise<this> {
+  public async getNewCredentials(flag: string = this.CUR_FLAG) {
     const username = await vscode.window.showInputBox({ prompt: 'Enter your username' })
       .then(resp => {
         // username validation?
@@ -103,12 +119,17 @@ export class BasicAuthManager extends AuthManager<BasicAuth> {
         // password validation?
         return resp || "";
       });
-    this.setAuth(new BasicAuth({ username, password }));
-    return this;
+    this.setAuth(new BasicAuth({ username, password }), flag);
   }
-};
 
-enum AUTH_FLAGS {
-  DEFAULT = 'default',
-}
+  /**
+   * Determines the correct credential flag for the domain in question. 
+   * 
+   * right now we will only ever use the default
+   * @returns The relevant authentication flag.
+   */
+  public determineFlag() {
+    return this.CUR_FLAG;
+  }
+}();
 

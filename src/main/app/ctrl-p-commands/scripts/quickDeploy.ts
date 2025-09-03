@@ -33,7 +33,7 @@ async function getScriptWebdavId(origin: string, topId: string): Promise<string 
    */
 
   try {
-    const GQL_RESP = await SM.csrf.fetch(origin + "/gql", {
+    const GQL_RESP = await SM.csrfFetch(origin + "/gql", {
       method: "POST",
       headers: {
         "Accept": "*/*",

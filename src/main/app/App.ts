@@ -1,15 +1,16 @@
 import * as vscode from 'vscode';
 import type {  ReadOnlyMap, SavableObject } from '../../../types';
-import { PublicPersistanceMap } from './util/data/PseudoMaps';
+import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
 import ctrlPCommands from './ctrl-p-commands';
-import { BasicAuthManager } from './services/Auth';
 import { SessionManager } from './services/SessionManager';
+import { Manager } from './services/Manager';
 
 
-export const App = new class {
+export const App = new class implements Manager {
   #_context: vscode.ExtensionContext | null;
-  #_variables: PublicPersistanceMap<SavableObject> | null = null;
+  #_settings: PublicPersistanceMap<SavableObject> | null = null;
   #_outputChannel: vscode.LogOutputChannel | null = null;
+  parent: Manager | null = null;
   placeHolder() {
     return this;
   }
@@ -29,14 +30,11 @@ export const App = new class {
       ['bsjs-push-pull.notify', vscode.commands.registerCommand('bsjs-push-pull.notify', ctrlPCommands.notify)],
       ['bsjs-push-pull.quickDeploy', vscode.commands.registerCommand('bsjs-push-pull.quickDeploy', ctrlPCommands.quickDeploy)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
-        console.log("STATE", App.variables.toJSON());
-        App.logger.info("STATE", App.variables.toJSON());
-        App.saveState();
+        console.log("STATE", App.settings.toJSON());
+        App.logger.info("STATE", App.settings.toJSON());
       })],
       ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
-        App.variables.clear();
-        App.saveState();
-        BasicAuthManager.getSingleton().persistanceCollection.clear();
+        App.clear();
       })]
     ]);
     constructor() { }
@@ -66,11 +64,12 @@ export const App = new class {
     return this.#_context!;
   }
 
-  public get variables() {
-    if (this.#_variables === null) {
-      throw new Error('Variables map is not set');
+
+  public get settings() {
+    if (this.#_settings === null) {
+      throw new Error('Settings map is not set');
     }
-    return this.#_variables!;
+    return this.#_settings!;
   }
 
   public get logger() {
@@ -80,7 +79,7 @@ export const App = new class {
     return this.#_outputChannel;
   }
 
-  public initializeFromContext(context: vscode.ExtensionContext) {
+  public init(context: vscode.ExtensionContext) {
     if (this.#_context !== null) {
       throw new Error('Extension context is already set');
     }
@@ -92,12 +91,20 @@ export const App = new class {
       log: true,
     });
     this.context.subscriptions.push(this.#_outputChannel);
-    this.#_variables = new PublicPersistanceMap("variables");
-    BasicAuthManager.touch();
-    SessionManager.init();
+    this.#_settings = new PublicPersistanceMap(PublicKeys.SETTINGS, App.context);
+    this.initChildren();
+    return this;
   }
 
-  public async saveState() {
-    this.variables.store();
+  public async initChildren() {
+    SessionManager.init(this);
+    return void 0;
+  }
+  public async save() {
+    this.settings.store();
+  }
+  public clear() {
+    this.settings.clear();
+    SessionManager.clear();
   }
 }();

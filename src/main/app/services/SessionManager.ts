@@ -1,107 +1,156 @@
 import type { SessionData } from "../../../../types";
-
 import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
 import { BasicAuthManager } from "./Auth";
+import { Manager } from "./Manager";
 
-export namespace SessionManager {
-  
-  const MILLIS_IN_A_MINUTE = 1000 * 60;
-  const SESSION_DURATION = MILLIS_IN_A_MINUTE * 5; // 5 minutes
-  const B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
-  let sessions: PrivatePersistanceMap<SessionData> | null = null;
-  export function init() {
-    sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS);
+export const SessionManager = new class extends Manager {
+
+  private readonly MILLIS_IN_A_MINUTE = 1000 * 60;
+  private readonly SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
+  private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
+  private _sessions: PrivatePersistanceMap<SessionData> | null = null;
+  #parent: Manager | null = null;
+
+  init(parent: Manager) {
+    this.#parent = parent;
+    if (this._sessions) {
+      throw new Error("only one session manager may be initialized");
+    }
+    this._sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
+    this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
+    this.initChildren();
+    return this;
   }
-  function getSessions() {
-    if (!sessions) {
+  initChildren(): void {
+    BasicAuthManager.init(this);
+  }
+  public get parent() {
+    if (!this.#parent) {
       throw new Error("SessionManager not initialized");
     }
-    return sessions;
+    return this.#parent;
   }
-  export const csrf = {
-    fetch: async (url: string | URL, options: RequestInit, retries = 3): Promise<Response> => {
-      url = new URL(url);
-      const origin = url.origin;
-      if (!getSessions().has(origin)) {
-        getSessions().set(origin, { lastCsrfToken: null, INGRESSCOOKIE: null, JSESSIONID: null, lastTouched: Date.now() });
-      }
-      const session = getSessions().get(origin);
-      if (!session) {
-        throw new Error("Session not found for origin: " + origin);
-      }
-
-      try {
-        if (!session.lastCsrfToken) {
-          const tokenValue = await fetch(`${origin}/csrf-token`).then(r => r.text());
-          session.lastCsrfToken = tokenValue;
-        }
-
-        options = options || {};
-        options.headers = options.headers || {};
-
-        (options.headers as Record<string, string>)[B6P_CSRF_TOKEN] = 
-          session.lastCsrfToken 
-          || (() => { throw new Error("CSRF token not found"); })();
-
-        let response = await fetch(url, options);
-
-        // TODO: figure out why the get here is always returning empty
-        // and why the for loop is needed
-        let newToken = response.headers.get(B6P_CSRF_TOKEN);
-        for (const [key, value] of Object.entries(response.headers)) {
-          if (key === B6P_CSRF_TOKEN) {
-            newToken = value;
-          }
-        }
-        if (!newToken) {
-          throw new Error("No CSRF token in response");
-        }
-        session.lastCsrfToken = newToken;
-        getSessions().set(origin, session);
-        return response;
-      } catch (e) {
-        // Handle specific error types
-        if (e instanceof Error) {
-          if (e.name === 'AbortError') {
-            throw new Error('Request timed out');
-          }
-          if (e.message.includes('terminated') && retries > 0) {
-            console.log(`Request terminated, retrying... (${retries} attempts left)`);
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-            return csrf.fetch(url, options, retries - 1);
-          }
-        }
-        throw e;
-      }
+  public get context() {
+    if (!this.parent.context) {
+      throw new Error("SessionManager not initialized");
     }
-  };
+    return this.parent.context;
+  }
+  public get logger() {
+    if (!this.parent) {
+      throw new Error("SessionManager has no parent, cannot get logger");
+    }
+    return this.parent.logger;
+  }
 
-  export function processResponse(response: Response): Response {
+
+  save() {
+    this.sessions.store();
+  }
+
+  private get sessions() {
+    if (!this._sessions) {
+      throw new Error("SessionManager not initialized");
+    }
+    return this._sessions;
+  }
+
+  /**
+   * Performs the normal managed fetch, however, wraps it with additional CSRF management,
+   * complete with retries.
+   * @param url 
+   * @param options 
+   * @param retries 
+   * @returns 
+   */
+  public async csrfFetch(url: string | URL, options: RequestInit, retries = 3): Promise<Response> {
+    url = new URL(url);
+    const origin = url.origin;
+    if (!this.sessions.has(origin)) {
+      this.sessions.set(origin, { lastCsrfToken: null, INGRESSCOOKIE: null, JSESSIONID: null, lastTouched: Date.now() });
+    }
+    const session = this.sessions.get(origin);
+    if (!session) {
+      throw new Error("Session not found for origin: " + origin);
+    }
+
+    try {
+      if (!session.lastCsrfToken) {
+        const tokenValue = await fetch(`${origin}/csrf-token`).then(r => r.text());
+        session.lastCsrfToken = tokenValue;
+      }
+
+      options = options || {};
+      options.headers = options.headers || {};
+
+      (options.headers as Record<string, string>)[this.B6P_CSRF_TOKEN] =
+        session.lastCsrfToken
+        || (() => { throw new Error("CSRF token not found"); })();
+
+      let response = await fetch(url, options);
+
+      // TODO: figure out why the get here is always returning empty
+      // and why the for loop is needed
+      let newToken = response.headers.get(this.B6P_CSRF_TOKEN);
+      for (const [key, value] of Object.entries(response.headers)) {
+        if (key === this.B6P_CSRF_TOKEN) {
+          newToken = value;
+        }
+      }
+      if (!newToken) {
+        throw new Error("No CSRF token in response");
+      }
+      session.lastCsrfToken = newToken;
+      this.sessions.set(origin, session);
+      return response;
+    } catch (e) {
+      // Handle specific error types
+      if (e instanceof Error) {
+        if (e.name === 'AbortError') {
+          throw new Error('Request timed out');
+        }
+        if (retries > 0) {
+          console.log(`Request terminated, retrying... (${retries} attempts left)`);
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+          return this.csrfFetch(url, options, retries - 1);
+        }
+      }
+      throw e;
+    }
+  }
+
+  private processResponse(response: Response): Response {
     const cookies = response.headers.get("set-cookie");
     const responderUrl = new URL(response.url);
     if (cookies) {
-      const cookieMap = parseCookies(response.headers);
+      const cookieMap = this.parseCookies(response.headers);
       const sessionData: SessionData = {
         lastTouched: Date.now(),
-        JSESSIONID: cookieMap.get("JSESSIONID") 
-          || getSessions().get(responderUrl.origin)?.JSESSIONID 
-          || (() => {throw new Error("Missing JSESSIONID");})(),
-        INGRESSCOOKIE: cookieMap.get("INGRESSCOOKIE") 
-          || getSessions().get(responderUrl.origin)?.INGRESSCOOKIE 
-          || (() => {throw new Error("Missing INGRESSCOOKIE");})(),
-        lastCsrfToken: getSessions().get(responderUrl.origin)?.lastCsrfToken || null
+        JSESSIONID: cookieMap.get("JSESSIONID")
+          || this.sessions.get(responderUrl.origin)?.JSESSIONID
+          || (() => { throw new Error("Missing JSESSIONID"); })(),
+        INGRESSCOOKIE: cookieMap.get("INGRESSCOOKIE")
+          || this.sessions.get(responderUrl.origin)?.INGRESSCOOKIE
+          || (() => { throw new Error("Missing INGRESSCOOKIE"); })(),
+        lastCsrfToken: this.sessions.get(responderUrl.origin)?.lastCsrfToken || null
       };
-      getSessions().set(responderUrl.origin, sessionData);
+      this.sessions.set(responderUrl.origin, sessionData);
     }
     return response;
   }
 
-  export async function fetch(urlString: string | URL, options?: RequestInit): Promise<Response> {
-    //apparently you can redundantly wrap a URL in a new constructor
-    const url = new URL(urlString);
-    const sessionData = getSessions().get(url.origin);
+  /**
+   * performs a managed fetch. This is simply a wrapper for the standard `node.fetch(..args)`
+   * where we merely append and manage the session cookies. Does not automatically retry.
+   * @param url 
+   * @param options 
+   * @returns 
+   */
+  public async fetch(url: string | URL, options?: RequestInit): Promise<Response> {
+    url = new URL(url);
+    const sessionData = this.sessions.get(url.origin);
 
-    if (sessionData && (sessionData.lastTouched > (Date.now() - SESSION_DURATION))) {
+    if (sessionData && (sessionData.lastTouched > (Date.now() - this.SESSION_DURATION))) {
       options = {
         ...options,
         headers: {
@@ -114,16 +163,23 @@ export namespace SessionManager {
         ...options,
         headers: {
           ...options?.headers,
-          "Authorization": `${await BasicAuthManager.getSingleton().authHeaderValue()}`
+          "Authorization": `${await BasicAuthManager.authHeaderValue()}`
         }
       };
     }
-    const response = await globalThis.fetch(urlString, options);
-    return processResponse(response);
+    const response = await globalThis.fetch(url, options);
+    return this.processResponse(response);
   }
 
-  export function endSession({ origin }: { origin: string }) {
-    getSessions().delete(origin);
+  public clearSession({ origin }: { origin: string | URL }) {
+    this.sessions.delete(new URL(origin).origin);
+  }
+  public clear() {
+    this.sessions.clear();
+  }
+  public hasValidSession({ origin }: { origin: string | URL }): boolean {
+    const session = this.sessions.get(new URL(origin).origin);
+    return !!session && (session.lastTouched > (Date.now() - SessionManager.SESSION_DURATION));
   }
 
   /**
@@ -134,7 +190,7 @@ export namespace SessionManager {
    * @param cookies
    * @returns
    */
-  function parseCookies(headers: Headers): Map<string, string> {
+  private parseCookies(headers: Headers): Map<string, string> {
     const cookieMap = new Map<string, string>();
 
     const cookies = headers.get("set-cookie");
@@ -147,11 +203,11 @@ export namespace SessionManager {
     const cookieStrings = cookies.split(/,(?=[^;]+=[^;])/);
     cookieStrings.forEach(cookieString => {
       const parts = cookieString.split(";").map(part => part.trim());
-      
+
       if (parts.length > 0) {
         const cookiePart = parts[0];
         const equalIndex = cookiePart.indexOf("=");
-        
+
         if (equalIndex > 0) {
           const name = cookiePart.substring(0, equalIndex).trim();
           const value = cookiePart.substring(equalIndex + 1).trim();
@@ -163,7 +219,19 @@ export namespace SessionManager {
         }
       }
     });
-    
+
     return cookieMap;
   }
-}
+
+  private triggerNextCleanup(delay: number = SessionManager.SESSION_DURATION + 5_000) {
+    setTimeout(() => {
+      const now = Date.now();
+      this.sessions.forEach((session, flag) => {
+        if (now - session.lastTouched > SessionManager.SESSION_DURATION) {
+          this.sessions.delete(flag);
+        }
+      });
+      this.triggerNextCleanup();
+    }, delay);
+  }
+}();

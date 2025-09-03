@@ -6,7 +6,7 @@ export default function (context: vscode.ExtensionContext) {
 
   try {
     
-    App.initializeFromContext(context);
+    App.init(context);
     App.logger.info("B6P: App initialized");
     return;
     //TODO implement this properly
