@@ -53,7 +53,7 @@ export class PseudoMap<T> {
    * Executes a provided function once for each key-value pair in the map.
    * @param callback The function to execute for each entry.
    */
-  forEach(callback: (value: T, key: string, map: PseudoMap<T>) => void): void {
+  forEach(callback: (value: T, key: string, map: this) => void): void {
     for (const key in this.obj) {
       callback(this.obj[key], key, this);
     }
@@ -194,45 +194,42 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
     });
   }
 
-  get(key: string): T | undefined  {
+  /**
+   * Throws if the map is not fully initialized
+   */
+  private requiresInit() {
     if (!this.initialized) {
       throw new Error(`PrivatePersistanceMap for ${this.key} not fully initialized`);
     }
+  }
+
+  get(key: string): T | undefined  {
+    this.requiresInit();
     return super.get(key);
   }
 
   has(key: string): boolean {
-    if (!this.initialized) {
-      throw new Error(`PrivatePersistanceMap for ${this.key} not fully initialized`);
-    }
+    this.requiresInit();
     return super.has(key);
   }
 
   set(key: string, value: T): this {
-    if (!this.initialized) {
-      throw new Error(`PrivatePersistanceMap for ${this.key} not fully initialized`);
-    }
+    this.requiresInit();
     return super.set(key, value);
   }
 
-  forEach(callback: (value: T, key: string, map: PseudoMap<T>) => void): void {
-    if (!this.initialized) {
-      throw new Error(`PrivatePersistanceMap for ${this.key} not fully initialized`);
-    }
+  forEach(callback: (value: T, key: string, map: this) => void): void {
+    this.requiresInit();
     super.forEach(callback);
   }
 
   delete(key: string): this {
-    if (!this.initialized) {
-      throw new Error(`PrivatePersistanceMap for ${this.key} not fully initialized`);
-    }
+    this.requiresInit();
     return super.delete(key);
   }
 
   clear(): void {
-    if (!this.initialized) {
-      throw new Error(`PrivatePersistanceMap for ${this.key} not fully initialized`);
-    }
+    this.requiresInit();
     super.clear();
     this.store();
   }
@@ -247,23 +244,31 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
     this.context.secrets.store(this.key, JSON.stringify(this.obj));
   }
 
+  /**
+   * Checks if the map is fully initialized.
+   * @returns True if the map is initialized, false otherwise.
+   */
   isInitialized(): boolean {
     return this.initialized;
   }
+  
 }
 
 /**
  * Keys used for private persistance maps
  */
 export enum PrivateKeys {
+
   /**
    * key for the data we persist for the basic auth map
    */
   BASIC_AUTH = 'b6p:basic_auth',
+  
   /**
    * key for the data we persist for the existing sessions map
    */
   SESSIONS = 'b6p:sessions'
+
 }
 
 /**
@@ -274,4 +279,5 @@ export enum PublicKeys {
    * TODO
    */
   SETTINGS = 'b6p:user_settings',
+
 }
