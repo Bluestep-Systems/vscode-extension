@@ -13,6 +13,11 @@ export abstract class StatefulNode {
    * @param context the extension context
    */
   abstract init(contextOrManager: vscode.ExtensionContext | StatefulNode): this;
+
+  /**
+   * Initialize any child managers that depend on this manager being initialized first.
+   * if the manager has no children, this can be a no-op.
+   */
   abstract initChildren(): void;
-  abstract save(): void;
+  
 }

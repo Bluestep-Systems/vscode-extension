@@ -95,13 +95,11 @@ export const App = new class extends StatefulNode {
     return this;
   }
 
-  public async initChildren() {
+  public initChildren() {
     SessionManager.init(this);
     return void 0;
   }
-  public async save() {
-    this.settings.store();
-  }
+
   public clear() {
     this.settings.clear();
     SessionManager.clear();

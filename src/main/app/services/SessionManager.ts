@@ -38,12 +38,6 @@ export const SessionManager = new class extends StatefulNode {
     return this.parent.context;
   }
 
-
-
-  save() {
-    this.persistance.store();
-  }
-
   /**
    * alias for persistance map so this reads easier
    */

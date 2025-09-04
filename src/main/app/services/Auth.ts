@@ -47,12 +47,8 @@ export const BasicAuthManager = new class extends StatefulNode {
     }
     return this.parent.context;
   }
-  public async initChildren(): Promise<void> {
+  public initChildren(): void {
     return void 0;
-  }
-
-  public save() {
-    this.flagMap.store();
   }
 
   /**
