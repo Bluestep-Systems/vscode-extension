@@ -2,15 +2,15 @@ import * as vscode from 'vscode';
 import type {  ReadOnlyMap, SavableObject } from '../../../types';
 import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
 import ctrlPCommands from './ctrl-p-commands';
-import { SessionManager } from './services/SessionManager';
-import { StatefulNode } from './services/StatefulNode';
+import { SESSION_MANAGER } from './services/SessionManager';
+import { ContextNode } from './services/ContextNode';
 
 
-export const App = new class extends StatefulNode {
+export const App = new class extends ContextNode {
   #_context: vscode.ExtensionContext | null = null;
   #_settings: PublicPersistanceMap<SavableObject> | null = null;
   #_outputChannel: vscode.LogOutputChannel | null = null;
-  parent: StatefulNode | null = null;
+  parent: ContextNode | null = null;
   placeHolder() {
     return this;
   }
@@ -60,7 +60,7 @@ export const App = new class extends StatefulNode {
     return this.#_context!;
   }
 
-  protected get persistance() {
+  protected persistence() {
     return this.settings;
   }
 
@@ -91,17 +91,12 @@ export const App = new class extends StatefulNode {
     });
     this.context.subscriptions.push(this.#_outputChannel);
     this.#_settings = new PublicPersistanceMap(PublicKeys.SETTINGS, App.context);
-    this.initChildren();
+    SESSION_MANAGER.init(this);
     return this;
-  }
-
-  public initChildren() {
-    SessionManager.init(this);
-    return void 0;
   }
 
   public clear() {
     this.settings.clear();
-    SessionManager.clear();
+    SESSION_MANAGER.clear();
   }
 }();

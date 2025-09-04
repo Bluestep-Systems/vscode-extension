@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { App } from '../../App';
-import { SessionManager } from '../../services/SessionManager';
+import { SESSION_MANAGER } from '../../services/SessionManager';
 import { Util } from '../../util';
-import { urlParser } from '../../util/data/URLParser';
+import { parseUrl } from '../../util/data/URLParser';
 import { Alert } from '../../util/ui/Alert';
 import * as path from 'path';
 /**
@@ -83,7 +83,7 @@ async function sendFile({ localFile, targetFormulaUri }: { localFile: string; ta
   }
   App.logger.info("Preparing to send file:", localFile);
   App.logger.info("To target formula URI:", targetFormulaUri);
-  const { webDavId, url } = urlParser(targetFormulaUri);
+  const { webDavId, url } = parseUrl(targetFormulaUri);
   const desto = localFile
     .split(url.host + "/" + webDavId)[1];
   url.pathname = `/files/${webDavId}${desto}`;
@@ -91,7 +91,7 @@ async function sendFile({ localFile, targetFormulaUri }: { localFile: string; ta
 
   //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(vscode.Uri.file(localFile));
-  const resp = await SessionManager.fetch(url.toString(), {
+  const resp = await SESSION_MANAGER.fetch(url.toString(), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',

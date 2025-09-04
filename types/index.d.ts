@@ -8,11 +8,22 @@ declare interface ReadOnlyMap<T> {
 }
 export type Primitive = string | number | boolean | null | bigint;
 
+/**
+ * A nested object where all values are primitives or other nested objects.
+ */
 export type PrimitiveNestedObject = {
   [key: string]: Primitive | PrimitiveNestedObject
 }
 
-export type SavableObject = Primitive | Primitive[] | { [key: string]: SavableObject } | SavableObject[];
+/**
+ * A savable object can be a primitive, an array of primitives.
+ *
+ * By design, this should be an object such that `JSON.stringify(obj) === JSON.stringify(JSON.parse(JSON.stringify(obj)))` is true
+ */
+export type SavableObject =
+  | Primitive
+  | Primitive[]
+  | { [key: string]: SavableObject };
 
 export type XMLResponse = {
   "?xml": {

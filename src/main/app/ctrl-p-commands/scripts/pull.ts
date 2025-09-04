@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { App } from '../../App';
-import { SessionManager } from '../../services/SessionManager';
+import { SESSION_MANAGER } from '../../services/SessionManager';
 import { Util } from '../../util';
 import { getScript } from "../../util/data/getScript";
-import { urlParser } from "../../util/data/URLParser";
+import { parseUrl } from "../../util/data/URLParser";
 import { Alert } from '../../util/ui/Alert';
 /**
  * TODO
@@ -34,7 +34,7 @@ async function getStartingURL(overrideFormulaUri?: string) {
     vscode.window.showErrorMessage('No formula URI provided');
     return;
   }
-  return urlParser(formulaURI);
+  return parseUrl(formulaURI);
 }
 
 async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promise<void> {
@@ -68,7 +68,7 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
     const lookupUri = "https://" + sourceUrl.host + "/files/" + path;
     Util.printLine();
     App.logger.info("fetching from:", lookupUri);
-    const contents = await SessionManager.fetch(lookupUri, {
+    const contents = await SESSION_MANAGER.fetch(lookupUri, {
       method: "GET",
     });
     vscode.workspace.fs.writeFile(ultimatePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));

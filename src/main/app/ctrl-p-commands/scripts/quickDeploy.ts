@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SessionManager } from "../../services/SessionManager";
+import { SESSION_MANAGER } from "../../services/SessionManager";
 import { Alert } from "../../util/ui/Alert";
 import push from "./push";
 export default async function (): Promise<void> {
@@ -25,7 +25,7 @@ export default async function (): Promise<void> {
   });
 }
 async function getScriptWebdavId(origin: string, topId: string): Promise<string | null> {
-  const SM = SessionManager;
+  const SM = SESSION_MANAGER;
 
   const gqlBody = (topId: string) => `{\"query\":\"query ObjectData($id: String!) {\\n  children(parentId: $id) {\\n    ... on Parent {\\n      children {\\n        items {\\n          id\\n        }\\n      }\\n    }\\n  }\\n}\",\"variables\":{\"id\":\"${topId}\"},\"operationName\":\"ObjectData\"}`;
   /**

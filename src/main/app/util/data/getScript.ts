@@ -1,22 +1,19 @@
 import { XMLParser } from 'fast-xml-parser';
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
-import { SessionManager } from "../../services/SessionManager";
-import PutObjVal from "../tree/PutObjVal";
+import { SESSION_MANAGER } from "../../services/SessionManager";
+import { Util } from "../";
 import { Alert } from "../ui/Alert";
-import { urlParser } from "./URLParser";
-type GetScriptArg = {
-  url: URL;
-  curLayer?: PrimitiveNestedObject;
-  webDavId: string;
-}
+import { parseUrl } from "./URLParser";
+
+type GetScriptArg = { url: URL; curLayer?: PrimitiveNestedObject; webDavId: string; }
 type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: string[] } | undefined;
+
 export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
   try {
-    const parser = new XMLParser();
     url.pathname = `/files/${webDavId}/`;
     App.logger.info("Fetching script from URL:", url.href);
-    const response = await SessionManager.fetch(url, {
+    const response = await SESSION_MANAGER.fetch(url, {
       //TODO review these
       "headers": {
         "accept": "*/*",
@@ -28,10 +25,11 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
       "method": "PROPFIND"
     });
     if (!response.ok) {
-     Alert.error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
+      Alert.error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
       return;
     }
     App.logger.info("Response Status:", response.status);
+    const parser = new XMLParser();
     const responseObj: XMLResponse = parser.parse(await response.text());
     App.logger.info("Response Object:", responseObj);
     //TODO remove magic strings
@@ -39,7 +37,7 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
       //TODO this only goes 4 layers deep
       .filter(terminal => {
         // TODO examine this for fragility
-        let { trailing } = urlParser(terminal["D:href"]);
+        let { trailing } = parseUrl(terminal["D:href"]);
         if (trailing === undefined) {
           return false; // not pulling the root itself
         }
@@ -55,16 +53,16 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
         return true;
       })
       .map(terminal => {
-        const { webDavId, trailing } = urlParser(terminal["D:href"]);
+        const { webDavId, trailing } = parseUrl(terminal["D:href"]);
 
-        const newPath = `${webDavId}/${trailing}`; 
+        const newPath = `${webDavId}/${trailing}`;
         const path = newPath.split("/");
         if (newPath.at(-1)! === "") {
           path.pop();
-          PutObjVal(curLayer, path, {}, "string");
+          Util.PutObjVal(curLayer, path, {}, "string");
         } else {
           const fileName = path.pop() as string;
-          PutObjVal(curLayer, path, { [`${fileName}`]: fileName }, "string");
+          Util.PutObjVal(curLayer, path, { [`${fileName}`]: fileName }, "string");
         }
         return newPath;
       });

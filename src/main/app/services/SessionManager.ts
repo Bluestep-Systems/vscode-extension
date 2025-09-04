@@ -1,30 +1,29 @@
 import type { SessionData } from "../../../../types";
-import type { App } from "../App";
+import { Auth } from "../authentication";
 import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
-import { BasicAuthManager } from "./Auth";
-import { StatefulNode } from "./StatefulNode";
+import { ContextNode } from "./ContextNode";
 
-export const SessionManager = new class extends StatefulNode {
+export const SESSION_MANAGER = new class extends ContextNode {
 
   private readonly MILLIS_IN_A_MINUTE = 1000 * 60;
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
   private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
-  #sessions: PrivatePersistanceMap<SessionData> | null = null;
-  #parent: typeof App | null = null;
-
-  init(parent: typeof App) {
+  protected persistence(){
+    return this.sessions;
+  }
+  private _sessions: PrivatePersistanceMap<SessionData> | null = null;
+  #parent: ContextNode | null = null;
+  init(parent: ContextNode) {
     this.#parent = parent;
-    if (this.#sessions) {
+    if (this._sessions) {
       throw new Error("only one session manager may be initialized");
     }
-    this.#sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
+    this._sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
-    this.initChildren();
+    Auth.BASIC_AUTH_MANAGER.init(this);
     return this;
   }
-  initChildren(): void {
-    BasicAuthManager.init(this);
-  }
+
   public get parent() {
     if (!this.#parent) {
       throw new Error("SessionManager not initialized");
@@ -38,19 +37,13 @@ export const SessionManager = new class extends StatefulNode {
     return this.parent.context;
   }
 
-  /**
-   * alias for persistance map so this reads easier
-   */
   private get sessions() {
-    if (!this.#sessions) {
+    if (!this._sessions) {
       throw new Error("SessionManager not initialized");
     }
-    return this.#sessions;
+    return this._sessions;
   }
 
-  protected get persistance() {
-    return this.sessions;
-  }
 
   /**
    * Performs the normal managed fetch, however, wraps it with additional CSRF management,
@@ -66,7 +59,7 @@ export const SessionManager = new class extends StatefulNode {
     if (!this.sessions.has(origin)) {
       this.sessions.set(origin, { lastCsrfToken: null, INGRESSCOOKIE: null, JSESSIONID: null, lastTouched: Date.now() });
     }
-    const session = this.persistance.get(origin);
+    const session = this.sessions.get(origin);
     if (!session) {
       throw new Error("Session not found for origin: " + origin);
     }
@@ -147,7 +140,7 @@ export const SessionManager = new class extends StatefulNode {
    */
   public async fetch(url: string | URL, options?: RequestInit): Promise<Response> {
     url = new URL(url);
-    const sessionData = this.persistance.get(url.origin);
+    const sessionData = this.sessions.get(url.origin);
 
     if (sessionData && (sessionData.lastTouched > (Date.now() - this.MAX_SESSION_DURATION))) {
       options = {
@@ -162,7 +155,7 @@ export const SessionManager = new class extends StatefulNode {
         ...options,
         headers: {
           ...options?.headers,
-          "Authorization": `${await BasicAuthManager.authHeaderValue()}`
+          "Authorization": `${await Auth.BASIC_AUTH_MANAGER.authHeaderValue()}`
         }
       };
     }
@@ -179,7 +172,7 @@ export const SessionManager = new class extends StatefulNode {
   }
   public hasValidSession({ origin }: { origin: string | URL }): boolean {
     const session = this.sessions.get(new URL(origin).origin);
-    return !!session && (session.lastTouched > (Date.now() - SessionManager.MAX_SESSION_DURATION));
+    return !!session && (session.lastTouched > (Date.now() - SESSION_MANAGER.MAX_SESSION_DURATION));
   }
 
   /**
@@ -223,11 +216,11 @@ export const SessionManager = new class extends StatefulNode {
     return cookieMap;
   }
 
-  private triggerNextCleanup(delay: number = SessionManager.MAX_SESSION_DURATION) {
+  private triggerNextCleanup(delay: number = SESSION_MANAGER.MAX_SESSION_DURATION) {
     setTimeout(() => {
       const now = Date.now();
       this.sessions.forEach((session, origin, sessions) => {
-        if (now - session.lastTouched > SessionManager.MAX_SESSION_DURATION) {
+        if (now - session.lastTouched > SESSION_MANAGER.MAX_SESSION_DURATION) {
           sessions.delete(origin);
         }
       });
