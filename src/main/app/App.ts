@@ -38,7 +38,7 @@ export const App = new class extends StatefulNode {
       })]
     ]);
     constructor() { }
-    forEach(callback: (disposable: vscode.Disposable, key?: string) => void) {
+    forEach(callback: (disposable: vscode.Disposable, key: string, map: ReadOnlyMap<vscode.Disposable>) => void) {
       this.#map.forEach(callback);
     }
     get(key: string): vscode.Disposable | undefined {
