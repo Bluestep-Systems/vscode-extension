@@ -65,3 +65,8 @@ export type SessionData = {
   INGRESSCOOKIE: string | null;
   lastCsrfToken: string | null;
 }
+
+export type BasicAuthParams = {
+  username: string;
+  password: string;
+};

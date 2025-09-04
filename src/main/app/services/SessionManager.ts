@@ -1,5 +1,6 @@
 import type { SessionData } from "../../../../types";
 import { Auth } from "../authentication";
+import { BASIC_AUTH_MANAGER } from "../authentication/managers/BasicAuthManager";
 import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
 import { ContextNode } from "./ContextNode";
 
@@ -20,7 +21,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     }
     this._sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
-    Auth.BASIC_AUTH_MANAGER.init(this);
+    Auth.initManagers(this);
     return this;
   }
 
@@ -155,7 +156,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         ...options,
         headers: {
           ...options?.headers,
-          "Authorization": `${await Auth.BASIC_AUTH_MANAGER.authHeaderValue()}`
+          "Authorization": `${await BASIC_AUTH_MANAGER.authHeaderValue()}`
         }
       };
     }

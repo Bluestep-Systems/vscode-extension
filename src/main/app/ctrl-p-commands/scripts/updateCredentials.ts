@@ -9,19 +9,13 @@ import { Auth } from '../../authentication';
 export default async function (): Promise<void> {
   
   try {
-    const MANAGER = Auth.determineManager();
+    
+    await Auth
+      .determineManager()
+      .createOrUpdate();
+      
+    return void 0;
 
-    const flag = MANAGER.determineFlag();
-    const firstTime = !MANAGER.hasAuth(flag);
-    const authObject = await MANAGER.getAuthObject(flag);
-    if (firstTime) {
-      return; // getAuth prompts for creds if they don't exist
-      // so if we don't return here it would be redundant
-    }
-
-    await authObject.updateExisting();
-
-    MANAGER.setAuthObject(authObject, flag);
   } catch (error) {
     console.trace("Error getting user credentials:", error);
   }
