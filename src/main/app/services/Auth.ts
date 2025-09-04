@@ -52,18 +52,25 @@ export const BasicAuthManager = new class extends StatefulNode {
   }
 
   public save() {
-    this.persistance.store();
+    this.flagMap.store();
   }
 
-  public get persistance(): PrivatePersistanceMap<BasicAuthParams> {
+  /**
+   * alias for persistance map so this reads easier
+   */
+  private get flagMap() {
     if (!this._flagMap) {
       throw new Error('AuthManager not initialized');
     }
     return this._flagMap;
   }
 
+  protected get persistance(): PrivatePersistanceMap<BasicAuthParams> {
+    return this.flagMap;
+  }
+
   public clear() {
-    this.persistance.clear();
+    this.flagMap.clear();
   }
 
   public setFlag(flag?: string) {
@@ -71,7 +78,7 @@ export const BasicAuthManager = new class extends StatefulNode {
   }
 
   public async getAuth(flag: string = this.CUR_FLAG): Promise<BasicAuth> {
-    const existingAuth = this.persistance.get(flag);
+    const existingAuth = this.flagMap.get(flag);
     if (!existingAuth) {
       vscode.window.showInformationMessage('No existing credentials found, please enter new credentials.');
       await this.getNewCredentials(flag);
@@ -83,11 +90,11 @@ export const BasicAuthManager = new class extends StatefulNode {
 
 
   public hasAuth(flag: string = this.CUR_FLAG): boolean {
-    return this.persistance.has(flag);
+    return this.flagMap.has(flag);
   }
 
   public setAuth(auth: BasicAuth, flag: string = this.CUR_FLAG) {
-    this.persistance.set(flag, auth.toSavableObject());
+    this.flagMap.set(flag, auth.toSavableObject());
   }
 
   public async getDefaultAuth(): Promise<BasicAuth> {

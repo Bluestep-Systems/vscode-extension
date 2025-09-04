@@ -9,15 +9,15 @@ export const SessionManager = new class extends StatefulNode {
   private readonly MILLIS_IN_A_MINUTE = 1000 * 60;
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
   private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
-  private _persistance: PrivatePersistanceMap<SessionData> | null = null;
+  #sessions: PrivatePersistanceMap<SessionData> | null = null;
   #parent: typeof App | null = null;
 
   init(parent: typeof App) {
     this.#parent = parent;
-    if (this._persistance) {
+    if (this.#sessions) {
       throw new Error("only one session manager may be initialized");
     }
-    this._persistance = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
+    this.#sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
     this.initChildren();
     return this;
@@ -48,14 +48,14 @@ export const SessionManager = new class extends StatefulNode {
    * alias for persistance map so this reads easier
    */
   private get sessions() {
-    return this.persistance;
-  }
-
-  public get persistance() {
-    if (!this._persistance) {
+    if (!this.#sessions) {
       throw new Error("SessionManager not initialized");
     }
-    return this._persistance;
+    return this.#sessions;
+  }
+
+  protected get persistance() {
+    return this.sessions;
   }
 
   /**
@@ -144,7 +144,9 @@ export const SessionManager = new class extends StatefulNode {
 
   /**
    * performs a managed fetch. This is simply a wrapper for the standard `node.fetch(..args)`
-   * where we merely append and manage the session cookies. Does not automatically retry.
+   * where we merely append and manage the session cookies.
+   * 
+   * Does not automatically retry.
    * @param url 
    * @param options 
    * @returns 
@@ -175,13 +177,14 @@ export const SessionManager = new class extends StatefulNode {
   }
 
   public clearSession({ origin }: { origin: string | URL }) {
-    this.persistance.delete(new URL(origin).origin);
+    this.sessions.delete(new URL(origin).origin);
   }
+  
   public clear() {
-    this.persistance.clear();
+    this.sessions.clear();
   }
   public hasValidSession({ origin }: { origin: string | URL }): boolean {
-    const session = this.persistance.get(new URL(origin).origin);
+    const session = this.sessions.get(new URL(origin).origin);
     return !!session && (session.lastTouched > (Date.now() - SessionManager.MAX_SESSION_DURATION));
   }
 
@@ -226,12 +229,12 @@ export const SessionManager = new class extends StatefulNode {
     return cookieMap;
   }
 
-  private triggerNextCleanup(delay: number = SessionManager.MAX_SESSION_DURATION + 5_000) {
+  private triggerNextCleanup(delay: number = SessionManager.MAX_SESSION_DURATION) {
     setTimeout(() => {
       const now = Date.now();
-      this.sessions.forEach(([origin, session]) => {
+      this.sessions.forEach((session, origin, sessions) => {
         if (now - session.lastTouched > SessionManager.MAX_SESSION_DURATION) {
-          this.sessions.delete(origin);
+          sessions.delete(origin);
         }
       });
       this.triggerNextCleanup();

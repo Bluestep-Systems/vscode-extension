@@ -6,8 +6,8 @@ import { SessionManager } from './services/SessionManager';
 import { StatefulNode } from './services/StatefulNode';
 
 
-export const App = new class implements StatefulNode {
-  #_context: vscode.ExtensionContext | null;
+export const App = new class extends StatefulNode {
+  #_context: vscode.ExtensionContext | null = null;
   #_settings: PublicPersistanceMap<SavableObject> | null = null;
   #_outputChannel: vscode.LogOutputChannel | null = null;
   parent: StatefulNode | null = null;
@@ -49,10 +49,6 @@ export const App = new class implements StatefulNode {
     }
   }();
 
-  constructor() {
-    this.#_context = null;
-  }
-
   public isInitialized(): boolean {
     return this.#_context !== null;
   }
@@ -64,7 +60,7 @@ export const App = new class implements StatefulNode {
     return this.#_context!;
   }
 
-  public get persistance() {
+  protected get persistance() {
     return this.settings;
   }
 
