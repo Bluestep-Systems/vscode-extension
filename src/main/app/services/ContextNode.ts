@@ -30,6 +30,9 @@ export abstract class ContextNode {
    */
   abstract init(contextOrManager: vscode.ExtensionContext | ContextNode): this;
 
+  /**
+   * clears the persistance of this context node and persists the removal
+   */
   clearPersistance() {
     this.persistence().clear();
   }

@@ -5,13 +5,16 @@ import { Util } from '../../util';
 import { parseUrl } from '../../util/data/URLParser';
 import { Alert } from '../../util/ui/Alert';
 import * as path from 'path';
+import type { SourceOps } from '../../../../../types';
 /**
- * TODO
+ * Pushes a file to a WebDAV location.
+ * @param overrideFormulaUri The URI to override the default formula URI.
+ * @param sourceOps The source operations to perform.
+ * @returns A promise that resolves when the push is complete.
  */
-type SourceOps = { sourceOrigin: string, topId: string };
 export default async function (overrideFormulaUri?: string, sourceOps?: SourceOps): Promise<void> {
   try {
-    const sourceEditorUri = await getOurUri(sourceOps);
+    const sourceEditorUri = await getLocalFileUri(sourceOps);
     if (sourceEditorUri === undefined) {
       Alert.error('No source path provided');
       return;
@@ -58,6 +61,12 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
     Alert.error(`Error pushing files: ${e}`);
   }
 }
+/**
+ * TODO
+ * @param node 
+ * @param param1 
+ * @returns 
+ */
 async function tunnelNode(node: [string, vscode.FileType][], {
   nodeURI,
   pathList = []
@@ -76,6 +85,11 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   }));
   return pathList;
 }
+/**
+ * Sends a specific file to a WebDAV location.
+ * @param param0 The parameters for sending the file.
+ * @returns A promise that resolves when the file has been sent.
+ */
 async function sendFile({ localFile, targetFormulaUri }: { localFile: string; targetFormulaUri: string; }) {
   if (localFile.includes(`/declarations/`)) {
     console.log("skipping declarations file");
@@ -115,7 +129,11 @@ text: ${await resp.text()}
   return resp;
 }
 
-
+/**
+ * Converts a URI string to a file path.
+ * @param uriString The URI string to convert.
+ * @returns The corresponding file path.
+ */
 function uriStringToFilePath(uriString: string): string {
   // Remove the file:// protocol prefix if present
   let path = uriString.replace(/^file:\/\/\/?/, '');
@@ -126,7 +144,12 @@ function uriStringToFilePath(uriString: string): string {
   return path;
 }
 
-async function getOurUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
+/**
+ * Gets the URI for the current file based on the provided source operations.
+ * @param sourceOps The source operations to use for determining the URI.
+ * @returns The URI of the current file.
+ */
+async function getLocalFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
   if (!sourceOps) {
     return vscode.window.activeTextEditor?.document.uri || (() => { throw new Error("No active editor found"); })();
   }
@@ -135,7 +158,7 @@ async function getOurUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
   let found = false;
   const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
   const wsDir = await vscode.workspace.fs.readDirectory(curWorkspaceFolder.uri);
-  
+
   const folderUri = wsDir.reduce(
     (curValue, [subFolderName, _fileType]) => {
       const subFolderPath = path.join(curWorkspaceFolder.uri.fsPath, subFolderName);
@@ -153,34 +176,65 @@ async function getOurUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
   if (!folderUri) {
     throw new Error("No folder found for source origin");
   }
-  const id = new Id(topId);
-  const nodes = await vscode.workspace.fs.readDirectory(folderUri);
-  const ret = await findFileContainingId(nodes, folderUri, id);
+  const id = new IdUtility(topId);
+
+  const ret = await id.findFileContaining(folderUri);
   if (!ret) {
     throw new Error("No matching file found");
   }
   return ret;
 }
 
-class Id {
+/**
+ * A utility class for dealing with IDs in the format `363769__FID_dummyTestEndpoint`.
+ */
+class IdUtility {
+
+  /**
+   * The class ID extracted from the ID string.
+   */
   classId: string;
-  seqnum: string;
+
+  /**
+   * The alt ID value extracted from the ID string.
+   */
+  altIdValue: string;
+
+  /**
+   * The alt ID key extracted from the ID string. Typically it is "FID" or "PID".
+   */
   altIdKey?: string;
+
+  /**
+   * constructs this utility class
+   * @param id The ID string to extract information from.
+   */
   constructor(id: string) {
     // write a regex that takes id in the following patterh `363769__FID_dummyTestEndpoint` and extracts a regex
     const match = id.match(/^(\d+)__(\w*)_(.+)$/);
     if (match) {
       this.classId = match[1];
       this.altIdKey = match[2];
-      this.seqnum = match[3];
+      this.altIdValue = match[3];
     } else {
-      throw new Error("Invalid ID format");
+      throw new Error("Invalid ID format: expected something like `363769__FID_dummyTestEndpoint` but got: `" + id + "`");
     }
   }
+
+  /**
+   * Converts the ID to a format that can be searched for in a file.
+   * @returns The searchable string representation of the ID.
+   */
   private toSearchableString() {
-    return `${this.altIdKey}=${this.seqnum}`;
+    return `${this.altIdKey}=${this.altIdValue}`;
   }
-  async isContainedIn(uri: vscode.Uri): Promise<boolean> {
+
+  /**
+   * uses the vscode api to determine if the file contains the id
+   * @param uri 
+   * @returns 
+   */
+  private async isContainedIn(uri: vscode.Uri): Promise<boolean> {
     const fileContent = await vscode.workspace.fs.readFile(uri);
     const textContent = new TextDecoder().decode(fileContent);
     if (textContent.includes(this.toSearchableString())) {
@@ -188,25 +242,35 @@ class Id {
     }
     return false;
   }
-}
 
-async function findFileContainingId(nodes: [string, vscode.FileType][], folderUri: vscode.Uri, id: Id): Promise<vscode.Uri | null> {
-  for (const [name, type] of nodes) {
-    if (type === vscode.FileType.Directory) {
-      const nestedFolderUri = vscode.Uri.file(path.join(folderUri.fsPath, name));
+  /**
+   * Finds a metadata file containing the specified ID.
+   * @param nodes The directory listing to search.
+   * @param folderUri The URI of the folder to search within.
+   * @param id The ID to search for.
+   * @returns The URI of the file containing the ID, or null if not found.
+   */
+  async findFileContaining(folderUri: vscode.Uri): Promise<vscode.Uri | null> {
+    const nodes = await vscode.workspace.fs.readDirectory(folderUri);
+    for (const [name, type] of nodes) {
+      if (type === vscode.FileType.Directory) {
+        const nestedFolderUri = vscode.Uri.file(path.join(folderUri.fsPath, name));
 
-      try {
-        const files = await vscode.workspace.findFiles(new vscode.RelativePattern(nestedFolderUri, '**/metadata.json'));
-        for (const file of files) {
-          const isContained = await id.isContainedIn(file);
-          if (isContained) {
-            return file;
+        try {
+          const files = await vscode.workspace.findFiles(new vscode.RelativePattern(nestedFolderUri, '**/metadata.json'));
+          for (const file of files) {
+            const isContained = await this.isContainedIn(file);
+            if (isContained) {
+              return file;
+            }
           }
+        } catch (error) {
+          Alert.warning(`Error reading directory ${nestedFolderUri.fsPath}: ${error}`);
         }
-      } catch (error) {
-        Alert.warning(`Error reading directory ${nestedFolderUri.fsPath}: ${error}`);
       }
     }
+    return null;
   }
-  return null;
 }
+
+

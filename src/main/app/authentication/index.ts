@@ -2,6 +2,7 @@ import { ContextNode } from '../services/ContextNode';
 import { AuthManager, AuthObject } from './classes';
 import { BASIC_AUTH_MANAGER } from './managers/BasicAuthManager';
 
+export { AuthError, AuthManager, AuthObject } from './classes';
 /**
  * Namespace for authentication related utilities and functions.
  */

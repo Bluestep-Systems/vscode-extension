@@ -1,6 +1,5 @@
 import type { SessionData } from "../../../../types";
-import { Auth } from "../authentication";
-import { AuthManager, AuthObject } from "../authentication/classes";
+import { Auth, AuthManager, AuthObject } from "../authentication";
 import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
 import { ContextNode } from "./ContextNode";
 
@@ -9,29 +8,29 @@ export const SESSION_MANAGER = new class extends ContextNode {
   private readonly MILLIS_IN_A_MINUTE = 1000 * 60;
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
   private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
-  private _authManager: AuthManager<AuthObject> | null = null;
+  #authManager: AuthManager<AuthObject> | null = null;
   protected persistence(){
     return this.sessions;
   }
-  private _sessions: PrivatePersistanceMap<SessionData> | null = null;
+  #sessions: PrivatePersistanceMap<SessionData> | null = null;
   #parent: ContextNode | null = null;
   init(parent: ContextNode) {
     this.#parent = parent;
-    if (this._sessions) {
+    if (this.#sessions) {
       throw new Error("only one session manager may be initialized");
     }
-    this._sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
+    this.#sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
     Auth.initManagers(this);
-    this._authManager = Auth.determineManager();
+    this.#authManager = Auth.determineManager();
     return this;
   }
 
   public get authManager() {
-    if (!this._authManager) {
+    if (!this.#authManager) {
       throw new Error("AuthManager not initialized");
     }
-    return this._authManager;
+    return this.#authManager;
   }
 
   public get parent() {
@@ -48,10 +47,10 @@ export const SESSION_MANAGER = new class extends ContextNode {
   }
 
   private get sessions() {
-    if (!this._sessions) {
+    if (!this.#sessions) {
       throw new Error("SessionManager not initialized");
     }
-    return this._sessions;
+    return this.#sessions;
   }
 
 

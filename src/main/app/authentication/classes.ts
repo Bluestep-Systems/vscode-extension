@@ -98,6 +98,11 @@ export abstract class AuthManager<T extends AuthObject> extends ContextNode {
    */
   public abstract createNewCredentials(flag: string): Promise<T>;
 
+  /**
+   * gets the auth header value for the given flag, or default if none is given.
+   * @param flag the flag to get the auth header value for.
+   */
+
   public abstract authHeaderValue(flag?: string): Promise<string>;
 }
 

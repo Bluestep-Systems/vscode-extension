@@ -1,4 +1,5 @@
 
+import { App } from '../../App';
 import { Auth } from '../../authentication';
 
 /**
@@ -17,7 +18,7 @@ export default async function (): Promise<void> {
     return void 0;
 
   } catch (error) {
-    console.trace("Error getting user credentials:", error);
+    App.logger.error("Error getting user credentials:", error);
   }
 }
 

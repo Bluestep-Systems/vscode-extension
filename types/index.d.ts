@@ -25,6 +25,9 @@ export type SavableObject =
   | Primitive[]
   | { [key: string]: SavableObject };
 
+/**
+ * The structure of a WebDAV XML response.
+ */
 export type XMLResponse = {
   "?xml": {
     "@version"?: string;
@@ -59,14 +62,59 @@ export type XMLResponse = {
     }[];
   };
 }
+/**
+ * data requisite to manage an individual session
+ */
 export type SessionData = {
   lastTouched: number;
   JSESSIONID: string | null;
   INGRESSCOOKIE: string | null;
   lastCsrfToken: string | null;
 }
-
+/**
+ * Basic auth parameters.
+ */
 export type BasicAuthParams = {
   username: string;
   password: string;
 };
+
+/**
+ * TODO
+ */
+type ScriptGqlResp = ScriptGQLGoodResp | ScriptGQLBadResp;
+
+/**
+ * TODO
+ */
+type ScriptGQLGoodResp = {
+  "data": {
+    "children": [
+      {
+        "children": {
+          "items": [
+            {
+              "id": string
+            }
+          ]
+        }
+      }
+    ]
+  }
+};
+
+/**
+ * TODO
+ */
+type ScriptGQLBadResp = {
+  "errors": [
+    {
+      "message": string
+    }
+  ]
+}
+
+/**
+ * TODO
+ */
+type SourceOps = { sourceOrigin: string, topId: string };

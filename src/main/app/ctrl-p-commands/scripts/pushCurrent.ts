@@ -1,6 +1,12 @@
 import * as vscode from 'vscode';
 import { getFileMetaData } from '../../util/data/FileMetaData';
 import pushScript from '../scripts/push';
+
+
+/**
+ * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location.
+ * @returns 
+ */
 export default async function (): Promise<void> {
   const workspaceUri = vscode.workspace.workspaceFolders![0]!.uri;
   const activeEditorUri = vscode.window.activeTextEditor!.document.uri;

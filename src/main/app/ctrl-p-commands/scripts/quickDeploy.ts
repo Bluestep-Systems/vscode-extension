@@ -1,7 +1,12 @@
 import * as vscode from 'vscode';
 import { SESSION_MANAGER } from "../../services/SessionManager";
 import { Alert } from "../../util/ui/Alert";
+import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../../types";
 import push from "./push";
+
+/**
+ * Pushes the current file to multiple origins and topIds as specified by a function in the current file.
+ */
 export default async function (): Promise<void> {
   const curText = vscode.window.activeTextEditor!.document.getText();
   const getArgs = eval(curText) as (() => { origins: string[], topIds: string[], sourceOrigin: string });
@@ -24,6 +29,13 @@ export default async function (): Promise<void> {
     });
   });
 }
+
+/**
+ * Gets the WebDAV ID of a script.
+ * @param origin The origin of the script.
+ * @param topId The top ID of the script.
+ * @returns The WebDAV ID of the script, or null if not found.
+ */
 async function getScriptWebdavId(origin: string, topId: string): Promise<string | null> {
   const SM = SESSION_MANAGER;
 
@@ -57,28 +69,3 @@ async function getScriptWebdavId(origin: string, topId: string): Promise<string 
   return null;
 }
 
-type ScriptGqlResp = ScriptGQLGoodResp | ScriptGQLBadResp;
-
-type ScriptGQLGoodResp = {
-  "data": {
-    "children": [
-      {
-        "children": {
-          "items": [
-            {
-              "id": string
-            }
-          ]
-        }
-      }
-    ]
-  }
-};
-
-type ScriptGQLBadResp = {
-  "errors": [
-    {
-      "message": string
-    }
-  ]
-}

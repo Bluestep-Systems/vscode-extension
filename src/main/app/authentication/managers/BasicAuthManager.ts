@@ -117,11 +117,10 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   }
 
   /**
-   * Determines the correct credential flag for the domain in question. 
-   * 
-   * right now we will only ever use the default
-   * @returns The relevant authentication flag.
+   * this manager determines flag based on reseller name.
+   * @returns the flag to use for the operation.
    */
+
   public determineFlag() {
     return this.CUR_FLAG;
   }

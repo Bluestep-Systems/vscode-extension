@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
 import pull from "./pull";
 import push from "./pull";
+
+/**
+ * Runs the current file as a Ctrl+P script.
+ */
 export default function () {
 
     // #region eval variables
