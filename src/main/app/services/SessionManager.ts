@@ -1,6 +1,6 @@
 import type { SessionData } from "../../../../types";
 import { Auth } from "../authentication";
-import { BASIC_AUTH_MANAGER } from "../authentication/managers/BasicAuthManager";
+import { AuthManager, AuthObject } from "../authentication/classes";
 import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
 import { ContextNode } from "./ContextNode";
 
@@ -9,6 +9,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
   private readonly MILLIS_IN_A_MINUTE = 1000 * 60;
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
   private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
+  private _authManager: AuthManager<AuthObject> | null = null;
   protected persistence(){
     return this.sessions;
   }
@@ -22,7 +23,15 @@ export const SESSION_MANAGER = new class extends ContextNode {
     this._sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
     Auth.initManagers(this);
+    this._authManager = Auth.determineManager();
     return this;
+  }
+
+  public get authManager() {
+    if (!this._authManager) {
+      throw new Error("AuthManager not initialized");
+    }
+    return this._authManager;
   }
 
   public get parent() {
@@ -156,7 +165,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         ...options,
         headers: {
           ...options?.headers,
-          "Authorization": `${await BASIC_AUTH_MANAGER.authHeaderValue()}`
+          "Authorization": `${await this.authManager.authHeaderValue()}`
         }
       };
     }
@@ -168,9 +177,6 @@ export const SESSION_MANAGER = new class extends ContextNode {
     this.sessions.delete(new URL(origin).origin);
   }
   
-  public clear() {
-    this.sessions.clear();
-  }
   public hasValidSession({ origin }: { origin: string | URL }): boolean {
     const session = this.sessions.get(new URL(origin).origin);
     return !!session && (session.lastTouched > (Date.now() - SESSION_MANAGER.MAX_SESSION_DURATION));

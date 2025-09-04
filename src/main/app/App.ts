@@ -4,6 +4,7 @@ import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
 import ctrlPCommands from './ctrl-p-commands';
 import { SESSION_MANAGER } from './services/SessionManager';
 import { ContextNode } from './services/ContextNode';
+import { Auth } from './authentication';
 
 
 export const App = new class extends ContextNode {
@@ -34,7 +35,7 @@ export const App = new class extends ContextNode {
         App.logger.info("STATE", App.settings.toJSON());
       })],
       ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
-        App.clear();
+        App.clearPersistance();
       })]
     ]);
     constructor() { }
@@ -95,8 +96,10 @@ export const App = new class extends ContextNode {
     return this;
   }
 
-  public clear() {
+  public clearPersistance() {
     this.settings.clear();
-    SESSION_MANAGER.clear();
+    SESSION_MANAGER.clearPersistance();
+    Auth.clearManagers();
+    App.logger.info("Cleared all settings and auth managers");
   }
 }();

@@ -57,12 +57,12 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
     return this._flagMap;
   }
 
-  public clear() {
+  public clearPersistance() {
     this.flagMap.clear();
   }
 
-  public setFlag(flag?: string) {
-    this.CUR_FLAG = flag || this.DEFAULT_FLAG;
+  public setFlag(flag: string) {
+    this.CUR_FLAG = flag;
   }
 
   public async getAuthObject(flag: string = this.CUR_FLAG, createIfNotPresent: boolean = true): Promise<BasicAuth> {
@@ -111,17 +111,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   }
 
   public async createNewCredentials(flag: string = this.CUR_FLAG) {
-    const username = await vscode.window.showInputBox({ prompt: 'Enter your username' })
-      .then(resp => {
-        // username validation?
-        return resp || "";
-      });
-    const password = await vscode.window.showInputBox({ prompt: 'Enter your password', password: true })
-      .then(resp => {
-        // password validation?
-        return resp || "";
-      });
-    const authObj = new BasicAuth({ username, password });
+    const authObj = await BasicAuth.generateNew();
     this.setAuthObject(authObj, flag);
     return authObj;
   }
