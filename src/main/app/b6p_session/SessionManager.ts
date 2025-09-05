@@ -1,7 +1,7 @@
 import type { SessionData } from "../../../../types";
 import { Auth, AuthManager, AuthObject } from "../authentication";
 import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
-import { ContextNode } from "./ContextNode";
+import { ContextNode } from "../context/ContextNode";
 
 export const SESSION_MANAGER = new class extends ContextNode {
 

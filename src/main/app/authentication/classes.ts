@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { BasicAuthParams, SavableObject } from "../../../../types";
-import { ContextNode } from "../services/ContextNode";
+import { ContextNode } from "../context/ContextNode";
 
 /**
    * Generic Auth class that can be extended for specific auth types.

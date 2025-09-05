@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import type {  ReadOnlyMap, SavableObject } from '../../../types';
 import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
 import ctrlPCommands from './ctrl-p-commands';
-import { SESSION_MANAGER } from './services/SessionManager';
-import { ContextNode } from './services/ContextNode';
+import { SESSION_MANAGER } from './b6p_session/SessionManager';
+import { ContextNode } from './context/ContextNode';
 import { Auth } from './authentication';
 
 

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { ContextNode } from "../../services/ContextNode";
+import { ContextNode } from "../../context/ContextNode";
 import { PrivateKeys, PrivatePersistanceMap } from "../../util/data/PseudoMaps";
 import { AuthManager, BasicAuth, AuthError } from "../classes";
 import { BasicAuthParams } from "../../../../../types";

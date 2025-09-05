@@ -1,4 +1,4 @@
-import { ContextNode } from '../services/ContextNode';
+import { ContextNode } from '../context/ContextNode';
 import { AuthManager, AuthObject } from './classes';
 import { BASIC_AUTH_MANAGER } from './managers/BasicAuthManager';
 

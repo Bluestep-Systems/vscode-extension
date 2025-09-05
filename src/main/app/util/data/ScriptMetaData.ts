@@ -2,14 +2,13 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 
 
-
 /**
  * A class representing metadata extracted from a file path.
  * 
  * Specifically, we use a local URI from any file within a formula's draft folder
  * to extract the WebDAV ID and domain associated with that formula.
  */
-export class FileMetaData {
+export class ScriptMetaData {
 
   /**
    * The parsed path of the WebDAV ID folder. This will eventually be replaced/renamed

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SESSION_MANAGER } from "../../services/SessionManager";
+import { SESSION_MANAGER } from "../../b6p_session/SessionManager";
 import { Alert } from "../../util/ui/Alert";
 import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../../types";
 import push from "./push";

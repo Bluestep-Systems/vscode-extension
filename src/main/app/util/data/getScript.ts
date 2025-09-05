@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
-import { SESSION_MANAGER } from "../../services/SessionManager";
+import { SESSION_MANAGER } from "../../b6p_session/SessionManager";
 import { Util } from "../";
 import { Alert } from "../ui/Alert";
 import { parseUrl } from "./URLParser";

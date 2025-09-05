@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
-import { FileMetaData } from '../../util/data/FileMetaData';
+import { getActiveEditorUri } from '../../util/data/getActiveEditorUri';
+import { ScriptMetaData } from '../../util/data/ScriptMetaData';
+import { getDirtyDocs } from '../../util/data/getDirtyDocs';
 import { Alert } from '../../util/ui/Alert';
 import pushScript from '../scripts/push';
 
@@ -12,24 +14,11 @@ export default async function (): Promise<void> {
 
   try {
 
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      vscode.window.showErrorMessage('No workspace folder is open.');
+    const activeEditorUri = getActiveEditorUri();
+    if (activeEditorUri === undefined) {
       return;
     }
-    const activeEditor = vscode.window.activeTextEditor;
-    if (!activeEditor) {
-      vscode.window.showErrorMessage('No active text editor found.');
-      return;
-    }
-    const workspaceUri = workspaceFolders[0].uri;
-    const activeEditorUri = activeEditor.document.uri;
-    if (!activeEditorUri.path.startsWith(workspaceUri.path)) {
-      vscode.window.showWarningMessage('Active file is not in the current workspace');
-      return;
-    }
-
-    const fileMetaData = new FileMetaData({ curUri: activeEditorUri });
+    const fileMetaData = new ScriptMetaData({ curUri: activeEditorUri });
     const dirtyDocs = await getDirtyDocs(fileMetaData.get_webdavId_folderUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
@@ -61,23 +50,4 @@ export default async function (): Promise<void> {
       console.error('Push current file error:', e);
     }
   }
-}
-
-async function getDirtyDocs(uri: vscode.Uri): Promise<vscode.TextDocument[]> {
-  const activeEditorDocuments = vscode.window.visibleTextEditors.map(editor => editor.document);
-  const dirtyDocs: vscode.TextDocument[] = [];
-  const directory = await vscode.workspace.fs.readDirectory(uri);
-  for (const [name, type] of directory) {
-    if (type === vscode.FileType.Directory) {
-      const subDir = vscode.Uri.joinPath(uri, name);
-      dirtyDocs.push(...await getDirtyDocs(subDir));
-    } else if (type === vscode.FileType.File) {
-      const fileUri = vscode.Uri.joinPath(uri, name);
-      const dirtyDoc = activeEditorDocuments.find(doc => doc.uri.toString() === fileUri.toString() && doc.isDirty);
-      if (dirtyDoc) {
-        dirtyDocs.push(dirtyDoc);
-      }
-    }
-  }
-  return dirtyDocs;
 }

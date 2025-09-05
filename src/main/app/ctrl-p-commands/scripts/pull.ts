@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { App } from '../../App';
-import { SESSION_MANAGER } from '../../services/SessionManager';
+import { SESSION_MANAGER } from '../../b6p_session/SessionManager';
 import { getScript } from "../../util/data/getScript";
 import { parseUrl } from "../../util/data/URLParser";
 import { Alert } from '../../util/ui/Alert';
