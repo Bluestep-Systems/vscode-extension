@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-//file:///home/brendan/test/extensiontest/bst3.bluestep.net/1433413/draft/scripts/app.ts
-//file:///home/brendan/test/extensiontest
 
 
 /**
@@ -13,8 +11,17 @@ import * as path from 'path';
  */
 export class FileMetaData {
 
-  private _webdavIdFolder: path.ParsedPath;
-  private _domainfolder: path.ParsedPath;
+  /**
+   * The parsed path of the WebDAV ID folder. This will eventually be replaced/renamed
+   * when we refactor to use a metadata file.
+   */
+  private _webdavId_folderPath: path.ParsedPath;
+
+  /**
+   * The parsed path of the domain folder. This will eventually be replaced/renamed
+   * when we refactor to use a metadata file.
+   */
+  private _domain_folderPath: path.ParsedPath;
 
   constructor({ curUri }: { curUri: vscode.Uri }) {
 
@@ -25,8 +32,9 @@ export class FileMetaData {
       path.parse(shavedName);               // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
     const parentDirBase = 
       path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
-    this._webdavIdFolder = scriptPath;
-    this._domainfolder = parentDirBase;
+
+    this._webdavId_folderPath = scriptPath;
+    this._domain_folderPath = parentDirBase;
   }
 
   /**
@@ -36,7 +44,7 @@ export class FileMetaData {
    * not be so trivial.
    */
   private get webDavId() {
-    return this._webdavIdFolder.base;
+    return this._webdavId_folderPath.base;
   }
 
   /**
@@ -46,7 +54,7 @@ export class FileMetaData {
    * not be so trivial.
    */
   private get origin() {
-    return this._domainfolder.base;
+    return this._domain_folderPath.base;
   }
 
   /**
@@ -57,7 +65,22 @@ export class FileMetaData {
     return `https://${this.origin}/files/${this.webDavId}/`;
   }
 
+  /**
+   * Returns a base URL suitable for pull and push operations.
+   * @returns A base URL suitable for pull and push operations.
+   */
   public toBasePullPushUrl(): URL {
     return new URL(this.toBasePullPushUrlString());
   }
+
+
+  /**
+   * Returns the local URI of the domain folder.
+   * @returns The URI of the domain folder.
+   */
+
+  public get_webdavId_folderUri() {
+    return vscode.Uri.file(this._webdavId_folderPath.dir + "/" + this._webdavId_folderPath.base);
+  }
+  
 }
