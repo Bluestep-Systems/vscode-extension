@@ -129,15 +129,15 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Run Task](command:bsjs-push-pull.runTask)"
+        "contents": "[Pull New Script](command:bsjs-push-pull.pullScript)"
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Pull New](command:bsjs-push-pull.pullScript)"
+        "contents": "[Push Current Script To...](command:bsjs-push-pull.pushScript)"
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Push Script](command:bsjs-push-pull.pushScript)"
+        "contents": "[Run Script](command:bsjs-push-pull.runTask)"
       },
       {
         "view": "b6pMenuView",
@@ -158,6 +158,10 @@
       {
         "view": "b6pMenuView",
         "contents": "[Trigger BlueSync Task](command:bsjs-push-pull.notify)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Extension Preferences](command:bsjs-push-pull.notify)"
       }
     ]
   },

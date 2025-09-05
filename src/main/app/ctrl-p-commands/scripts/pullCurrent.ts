@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getFileMetaData } from '../../util/data/FileMetaData';
+import { FileMetaData } from '../../util/data/FileMetaData';
 import pullScript from '../scripts/pull';
 export default async function (): Promise<void> {
   const workspaceUri = vscode.workspace.workspaceFolders![0]!.uri;
@@ -8,8 +8,6 @@ export default async function (): Promise<void> {
     vscode.window.showErrorMessage('No source path provided');
     return;
   }
-  console.log("Active Editor URI:", activeEditorUri.toString());
-  console.log("workspace URI:", workspaceUri.toString());
-  const { webdavId, domain } = await getFileMetaData({ curUri: activeEditorUri });
-  pullScript(`https://${domain}/files/${webdavId}/`);
+  const fileMetaData = new FileMetaData({ curUri: activeEditorUri });
+  await pullScript(fileMetaData.toBasePullPushUrlString());
 }
