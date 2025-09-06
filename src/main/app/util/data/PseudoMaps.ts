@@ -218,6 +218,13 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
     return super.set(key, value);
   }
 
+  async setAsync(key: string, value: T): Promise<this> {
+    this.requiresInit();
+    super.set(key, value);
+    await this.storeAsync();
+    return this;
+  }
+
   forEach(callback: (value: T, key: string, map: this) => void): void {
     this.requiresInit();
     super.forEach(callback);
@@ -238,11 +245,15 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
    * Stores the current state of the of the map in the vscode secrets storage
    */
   store(): void {
-    if (!this.initialized) {
-      throw new Error("PrivatePersistanceMap not fully initialized");
-    }
+    this.requiresInit();
     this.context.secrets.store(this.key, JSON.stringify(this.obj));
   }
+
+  async storeAsync(): Promise<void> {
+    this.requiresInit();
+    await this.context.secrets.store(this.key, JSON.stringify(this.obj));
+  }
+
 
   /**
    * Checks if the map is fully initialized.

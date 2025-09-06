@@ -99,7 +99,7 @@ export const App = new class extends ContextNode {
   public clearPersistance() {
     this.settings.clear();
     SESSION_MANAGER.clearPersistance();
-    Auth.clearManagers();
+    Auth;
     App.logger.info("Cleared all settings and auth managers");
   }
 }();

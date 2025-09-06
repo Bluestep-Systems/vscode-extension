@@ -110,6 +110,12 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
     return `Basic ${auth ? auth.toBase64() : ''}`;
   }
 
+  public async authLoginBodyValue(flag: string = this.CUR_FLAG) {
+    const auth = await this.getAuthObject(flag);
+    const params = auth.toSavableObject();
+    return `_postEvent=commit&_postFormClass=myassn.user.UserLoginWebView&rememberMe=false&myUserName=${encodeURIComponent(params.username)}&myPassword=${encodeURIComponent(params.password)}`;
+  }
+
   public async createNewCredentials(flag: string = this.CUR_FLAG) {
     const authObj = await BasicAuth.generateNew();
     this.setAuthObject(authObj, flag);

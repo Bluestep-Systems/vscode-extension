@@ -56,9 +56,12 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
        */
       await sendFile({ localFile: file, targetFormulaUri });
     }
-    Alert.info('Push complete!');
+    if (!sourceOps?.skipMessage) {
+      Alert.info('Push complete!');
+    }
   } catch (e) {
     Alert.error(`Error pushing files: ${e}`);
+    throw e; 
   }
 }
 /**
@@ -92,7 +95,7 @@ async function tunnelNode(node: [string, vscode.FileType][], {
  */
 async function sendFile({ localFile, targetFormulaUri }: { localFile: string; targetFormulaUri: string; }) {
   if (localFile.includes(`/declarations/`)) {
-    console.log("skipping declarations file");
+    // we skip declarations -- since they are readonly and not part of the actual script
     return;
   }
   App.logger.info("Preparing to send file:", localFile);

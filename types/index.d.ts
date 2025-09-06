@@ -70,6 +70,7 @@ export type SessionData = {
   JSESSIONID: string | null;
   INGRESSCOOKIE: string | null;
   lastCsrfToken: string | null;
+  fresh: boolean;
 }
 /**
  * Basic auth parameters.
@@ -117,4 +118,4 @@ type ScriptGQLBadResp = {
 /**
  * TODO
  */
-type SourceOps = { sourceOrigin: string, topId: string };
+type SourceOps = { sourceOrigin: string, topId: string, skipMessage?: true };

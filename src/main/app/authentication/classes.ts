@@ -104,6 +104,12 @@ export abstract class AuthManager<T extends AuthObject> extends ContextNode {
    */
 
   public abstract authHeaderValue(flag?: string): Promise<string>;
+
+  /**
+   * gets the auth login body value for the given flag. This is likely to be removed in favor of just using the header value.
+   * @param flag 
+   */
+  public abstract authLoginBodyValue(flag?: string): Promise<string>;
 }
 
 
