@@ -8,7 +8,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
 
   private readonly MILLIS_IN_A_MINUTE = 1000 * 60;
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
-  private readonly MAX_CSRF_TOKEN_AGE = this.MILLIS_IN_A_MINUTE * 1; // 1 minutes
+  //private readonly MAX_CSRF_TOKEN_AGE = this.MILLIS_IN_A_MINUTE * 1; // 1 minutes
   private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
   #authManager: AuthManager<AuthObject> | null = null;
   protected persistence() {
@@ -76,11 +76,12 @@ export const SESSION_MANAGER = new class extends ContextNode {
     }
 
     try {
-      if (!session.lastCsrfToken || session.lastTouched < (Date.now() - this.MAX_CSRF_TOKEN_AGE)) {
+      //TODO figure out why we it will sometimes error out with this if-check
+      //if (!session.lastCsrfToken || session.lastTouched < (Date.now() - this.MAX_CSRF_TOKEN_AGE)) {
         const tokenValue = await this.fetch(`${origin}/csrf-token`).then(r => r.text());
         session.lastCsrfToken = tokenValue;
         await this.sessions.setAsync(origin, session);
-      }
+      //}
 
       options = options || {};
       options.headers = options.headers || {};
@@ -122,11 +123,8 @@ export const SESSION_MANAGER = new class extends ContextNode {
         }
         if (retries > 0) {
           session.lastCsrfToken = null; // force a refresh
-          await this.sessions.setAsync(origin, session);
-          await this.sessions.storeAsync();
           Alert.info(`Request didn't work, retrying... (${retries} attempts left)`, { modal: false });
-          this.sessions.delete(origin);
-          await this.sessions.storeAsync();
+          this.sessions.deleteAsync(origin);
           await new Promise(resolve => setTimeout(resolve, 1_000)); // Wait 1 second
           return await this.csrfFetch(url, options, retries - 1);
         }
@@ -157,7 +155,6 @@ export const SESSION_MANAGER = new class extends ContextNode {
         fresh: false,
       };
       await this.sessions.setAsync(responderUrl.origin, sessionData);
-      await this.sessions.storeAsync();
     } else {
       const existing = this.sessions.get(responderUrl.origin);
       if (!existing) {
@@ -166,7 +163,6 @@ export const SESSION_MANAGER = new class extends ContextNode {
       existing.lastTouched = Date.now();
       existing.lastCsrfToken = response.headers.get(this.B6P_CSRF_TOKEN) || existing.lastCsrfToken;
       await this.sessions.setAsync(responderUrl.origin, existing);
-      await this.sessions.storeAsync();
     }
 
     return response;

@@ -218,6 +218,15 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
     return super.set(key, value);
   }
 
+  /**
+   * Sets the value associated with the given key asynchronously.
+   * 
+   * This is primarily intended for situations where you can't wait for set to be done
+   * and you need an await done.
+   * @param key The key to set.
+   * @param value The value to associate with the key.
+   * @returns A promise that resolves to the PersistableMap instance.
+   */
   async setAsync(key: string, value: T): Promise<this> {
     this.requiresInit();
     super.set(key, value);
@@ -235,6 +244,21 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
     return super.delete(key);
   }
 
+  /**
+   * Deletes the entry associated with the given key asynchronously.
+   * 
+   * This is primarily intended for situations where you can't wait for delete
+   * and you need an await.
+   * @param key The key to delete.
+   * @returns A promise that resolves to the PersistableMap instance.
+   */
+  async deleteAsync(key: string): Promise<this> {
+    this.requiresInit();
+    super.delete(key);
+    return this.storeAsync().then(() => this);
+  }
+
+
   clear(): void {
     this.requiresInit();
     super.clear();
@@ -249,6 +273,13 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
     this.context.secrets.store(this.key, JSON.stringify(this.obj));
   }
 
+  /**
+   * Stores the current state of the of the map in the vscode secrets storage asynchronously.
+   * 
+   * This is primarily intended for situations where you can't wait for store to be done
+   * and you need an await done.
+   * @returns A promise that resolves when the storage is complete.
+   */
   async storeAsync(): Promise<void> {
     this.requiresInit();
     await this.context.secrets.store(this.key, JSON.stringify(this.obj));
