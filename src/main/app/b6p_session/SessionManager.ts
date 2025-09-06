@@ -123,6 +123,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         if (retries > 0) {
           session.lastCsrfToken = null; // force a refresh
           await this.sessions.setAsync(origin, session);
+          await this.sessions.storeAsync();
           Alert.info(`Request didn't work, retrying... (${retries} attempts left)`, { modal: false });
           this.sessions.delete(origin);
           await this.sessions.storeAsync();
