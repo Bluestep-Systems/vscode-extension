@@ -118,7 +118,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
           await this.sessions.storeAsync();
           Alert.info(e.stack || e.message || String(e), { modal: false });
           Alert.info("Session expired/etc, attempting to re-authenticate...", { modal: false });
-          return await this.csrfFetch(url, options, 0 /* retries - 1 */);
+          return await this.csrfFetch(url, options, retries - 1);
         }
         if (retries > 0) {
           session.lastCsrfToken = null; // force a refresh
