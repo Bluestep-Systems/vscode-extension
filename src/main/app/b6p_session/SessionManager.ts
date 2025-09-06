@@ -8,6 +8,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
 
   private readonly MILLIS_IN_A_MINUTE = 1000 * 60;
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
+  private readonly MAX_CSRF_TOKEN_AGE = this.MILLIS_IN_A_MINUTE * 1; // 1 minutes
   private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
   #authManager: AuthManager<AuthObject> | null = null;
   protected persistence() {
@@ -75,11 +76,10 @@ export const SESSION_MANAGER = new class extends ContextNode {
     }
 
     try {
-      if (!session.lastCsrfToken) {
+      if (!session.lastCsrfToken || session.lastTouched < (Date.now() - this.MAX_CSRF_TOKEN_AGE)) {
         const tokenValue = await this.fetch(`${origin}/csrf-token`).then(r => r.text());
         session.lastCsrfToken = tokenValue;
         await this.sessions.setAsync(origin, session);
-        await this.sessions.storeAsync();
       }
 
       options = options || {};
