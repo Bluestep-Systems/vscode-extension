@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SESSION_MANAGER } from "../../b6p_session/SessionManager";
+import { SESSION_MANAGER as SM} from "../../b6p_session/SessionManager";
 import { Alert } from "../../util/ui/Alert";
 import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../../types";
 import push from "./push";
@@ -43,7 +43,6 @@ export default async function (): Promise<void> {
  * @returns The WebDAV ID of the script, or null if not found.
  */
 async function getScriptWebdavId(origin: string, topId: string): Promise<string | null> {
-  const SM = SESSION_MANAGER;
   const originUrl = new URL(origin);
   const gqlBody = (topId: string) => `{\"query\":\"query ObjectData($id: String!) {\\n  children(parentId: $id) {\\n    ... on Parent {\\n      children {\\n        items {\\n          id\\n        }\\n      }\\n    }\\n  }\\n}\",\"variables\":{\"id\":\"${topId}\"},\"operationName\":\"ObjectData\"}`;
 

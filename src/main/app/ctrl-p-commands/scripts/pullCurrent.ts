@@ -8,6 +8,6 @@ export default async function (): Promise<void> {
     vscode.window.showErrorMessage('No source path provided');
     return;
   }
-  const fileMetaData = new ScriptMetaData({ curUri: activeEditorUri });
+  const fileMetaData = new ScriptMetaData({ downstairsUri: activeEditorUri });
   await pullScript(fileMetaData.toBasePullPushUrlString());
 }

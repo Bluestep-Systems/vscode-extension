@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-
+import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 
 /**
  * A class representing metadata extracted from a file path.
@@ -22,16 +22,18 @@ export class ScriptMetaData {
    */
   private _domain_folderPath: path.ParsedPath;
 
-  constructor({ curUri }: { curUri: vscode.Uri }) {
+  private _draft_downstairsUri: vscode.Uri;
 
-    const curUriString = curUri.toString(); // file:///home/brendan/test/extensiontest/configbeh.bluestep.net/1466960/draft/scripts/app.ts
-    const shavedName = 
+  constructor({ downstairsUri }: { downstairsUri: vscode.Uri }) {
+
+    const curUriString = downstairsUri.toString(); // file:///home/brendan/test/extensiontest/configbeh.bluestep.net/1466960/draft/scripts/app.ts
+    const shavedName =
       curUriString.substring(`file://`.length, curUriString.indexOf("/draft/"));
-    const scriptPath = 
+    const scriptPath =
       path.parse(shavedName);               // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
-    const parentDirBase = 
+    const parentDirBase =
       path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
-
+    this._draft_downstairsUri = downstairsUri;
     this._webdavId_folderPath = scriptPath;
     this._domain_folderPath = parentDirBase;
   }
@@ -81,5 +83,41 @@ export class ScriptMetaData {
   public get_webdavId_folderUri() {
     return vscode.Uri.file(this._webdavId_folderPath.dir + "/" + this._webdavId_folderPath.base);
   }
-  
+
+  /**
+   * Returns the URL for the proper upstairs file.
+   * @returns Returns the URL for the proper upstairs file.
+   */
+  public toUpstairsURL(): URL {
+    const cUriString = this._draft_downstairsUri.toString();
+    const rest = cUriString.substring(cUriString.indexOf("/draft/"));
+    const upstairsUrl = new URL(this.toBasePullPushUrl());
+    upstairsUrl.pathname = upstairsUrl.pathname + "/draft/" + rest;
+    return upstairsUrl;
+  }
+
+  /**
+   * determines if the local file has been modified since the last push
+   * 
+   * @returns 
+   */
+  public async hasBeenModified(): Promise<boolean> {
+    //TODO we need to read a metadata file rather than using stat
+    return true;
+    const stat = await vscode.workspace.fs.stat(this._draft_downstairsUri);
+    if (stat.type === vscode.FileType.Directory) {
+      throw new Error("Cannot push a directory; please select a file.");
+    }
+    const response = await SM.fetch(this.toUpstairsURL(), {
+      method: "HEAD",
+      headers: {
+        "Accept": "*/*",
+        "If-Modified-Since": new Date(stat.mtime).toUTCString()
+      }
+    });
+    if (response.status === 304) {
+      return false;
+    }
+    return true;
+  }
 }

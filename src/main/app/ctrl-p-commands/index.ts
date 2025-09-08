@@ -7,6 +7,7 @@ import runTask from "./scripts/runTask";
 import checkForUpdates from "./scripts/checkForUpdates";
 import notify from "./scripts/notify";
 import quickDeploy from "./scripts/quickDeploy";
+import testTask from "./scripts/testTask";
 
 /**
  * Namespace for Ctrl+P command related functions.
@@ -20,5 +21,6 @@ export default {
   runTask,
   checkForUpdates,
   notify,
-  quickDeploy
+  quickDeploy,
+  testTask
 };

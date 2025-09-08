@@ -18,7 +18,7 @@ export default async function (): Promise<void> {
     if (activeEditorUri === undefined) {
       return;
     }
-    const fileMetaData = new ScriptMetaData({ curUri: activeEditorUri });
+    const fileMetaData = new ScriptMetaData({ downstairsUri: activeEditorUri });
     const dirtyDocs = await getDirtyDocs(fileMetaData.get_webdavId_folderUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';

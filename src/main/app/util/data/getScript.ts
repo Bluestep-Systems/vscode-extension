@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
-import { SESSION_MANAGER } from "../../b6p_session/SessionManager";
+import { SESSION_MANAGER as SM} from "../../b6p_session/SessionManager";
 import { Util } from "../";
 import { Alert } from "../ui/Alert";
 import { parseUrl } from "./URLParser";
@@ -17,7 +17,7 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
   try {
     url.pathname = `/files/${webDavId}/`;
     App.logger.info("Fetching script from URL:", url.href);
-    const response = await SESSION_MANAGER.fetch(url, {
+    const response = await SM.fetch(url, {
       //TODO review these
       "headers": {
         "accept": "*/*",

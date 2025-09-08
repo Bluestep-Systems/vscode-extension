@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { ReadOnlyMap, SavableObject } from '../../../types';
-import { SESSION_MANAGER } from './b6p_session/SessionManager';
+import { SESSION_MANAGER as SM } from './b6p_session/SessionManager';
 import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
@@ -35,7 +35,8 @@ export const App = new class extends ContextNode {
       })],
       ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
         App.clearPersistance();
-      })]
+      })],
+      ['bsjs-push-pull.testTask', vscode.commands.registerCommand('bsjs-push-pull.testTask', ctrlPCommands.testTask)],
     ]);
     constructor() { }
     forEach(callback: (disposable: vscode.Disposable, key: string, map: this) => void) {
@@ -91,13 +92,13 @@ export const App = new class extends ContextNode {
     });
     this.context.subscriptions.push(this.#_outputChannel);
     this.#_settings = new PublicPersistanceMap(PublicKeys.SETTINGS, App.context);
-    SESSION_MANAGER.init(this);
+    SM.init(this);
     return this;
   }
 
   public clearPersistance() {
     this.settings.clear();
-    SESSION_MANAGER.clearPersistance();
+    SM.clearPersistance();
     App.logger.info("Cleared all settings and auth managers");
   }
 }();

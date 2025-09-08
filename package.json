@@ -162,6 +162,10 @@
       {
         "view": "b6pMenuView",
         "contents": "[Extension Preferences](command:bsjs-push-pull.notify)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Toggle Test Task](command:bsjs-push-pull.testTask)"
       }
     ]
   },

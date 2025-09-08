@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { App } from '../../App';
-import { SESSION_MANAGER } from '../../b6p_session/SessionManager';
+import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { getScript } from "../../util/data/getScript";
 import { parseUrl } from "../../util/data/URLParser";
 import { Alert } from '../../util/ui/Alert';
@@ -68,7 +68,7 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
   } else {
     const lookupUri = "https://" + sourceUrl.host + "/files/" + path;
     App.logger.info("fetching from:", lookupUri);
-    const contents = await SESSION_MANAGER.fetch(lookupUri, {
+    const contents = await SM.fetch(lookupUri, {
       method: "GET",
     });
     vscode.workspace.fs.writeFile(ultimatePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));

@@ -1,5 +1,4 @@
-import { SavableObject, PrimitiveNestedObject } from "../../../../types";
-
+import { PrimitiveNestedObject, SavableObject } from "../../../../types";
 /**
  * Utility functions and types.
  */
