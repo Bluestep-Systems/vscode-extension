@@ -1,10 +1,10 @@
 /**
- * TODO
+ * A pseud-map interface that only allows read operations.
  */
 declare interface ReadOnlyMap<T> {
   get(key: string): T | undefined;
   has(key: string): boolean;
-  forEach(callback: (value: T, key?: string) => void): void;
+  forEach(callback: (value: T, key: string, map: this) => void): void;
 }
 export type Primitive = string | number | boolean | null | bigint;
 
@@ -18,7 +18,7 @@ export type PrimitiveNestedObject = {
 /**
  * A savable object can be a primitive, an array of primitives.
  *
- * By design, this should be an object such that `JSON.stringify(obj) === JSON.stringify(JSON.parse(JSON.stringify(obj)))` is true
+ * By design, this should be an object such that it can be serialized to JSON and back without loss of information.
  */
 export type SavableObject =
   | Primitive
@@ -66,11 +66,26 @@ export type XMLResponse = {
  * data requisite to manage an individual session
  */
 export type SessionData = {
+
+  /**
+   * timestamp of the last time this session was used
+   */
   lastTouched: number;
+
+  /**
+   * the JSESSIONID cookie value used by tomcat to identify the session
+   */
   JSESSIONID: string | null;
+
+  /**
+   * the INGRESSCOOKIE cookie value used by the ingress controller to identify the session
+   */
   INGRESSCOOKIE: string | null;
+
+  /**
+   * the last CSRF token received from the server
+   */
   lastCsrfToken: string | null;
-  fresh: boolean;
 }
 /**
  * Basic auth parameters.
@@ -81,12 +96,12 @@ export type BasicAuthParams = {
 };
 
 /**
- * TODO
+ * //TODO
  */
 type ScriptGqlResp = ScriptGQLGoodResp | ScriptGQLBadResp;
 
 /**
- * TODO
+ * //TODO
  */
 type ScriptGQLGoodResp = {
   "data": {
@@ -105,7 +120,7 @@ type ScriptGQLGoodResp = {
 };
 
 /**
- * TODO
+ * //TODO
  */
 type ScriptGQLBadResp = {
   "errors": [
@@ -116,6 +131,6 @@ type ScriptGQLBadResp = {
 }
 
 /**
- * TODO
+ * //TODO
  */
 type SourceOps = { sourceOrigin: string, topId: string, skipMessage?: true };

@@ -3,19 +3,61 @@ import { Auth, AuthManager, AuthObject } from "../authentication";
 import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
 import { ContextNode } from "../context/ContextNode";
 import { Alert } from "../util/ui/Alert";
+import { Util } from "../util";
 
 export const SESSION_MANAGER = new class extends ContextNode {
 
+
+  /**
+   * Number of milliseconds in a minute. Useful for shorthanding some things in this class.
+   */
   private readonly MILLIS_IN_A_MINUTE = 1000 * 60;
+
+  /**
+   * Maximum duration of a session before it is considered expired and needs to be re-authenticated.
+   */
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
+
+  /**
+   * Maximum age of a CSRF token before it is considered stale and needs to be refreshed.
+   * 
+   * //TODO: re-enable this once we have a better sense of how often tokens actually expire.
+   */
   //private readonly MAX_CSRF_TOKEN_AGE = this.MILLIS_IN_A_MINUTE * 1; // 1 minutes
-  private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here
+
+  /**
+   * The name of the CSRF token header used by BlueStep.
+   */
+  private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here because the response headers are lower-cased
+
+  /**
+   * The AuthManager used for authentication.
+   */
   #authManager: AuthManager<AuthObject> | null = null;
+
+  /**
+   * Returns the persistence map for the session data.
+   * @returns The persistence map for the session data.
+   */
   protected persistence() {
     return this.sessions;
   }
+
+  /**
+   * The persistence map for the session data. Largely used as alias for the `persistence()` method.
+   */
   #sessions: PrivatePersistanceMap<SessionData> | null = null;
+
+  /**
+   * The ancestor context node that is used to instantiate this manager
+   */
   #parent: ContextNode | null = null;
+
+  /**
+   * Initializes the session manager.
+   * @param parent The ancestor context node that is used to instantiate this manager.
+   * @returns The initialized session manager.
+   */
   init(parent: ContextNode) {
     this.#parent = parent;
     if (this.#sessions) {
@@ -28,6 +70,9 @@ export const SESSION_MANAGER = new class extends ContextNode {
     return this;
   }
 
+  /**
+   * The AuthManager used for authentication.
+   */
   public get authManager() {
     if (!this.#authManager) {
       throw new Error("AuthManager not initialized");
@@ -35,12 +80,19 @@ export const SESSION_MANAGER = new class extends ContextNode {
     return this.#authManager;
   }
 
+  /**
+   * The ancestor context node that was used to instantiate this manager
+   */
   public get parent() {
     if (!this.#parent) {
       throw new Error("SessionManager not initialized");
     }
     return this.#parent;
   }
+
+  /**
+   * The vscode extension context from the ancestor context node.
+   */
   public get context() {
     if (!this.parent.context) {
       throw new Error("SessionManager not initialized");
@@ -48,6 +100,9 @@ export const SESSION_MANAGER = new class extends ContextNode {
     return this.parent.context;
   }
 
+  /**
+   * The persistence map for the session data.
+   */
   private get sessions() {
     if (!this.#sessions) {
       throw new Error("SessionManager not initialized");
@@ -68,7 +123,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     url = new URL(url);
     const origin = url.origin;
     if (!this.sessions.has(origin)) {
-      await this.sessions.setAsync(origin, { lastCsrfToken: null, INGRESSCOOKIE: null, JSESSIONID: null, lastTouched: Date.now(), fresh: true });
+      await this.sessions.setAsync(origin, { lastCsrfToken: null, INGRESSCOOKIE: null, JSESSIONID: null, lastTouched: Date.now() });
     }
     const session = this.sessions.get(origin);
     if (!session) {
@@ -78,9 +133,9 @@ export const SESSION_MANAGER = new class extends ContextNode {
     try {
       //TODO figure out why we it will sometimes error out with this if-check
       //if (!session.lastCsrfToken || session.lastTouched < (Date.now() - this.MAX_CSRF_TOKEN_AGE)) {
-        const tokenValue = await this.fetch(`${origin}/csrf-token`).then(r => r.text());
-        session.lastCsrfToken = tokenValue;
-        await this.sessions.setAsync(origin, session);
+      const tokenValue = await this.fetch(`${origin}/csrf-token`).then(r => r.text());
+      session.lastCsrfToken = tokenValue;
+      await this.sessions.setAsync(origin, session);
       //}
 
       options = options || {};
@@ -125,7 +180,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
           session.lastCsrfToken = null; // force a refresh
           Alert.info(`Request didn't work, retrying... (${retries} attempts left)`, { modal: false });
           this.sessions.deleteAsync(origin);
-          await new Promise(resolve => setTimeout(resolve, 1_000)); // Wait 1 second
+          await Util.sleep(1_000); // brief pause before retrying
           return await this.csrfFetch(url, options, retries - 1);
         }
       }
@@ -133,6 +188,14 @@ export const SESSION_MANAGER = new class extends ContextNode {
     }
   }
 
+  /**
+   * Common code for processing and storing session data from a fetch response.
+   * 
+   * This includes extracting cookies and CSRF tokens from the response headers
+   * and updating the session data accordingly.
+   * @param response 
+   * @returns 
+   */
   private async processResponse(response: Response): Promise<Response> {
     const cookies = response.headers.get("set-cookie");
     if (response.status === 403) {
@@ -151,8 +214,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
           || null,
         lastCsrfToken: response.headers.get(this.B6P_CSRF_TOKEN)
           || this.sessions.get(responderUrl.origin)?.lastCsrfToken
-          || null,
-        fresh: false,
+          || null
       };
       await this.sessions.setAsync(responderUrl.origin, sessionData);
     } else {
@@ -208,10 +270,20 @@ export const SESSION_MANAGER = new class extends ContextNode {
     }
   }
 
+  /**
+   * Clears the session data for a specific origin. Parses any URL strings and
+   * extracts the origin as needed.
+   * @param param0 The origin for which to clear the session data.
+   */
   public clearSession({ origin }: { origin: string | URL }) {
     this.sessions.delete(new URL(origin).origin);
   }
 
+  /**
+   * Checks if there is a valid session for a specific origin.
+   * @param param0 The origin to check for a valid session.
+   * @returns True if a valid session exists, false otherwise.
+   */
   public hasValidSession({ origin }: { origin: string | URL }): boolean {
     const session = this.sessions.get(new URL(origin).origin);
     return !!session && (session.lastTouched > (Date.now() - this.MAX_SESSION_DURATION));
@@ -249,6 +321,10 @@ export const SESSION_MANAGER = new class extends ContextNode {
     return cookieMap;
   }
 
+  /**
+   * Triggers the next cleanup of expired sessions.
+   * @param delay The delay before the next cleanup is triggered; defaults to {@link MAX_SESSION_DURATION}.
+   */
   private triggerNextCleanup(delay: number = this.MAX_SESSION_DURATION) {
     setTimeout(() => {
       const now = Date.now();

@@ -102,5 +102,14 @@ export namespace Util {
     } while (path.length > 1);
     iteratedObj[path[0]] = val;
   }
+
+  /**
+   * inserts a delay for a defined number of milliseconds.
+   * @param ms 
+   * @returns 
+   */
+  export async function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
 

@@ -318,7 +318,7 @@ export enum PrivateKeys {
  */
 export enum PublicKeys {
   /**
-   * TODO
+   * //TODO
    */
   SETTINGS = 'b6p:user_settings',
 

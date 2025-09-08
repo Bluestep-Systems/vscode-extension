@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
-import type {  ReadOnlyMap, SavableObject } from '../../../types';
-import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
-import ctrlPCommands from './ctrl-p-commands';
+import type { ReadOnlyMap, SavableObject } from '../../../types';
 import { SESSION_MANAGER } from './b6p_session/SessionManager';
 import { ContextNode } from './context/ContextNode';
-import { Auth } from './authentication';
+import ctrlPCommands from './ctrl-p-commands';
+import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
 
 
 export const App = new class extends ContextNode {
@@ -39,8 +38,8 @@ export const App = new class extends ContextNode {
       })]
     ]);
     constructor() { }
-    forEach(callback: (disposable: vscode.Disposable, key: string, map: ReadOnlyMap<vscode.Disposable>) => void) {
-      this.#map.forEach(callback);
+    forEach(callback: (disposable: vscode.Disposable, key: string, map: this) => void) {
+      this.#map.forEach((disposable, key) => callback(disposable, key, this));
     }
     get(key: string): vscode.Disposable | undefined {
       return this.#map.get(key);
@@ -99,7 +98,6 @@ export const App = new class extends ContextNode {
   public clearPersistance() {
     this.settings.clear();
     SESSION_MANAGER.clearPersistance();
-    Auth;
     App.logger.info("Cleared all settings and auth managers");
   }
 }();
