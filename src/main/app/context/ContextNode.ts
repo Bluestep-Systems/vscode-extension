@@ -1,6 +1,10 @@
 import * as vscode from "vscode";
 import { PersistableMap } from "../util/data/PseudoMaps";
 import { SavableObject } from "../../../../types";
+
+/**
+ * An abstract base class for elements of the extension that require a vscode context, and some form of persistance.
+ */
 export abstract class ContextNode {
 
   /**
