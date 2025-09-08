@@ -9,6 +9,10 @@ import { parseUrl } from "./URLParser";
 type GetScriptArg = { url: URL; curLayer?: PrimitiveNestedObject; webDavId: string; }
 type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: string[] } | undefined;
 
+/**
+ * Fetches the script from the specified URL.
+ * @returns The structure and raw file paths of the fetched script, or undefined if not found.
+ */
 export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
   try {
     url.pathname = `/files/${webDavId}/`;
@@ -74,6 +78,5 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
     console.trace(e);
     throw e;
   }
-
 }
 
