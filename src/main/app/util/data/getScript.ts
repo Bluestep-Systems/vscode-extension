@@ -15,6 +15,7 @@ type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: string[] }
  */
 export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
   try {
+    console.log("getScript called with URL:", url.href, "and webDavId:", webDavId);
     url.pathname = `/files/${webDavId}/`;
     App.logger.info("Fetching script from URL:", url.href);
     const response = await SM.fetch(url, {

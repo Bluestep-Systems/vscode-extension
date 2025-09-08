@@ -1,13 +1,13 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
+import type { SourceOps } from '../../../../../types';
 import { App } from '../../App';
-import { SESSION_MANAGER as SM} from '../../b6p_session/SessionManager';
+import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { Util } from '../../util';
+import { IdUtility } from '../../util/data/IdUtility';
 import { parseUrl } from '../../util/data/URLParser';
 import { Alert } from '../../util/ui/Alert';
-import * as path from 'path';
-import type { SourceOps } from '../../../../../types';
-import { IdUtility } from '../../util/data/IdUtility';
-import { ScriptMetaData } from '../../util/data/ScriptMetaData';
+import { ScriptFile } from '../../util/data/ScriptUtil';
 /**
  * Pushes a file to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -63,7 +63,7 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
     }
   } catch (e) {
     Alert.error(`Error pushing files: ${e}`);
-    throw e; 
+    throw e;
   }
 }
 /**
@@ -108,12 +108,11 @@ async function sendFile({ localFile, targetFormulaUri }: { localFile: string; ta
   url.pathname = `/files/${webDavId}${desto}`;
   App.logger.info("Destination:", url.toString());
   const downstairsUri = vscode.Uri.file(localFile);
-  const smd = new ScriptMetaData ({ downstairsUri });
-  if (!(await smd.hasBeenModified())) {
+  const scriptFile = new ScriptFile({ downstairsUri });
+  if (await scriptFile.hasNotBeenModified()) {
     App.logger.info("File has not been modified since last push; skipping:", localFile);
     return;
   }
-  
   //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(downstairsUri);
   const resp = await SM.fetch(url.toString(), {
@@ -136,6 +135,19 @@ text: ${await resp.text()}
 ========`;
     throw new Error('Failed to send file' + details);
   }
+  await scriptFile.getScriptRoot().modifyMetaData(md => {
+    const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsUri.fsPath);
+    if (existingEntryIndex !== -1) {
+      md.pushPullRecords[existingEntryIndex].lastPulled = Date.now();
+      return;
+    } else {
+      md.pushPullRecords.push({
+        downstairsPath: downstairsUri.fsPath,
+        lastPushed: Date.now(),
+        lastPulled: Date.now()
+      });
+    }
+  });
   App.logger.info("File sent successfully:", localFile);
   return resp;
 }

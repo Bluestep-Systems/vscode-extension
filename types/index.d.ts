@@ -22,7 +22,7 @@ export type PrimitiveNestedObject = {
  */
 export type SavableObject =
   | Primitive
-  | Primitive[]
+  | SavableObject[]
   | { [key: string]: SavableObject };
 
 /**
@@ -134,3 +134,22 @@ type ScriptGQLBadResp = {
  * //TODO
  */
 type SourceOps = { sourceOrigin: string, topId: string, skipMessage?: true };
+
+type ScriptMetaData = {
+  /**
+   * The WebDAV ID extracted from the file path.
+   */
+  webdavId: string;
+  /**
+   * The name of the script.
+   */
+  scriptName: string;
+  /**
+   * push/pull records for the script.
+   */
+  pushPullRecords: {
+    downstairsPath: string;
+    lastPushed: number;
+    lastPulled: number;
+  }[]
+}

@@ -4,6 +4,7 @@ import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { getScript } from "../../util/data/getScript";
 import { parseUrl } from "../../util/data/URLParser";
 import { Alert } from '../../util/ui/Alert';
+import { ScriptFile } from '../../util/data/ScriptUtil';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -61,16 +62,46 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
       // find some analog of `optFolderExists()`
     }
     if (dirExists) {
-      //console.log(`Directory already exists: ${ultimatePath.fsPath}`);
+      console.log(`Directory already exists: ${ultimatePath.fsPath}`);
     } else {
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const lookupUri = "https://" + sourceUrl.host + "/files/" + path;
+
+    console.log("ultimatePath:", ultimatePath.toString());
+    const sf = new ScriptFile({ downstairsUri: ultimatePath });
+    console.log("ScriptFile downstairsUri:", sf.downstairsUri.fsPath.toString());
+    console.log("ScriptFile upstairsURL:", sf.toUpstairsURL().toString());
+    const exists = await sf.fileExists();
+
+    const lookupUri = sf.toUpstairsURL();
+
     App.logger.info("fetching from:", lookupUri);
-    const contents = await SM.fetch(lookupUri, {
+    const headers: { [key: string]: string } = {};
+    if (exists) {
+      headers['If-Modified-Since'] = new Date((await sf.lastModifiedTime())).toUTCString();
+    }
+    const response = await SM.fetch(lookupUri, {
       method: "GET",
+      headers
     });
-    vscode.workspace.fs.writeFile(ultimatePath, await contents.arrayBuffer().then(buffer => Buffer.from(buffer)));
+    if (response.status === 304) {
+      App.logger.info(`File not modified since last pull: ${ultimatePath.fsPath}`);
+      return;
+    }
+    await sf.getScriptRoot().modifyMetaData(md => {
+      const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === ultimatePath.fsPath);
+      if (existingEntryIndex !== -1) {
+        md.pushPullRecords[existingEntryIndex].lastPulled = Date.now();
+        return;
+      } else {
+        md.pushPullRecords.push({
+          downstairsPath: ultimatePath.fsPath,
+          lastPushed: Date.now(),
+          lastPulled: Date.now()
+        });
+      }
+    });
+    vscode.workspace.fs.writeFile(ultimatePath, await response.arrayBuffer().then(buffer => Buffer.from(buffer)));
   }
 }

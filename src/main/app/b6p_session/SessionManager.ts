@@ -253,7 +253,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       const response = await globalThis.fetch(url, options);
       return await this.processResponse(response);
     } else {
-      console.log("performing login");
+      console.log("performing login to:", url.origin);
       const response = await globalThis.fetch(url.origin + "/shared/home.jsp", {
         method: "POST",
         headers: {
@@ -262,6 +262,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         },
         body: `${await this.authManager.authLoginBodyValue()}`
       });
+      console.log("login status:", response.status);
       if (response.status >= 400) {
         throw new SessionError(`HTTP Error: ${response.status} ${response.statusText}`);
       }

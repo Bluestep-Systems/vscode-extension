@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getActiveEditorUri } from '../../util/data/getActiveEditorUri';
-import { ScriptMetaData } from '../../util/data/ScriptMetaData';
+import { ScriptFile } from '../../util/data/ScriptUtil';
 import { getDirtyDocs } from '../../util/data/getDirtyDocs';
 import { Alert } from '../../util/ui/Alert';
 import pushScript from '../scripts/push';
@@ -18,8 +18,8 @@ export default async function (): Promise<void> {
     if (activeEditorUri === undefined) {
       return;
     }
-    const fileMetaData = new ScriptMetaData({ downstairsUri: activeEditorUri });
-    const dirtyDocs = await getDirtyDocs(fileMetaData.get_webdavId_folderUri());
+    const fileMetaData = new ScriptFile({ downstairsUri: activeEditorUri });
+    const dirtyDocs = await getDirtyDocs(fileMetaData.getScriptRoot().getDownstairsUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
       const CANCEL = 'Cancel';
@@ -39,7 +39,7 @@ export default async function (): Promise<void> {
       }
     }
 
-    await pushScript(fileMetaData.toBasePullPushUrlString());
+    await pushScript(fileMetaData.getScriptRoot().toBasePullPushUrlString());
   } catch(e) {
     
     if (e instanceof Error) { 
