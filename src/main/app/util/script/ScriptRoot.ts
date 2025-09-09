@@ -34,11 +34,20 @@ export class ScriptRoot {
     return vscode.Uri.file(downstairsRoot.fsPath + "/" + ScriptRoot.METADATA_FILE);
   }
   async touchFile(file: vscode.Uri, touchType: "lastPulled" | "lastPushed"): Promise<void> {
-    await this.modifyMetaData(md => {
+    const metaData = await this.modifyMetaData(md => {
       const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === file.fsPath);
       if (existingEntryIndex !== -1) {
-        md.pushPullRecords[existingEntryIndex][touchType] = new Date().toUTCString();
-        return;
+        const newDateString = new Date().toUTCString();
+        if (file.fsPath.includes("tsconfig.json")) {
+          console.log("index", existingEntryIndex);
+          console.log("md.pushPullRecords[existingEntryIndex][touchType]", md.pushPullRecords[existingEntryIndex][touchType]);
+          console.log("new Date().toUTCString()", newDateString);
+        }
+        
+        md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
+        if (file.fsPath.includes("tsconfig.json")) {
+          console.log("after", md.pushPullRecords[existingEntryIndex][touchType]);
+        }
       } else {
         const now = new Date().toUTCString();
         md.pushPullRecords.push({
@@ -48,6 +57,9 @@ export class ScriptRoot {
         });
       }
     });
+    if (file.fsPath.includes("tsconfig.json")) {
+      console.log("touched metadata:", metaData);
+    }
     return void 0;
   }
   async modifyMetaData(callBack: ((meta: ScriptMetaData) => void)): Promise<ScriptMetaData> {
@@ -83,16 +95,16 @@ export class ScriptRoot {
           // If we get here, the file wasn't fully read, wait and retry
           attempts++;
           if (attempts < maxAttempts) {
-            console.warn(`File read incomplete, retrying... (attempt ${attempts}/${maxAttempts})`);
-            await Util.sleep(500); // Wait 500ms before retry
+            console.error(`File read incomplete, retrying... (attempt ${attempts}/${maxAttempts})`);
+            await Util.sleep(1000); // Wait 1000ms before retry
           }
         } catch (readError) {
           attempts++;
           if (attempts >= maxAttempts) {
             throw readError; // Re-throw if we've exhausted retries
           }
-          console.warn(`File read error, retrying... (attempt ${attempts}/${maxAttempts}):`, readError);
-          await Util.sleep(500); // Wait 500ms before retry
+          console.error(`File read error, retrying... (attempt ${attempts}/${maxAttempts}):`, readError);
+          await Util.sleep(1000); // Wait 1000ms before retry
         }
       }
 

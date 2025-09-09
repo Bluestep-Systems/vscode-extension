@@ -21,10 +21,10 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
    if (ScriptObject === undefined) {
      return;
    }
-
-   ScriptObject.rawFilePaths.forEach(async path => {
+   for (let i = 0; i < ScriptObject.rawFilePaths.length; i++) {
+     const path = ScriptObject.rawFilePaths[i];
      await createIndividualFileOrFolder(path, url);
-   });
+   }
    Alert.info('Pull complete!');
  } catch (e) {
    Alert.error(`Error pulling files: ${e}`);
@@ -92,6 +92,7 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
       App.logger.info(`File not modified since last pull: ${ultimatePath.fsPath}`);
       return;
     }
-    await vscode.workspace.fs.writeFile(ultimatePath, await response.arrayBuffer().then(buffer => Buffer.from(buffer)));
+    const buffer = await response.arrayBuffer();
+    await vscode.workspace.fs.writeFile(ultimatePath, Buffer.from(buffer));
   }
 }

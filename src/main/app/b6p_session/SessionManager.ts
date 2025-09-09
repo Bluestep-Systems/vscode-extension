@@ -197,10 +197,10 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * @returns 
    */
   private async processResponse(response: Response): Promise<Response> {
-    const cookies = response.headers.get("set-cookie");
     if (response.status === 403) {
       throw new UnauthorizedError(`HTTP Error: ${response.status} ${response.statusText}`);
     }
+    const cookies = response.headers.get("set-cookie");
     const responderUrl = new URL(response.url);
     if (cookies) {
       const cookieMap = this.parseCookies(response.headers);
