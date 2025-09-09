@@ -21,6 +21,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
    if (ScriptObject === undefined) {
      return;
    }
+   
    ScriptObject.rawFilePaths.forEach(async path => {
      await createIndividualFileOrFolder(path, url);
    });
@@ -85,23 +86,24 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
       method: "GET",
       headers
     });
-    if (response.status === 304) {
-      App.logger.info(`File not modified since last pull: ${ultimatePath.fsPath}`);
-      return;
-    }
     await sf.getScriptRoot().modifyMetaData(md => {
       const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === ultimatePath.fsPath);
       if (existingEntryIndex !== -1) {
         md.pushPullRecords[existingEntryIndex].lastPulled = Date.now();
         return;
       } else {
+        const now = Date.now();
         md.pushPullRecords.push({
           downstairsPath: ultimatePath.fsPath,
-          lastPushed: Date.now(),
-          lastPulled: Date.now()
+          lastPushed: now,
+          lastPulled: now
         });
       }
     });
+    if (response.status === 304) {
+      App.logger.info(`File not modified since last pull: ${ultimatePath.fsPath}`);
+      return;
+    }
     vscode.workspace.fs.writeFile(ultimatePath, await response.arrayBuffer().then(buffer => Buffer.from(buffer)));
   }
 }

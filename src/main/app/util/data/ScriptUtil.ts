@@ -134,6 +134,7 @@ export class ScriptFile {
 }
 
 class ScriptRoot {
+  static readonly METADATA_FILE = ".b6p_metadata.json";
   downstairsRootPath: path.ParsedPath;
   downstairsRootOrgPath: path.ParsedPath;
 
@@ -156,9 +157,12 @@ class ScriptRoot {
     this.downstairsRootOrgPath = parentDirBase;
   }
 
+  private getMetadataFileUri() {
+    const downstairsRoot = this.getDownstairsRootUri();
+    return vscode.Uri.file(downstairsRoot.fsPath + "/" + ScriptRoot.METADATA_FILE);
+  }
   async modifyMetaData(callBack: ((meta: ScriptMetaData) => void)): Promise<ScriptMetaData> {
-    const downstairsRoot = this.getOrgUri();
-    const metadataFileUri = vscode.Uri.file(downstairsRoot.fsPath + "/.b6p_metadata.json");
+    const metadataFileUri = this.getMetadataFileUri();
     let contentObj: ScriptMetaData;
     let modified = false;
     try {
@@ -181,12 +185,12 @@ class ScriptRoot {
       Util.isDeepEqual(preModified, contentObj) || (modified = true);
     }
     if (modified) {
-      await vscode.workspace.fs.writeFile(vscode.Uri.file(downstairsRoot.fsPath + "/.b6p_metadata.json"), Buffer.from(JSON.stringify(contentObj, null, 2)));
+      await vscode.workspace.fs.writeFile(this.getMetadataFileUri(), Buffer.from(JSON.stringify(contentObj, null, 2)));
     }
     return contentObj;
   }
 
-  public getDownstairsUri() {
+  public getDownstairsRootUri() {
     return vscode.Uri.file(this.downstairsRootPath.dir + "/" + this.downstairsRootPath.base);
   }
 

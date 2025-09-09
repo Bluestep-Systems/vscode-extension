@@ -19,7 +19,7 @@ export default async function (): Promise<void> {
       return;
     }
     const fileMetaData = new ScriptFile({ downstairsUri: activeEditorUri });
-    const dirtyDocs = await getDirtyDocs(fileMetaData.getScriptRoot().getDownstairsUri());
+    const dirtyDocs = await getDirtyDocs(fileMetaData.getScriptRoot().getDownstairsRootUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
       const CANCEL = 'Cancel';
