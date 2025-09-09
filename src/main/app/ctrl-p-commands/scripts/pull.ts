@@ -27,7 +27,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     const ultimateUris: vscode.Uri[] = [];
     for (let i = 0; i < rawFilePaths.length; i++) {
       const path = rawFilePaths[i];
-      const createdUri = await createOrUpdateIndividualFileOrFolder(path.downstairsRest, url);
+      const createdUri = await createOrUpdateIndividualFileOrFolder(path.downstairsPath, url);
       ultimateUris.push(createdUri);
     }
     const flattenedDirectory = await flattenDirectory(getHostFolderUri(url));

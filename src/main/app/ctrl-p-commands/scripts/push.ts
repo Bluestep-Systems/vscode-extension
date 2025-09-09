@@ -181,21 +181,22 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   const rawFilePaths = getScriptRet.rawFilePaths;
   
   const flattenedDownstairs = await flattenDirectory(downstairsRootFolderUri);
-  
+  console.log("Flattened downstairs paths:", flattenedDownstairs);
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
   // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for
   // any unmatched brothers.
 
   for (const rawFilePath of rawFilePaths) {
-    const curPath = vscode.Uri.joinPath(downstairsRootFolderUri, rawFilePath.downstairsRest);
+    // note that the only thing with an undefined trailing should be the root itself
+    const curPath = vscode.Uri.joinPath(downstairsRootFolderUri, rawFilePath.trailing || "/");
     const downstairsPath = flattenedDownstairs.find(dp => dp.fsPath === curPath.fsPath);
     if (!downstairsPath) {
       // If there's no matching downstairs path, we need to delete the upstairs path
-      console.log("Deleting upstairs path with no downstairs match:", rawFilePath.upstairsPath);
-      // await SM.fetch(rawFilePath.upstairsPath, {
-      //   method: "DELETE"
-      // });
+      console.log("going to delete upstairs path with no downstairs match:", rawFilePath.upstairsPath);
+      await SM.fetch(rawFilePath.upstairsPath, {
+        method: "DELETE"
+      });
     }
   }
 }

@@ -7,7 +7,7 @@ import { Alert } from "../ui/Alert";
 import { parseUpstairsUrl } from "./URLParser";
 
 type GetScriptArg = { url: URL; curLayer?: PrimitiveNestedObject; webDavId: string; }
-type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: { upstairsPath: string; downstairsRest: string; }[] } | undefined;
+type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: { upstairsPath: string; downstairsPath: string; trailing?: string }[] } | undefined;
 
 /**
  * Fetches the script from the specified URL.
@@ -69,7 +69,7 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
           const fileName = path.pop() as string;
           Util.PutObjVal(curLayer, path, { [`${fileName}`]: fileName }, "string");
         }
-        return { upstairsPath: terminal["D:href"], downstairsRest: newPath };
+        return { upstairsPath: terminal["D:href"], downstairsPath: newPath, trailing };
       });
     if (!response.ok) {
       throw new Error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
