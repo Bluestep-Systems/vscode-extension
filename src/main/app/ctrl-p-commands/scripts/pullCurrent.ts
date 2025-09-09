@@ -10,7 +10,7 @@ export default async function (): Promise<void> {
       return;
     }
     const fileMetaData = new ScriptFile({ downstairsUri: activeEditorUri });
-    await pullScript(fileMetaData.getScriptRoot().toBasePullPushUrlString());
+    await pullScript(fileMetaData.getScriptRoot().toBaseUpstairsString());
   } catch (e) {
     if (e instanceof Error) {
       vscode.window.showErrorMessage(`Error pulling current file: ${e.message}`);

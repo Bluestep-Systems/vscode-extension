@@ -4,10 +4,12 @@ import type { SourceOps } from '../../../../../types';
 import { App } from '../../App';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { Util } from '../../util';
+import { flattenDirectory } from '../../util/data/flattenDirectory';
+import { getScript } from '../../util/data/getScript';
 import { IdUtility } from '../../util/data/IdUtility';
-import { parseUrl } from '../../util/data/URLParser';
-import { Alert } from '../../util/ui/Alert';
+import { parseUpstairsUrl } from '../../util/data/URLParser';
 import { ScriptFile } from '../../util/script/ScriptFile';
+import { Alert } from '../../util/ui/Alert';
 /**
  * Pushes a file to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -16,7 +18,7 @@ import { ScriptFile } from '../../util/script/ScriptFile';
  */
 export default async function (overrideFormulaUri?: string, sourceOps?: SourceOps): Promise<void> {
   try {
-    const sourceEditorUri = await getLocalFileUri(sourceOps);
+    const sourceEditorUri = await getDownstairsFileUri(sourceOps);
     if (sourceEditorUri === undefined) {
       Alert.error('No source path provided');
       return;
@@ -39,11 +41,10 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
       return;
     }
     App.logger.info("Source folder URI:", sourceFolder);
-    const sourceFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
-    const readDir = sourceFolderUri;
-    App.logger.info("Reading directory:", readDir.toString());
+    const downstairsRootFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
+    App.logger.info("Reading directory:", downstairsRootFolderUri.toString());
     const fileList = await vscode.workspace.fs
-      .readDirectory(readDir)
+      .readDirectory(downstairsRootFolderUri)
       .then(async node => await tunnelNode(node, { nodeURI: uriStringToFilePath(sourceFolder) }));
 
     for (const file of fileList) {
@@ -56,8 +57,9 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
        * (1) prevents us from overloading the server with the plurality of requests
        * (2) prevents duplicate folders from being created by the webdav PUT method.
        */
-      await sendFile({ localFile: file, targetFormulaUri });
+      await sendFile({ localFile: file, upstairsRootUrlString: targetFormulaUri });
     }
+    cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaUri);
     if (!sourceOps?.skipMessage) {
       Alert.info('Push complete!');
     }
@@ -95,27 +97,31 @@ async function tunnelNode(node: [string, vscode.FileType][], {
  * @param param0 The parameters for sending the file.
  * @returns A promise that resolves when the file has been sent.
  */
-async function sendFile({ localFile, targetFormulaUri }: { localFile: string; targetFormulaUri: string; }) {
-  if (localFile.includes(`/declarations/`)) {
-    // we skip declarations -- since they are readonly and not part of the actual script
+async function sendFile({ localFile, upstairsRootUrlString }: { localFile: string; upstairsRootUrlString: string; }) {
+
+  //TODO tighten this up 
+  if (localFile.includes(`/declarations/`) || localFile.endsWith(".b6p_metadata.json")) {
+    // we skip these special files -- since they are not part of the actual script
     return;
   }
   App.logger.info("Preparing to send file:", localFile);
-  App.logger.info("To target formula URI:", targetFormulaUri);
-  const { webDavId, url } = parseUrl(targetFormulaUri);
+  App.logger.info("To target formula URI:", upstairsRootUrlString);
+  const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
   const desto = localFile
-    .split(url.host + "/" + webDavId)[1];
-  url.pathname = `/files/${webDavId}${desto}`;
-  App.logger.info("Destination:", url.toString());
+    .split(upstairsUrl.host + "/" + webDavId)[1];
+  upstairsUrl.pathname = `/files/${webDavId}${desto}`;
+  App.logger.info("Destination:", upstairsUrl.toString());
   const downstairsUri = vscode.Uri.file(localFile);
   const scriptFile = new ScriptFile({ downstairsUri });
-  if (await scriptFile.hasNotBeenModified()) {
-    App.logger.info("File has not been modified since last push; skipping:", localFile);
-    return;
-  }
+  //TODO figure out if we want to skip files that have not been modified since last push
+  // this is complicated by the fact that we may, or may not, wish to overwrite remote changes
+  // if (await scriptFile.hasNotBeenModified()) {
+  //   App.logger.info("File has not been modified since last push; skipping:", localFile);
+  //   return;
+  // }
   //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(downstairsUri);
-  const resp = await SM.fetch(url.toString(), {
+  const resp = await SM.fetch(upstairsUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -156,11 +162,51 @@ function uriStringToFilePath(uriString: string): string {
 }
 
 /**
+ * the objective of this function is to remove upstairs paths that no longer have a downstairs counterpart
+ * @param downstairsRootFolderUri 
+ * @param upstairsRootUrlString 
+ */
+async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, upstairsRootUrlString?: string) {
+  if (!downstairsRootFolderUri || !upstairsRootUrlString) {
+    throw new Error("Both downstairsRootFolderUri and upstairsRootUrlString are required for cleanup");
+  }
+  const upstairsObj = parseUpstairsUrl(upstairsRootUrlString);
+  /**
+   * this will give us a list of that are currently present upstairs
+   */
+  const getScriptRet = await getScript({ url: upstairsObj.url, webDavId: upstairsObj.webDavId });
+  if (!getScriptRet) {
+    throw new Error("Failed to get script for cleanup");
+  }
+  const rawFilePaths = getScriptRet.rawFilePaths;
+  
+  const flattenedDownstairs = await flattenDirectory(downstairsRootFolderUri);
+  
+  // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
+  // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
+  // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for
+  // any unmatched brothers.
+
+  for (const rawFilePath of rawFilePaths) {
+    const curPath = vscode.Uri.joinPath(downstairsRootFolderUri, rawFilePath.downstairsRest);
+    const downstairsPath = flattenedDownstairs.find(dp => dp.fsPath === curPath.fsPath);
+    if (!downstairsPath) {
+      // If there's no matching downstairs path, we need to delete the upstairs path
+      console.log("Deleting upstairs path with no downstairs match:", rawFilePath.upstairsPath);
+      // await SM.fetch(rawFilePath.upstairsPath, {
+      //   method: "DELETE"
+      // });
+    }
+  }
+}
+
+
+/**
  * Gets the URI for the current file based on the provided source operations.
  * @param sourceOps The source operations to use for determining the URI.
  * @returns The URI of the current file.
  */
-async function getLocalFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
+async function getDownstairsFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
   if (!sourceOps) {
     return vscode.window.activeTextEditor?.document.uri || (() => { throw new Error("No active editor found"); })();
   }

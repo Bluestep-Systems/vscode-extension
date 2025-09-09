@@ -39,7 +39,7 @@ export default async function (): Promise<void> {
       }
     }
 
-    await pushScript(fileMetaData.getScriptRoot().toBasePullPushUrlString());
+    await pushScript(fileMetaData.getScriptRoot().toBaseUpstairsString());
   } catch(e) {
     
     if (e instanceof Error) { 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
-import { ScriptRoot } from './ScriptRoot';
 import { DownstairsUrIParser } from './DownstairsUrIParser';
+import { ScriptRoot } from './ScriptRoot';
 
 /**
  * A class representing metadata extracted from a file path.
@@ -13,15 +13,11 @@ export class ScriptFile {
   /**
    * The downstairs URI (local file system path).
    */
-  public downstairsUri: vscode.Uri;
-
-  /**
-   * The script root information.
-   */
+  private parser: DownstairsUrIParser;
   private _scriptRoot: ScriptRoot;
 
   constructor({ downstairsUri }: { downstairsUri: vscode.Uri }) {
-    this.downstairsUri = downstairsUri;
+    this.parser = new DownstairsUrIParser(downstairsUri);
     this._scriptRoot = new ScriptRoot({ childUri: downstairsUri });
   }
 
@@ -32,25 +28,33 @@ export class ScriptFile {
    * @returns Returns the URL for the proper upstairs file.
    */
   public toUpstairsURL(): URL {
-    const parser = new DownstairsUrIParser(this.downstairsUri);
-    if (parser.type === "metadata") {
+    console.log('this.parser', this.parser);
+    if (this.parser.type === "metadata") {
+      console.trace();
       throw new Error("Cannot determine the type of this file");
     }
     const upstairsBaseUrl = this.getScriptRoot().toBasePullPushUrl();
     const newUrl = new URL(upstairsBaseUrl);
-    newUrl.pathname = upstairsBaseUrl.pathname + parser.type + "/" +parser.rest;
+    newUrl.pathname = upstairsBaseUrl.pathname + this.parser.type + "/" + this.parser.rest;
     return newUrl;
   }
 
+  public toDownstairsUri() {
+    return vscode.Uri.joinPath(this.getScriptRoot().getDownstairsRootUri(), this.parser.type, this.parser.rest);
+  }
 
 
   /**
-   * determines if the local file has been modified since the last push
+   * determines if the local file has been modified since last push
    * 
    * @returns 
    */
   public async hasBeenModified(): Promise<boolean> {
-    const stat = await vscode.workspace.fs.stat(this.downstairsUri);
+    const stat = await this.fileStat();
+    if (!stat) {
+      // file doesn't exist, so it has been "modified" in the sense that we need to push it
+      return true;
+    }
     if (stat.type === vscode.FileType.Directory) {
       throw new Error("Cannot push a directory; please select a file.");
     }
@@ -81,7 +85,7 @@ export class ScriptFile {
    */
   public async fileExists(): Promise<boolean> {
     try {
-      const stat = await vscode.workspace.fs.stat(this.downstairsUri);
+      const stat = await vscode.workspace.fs.stat(this.toDownstairsUri());
       if (stat.type === vscode.FileType.Directory) {
         return false;
       }
@@ -105,7 +109,7 @@ export class ScriptFile {
    */
   public async fileStat(): Promise<vscode.FileStat | null> {
     try {
-      return await vscode.workspace.fs.stat(this.downstairsUri);
+      return await vscode.workspace.fs.stat(this.toDownstairsUri());
     } catch (e) {
       return null;
     }
@@ -128,6 +132,24 @@ export class ScriptFile {
   public getScriptRoot() {
     return this._scriptRoot;
   }
+
+  public async getLastPulledTime(): Promise<string | null> {
+    const md = await this.getScriptRoot().getMetaData();
+    return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPulled || null;
+  }
+  public async getLastPushedTime(): Promise<string | null> {
+    const md = await this.getScriptRoot().getMetaData();
+    return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPushed || null;
+  }
+
+  withScriptRoot(root: ScriptRoot) {
+    this._scriptRoot = root;
+    if (this.parser.type === "metadata") {
+      throw new Error("Cannot overwrite script root of a metadata file");
+    }
+    return this;
+  }
+
 }
 
 

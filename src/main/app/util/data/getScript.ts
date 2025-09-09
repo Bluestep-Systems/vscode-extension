@@ -1,13 +1,13 @@
 import { XMLParser } from 'fast-xml-parser';
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
-import { SESSION_MANAGER as SM} from "../../b6p_session/SessionManager";
+import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
 import { Util } from "../";
 import { Alert } from "../ui/Alert";
-import { parseUrl } from "./URLParser";
+import { parseUpstairsUrl } from "./URLParser";
 
 type GetScriptArg = { url: URL; curLayer?: PrimitiveNestedObject; webDavId: string; }
-type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: string[] } | undefined;
+type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: { upstairsPath: string; downstairsRest: string; }[] } | undefined;
 
 /**
  * Fetches the script from the specified URL.
@@ -42,7 +42,7 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
       //TODO this only goes 4 layers deep
       .filter(terminal => {
         // TODO examine this for fragility
-        let { trailing } = parseUrl(terminal["D:href"]);
+        let { trailing } = parseUpstairsUrl(terminal["D:href"]);
         if (trailing === undefined) {
           return false; // not pulling the root itself
         }
@@ -58,7 +58,7 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
         return true;
       })
       .map(terminal => {
-        const { webDavId, trailing } = parseUrl(terminal["D:href"]);
+        const { webDavId, trailing } = parseUpstairsUrl(terminal["D:href"]);
 
         const newPath = `${webDavId}/${trailing}`;
         const path = newPath.split("/");
@@ -69,7 +69,7 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
           const fileName = path.pop() as string;
           Util.PutObjVal(curLayer, path, { [`${fileName}`]: fileName }, "string");
         }
-        return newPath;
+        return { upstairsPath: terminal["D:href"], downstairsRest: newPath };
       });
     if (!response.ok) {
       throw new Error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);

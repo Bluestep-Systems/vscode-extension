@@ -31,7 +31,7 @@ export class ScriptRoot {
 
   private getMetadataFileUri() {
     const downstairsRoot = this.getDownstairsRootUri();
-    return vscode.Uri.file(downstairsRoot.fsPath + "/" + ScriptRoot.METADATA_FILE);
+    return vscode.Uri.joinPath(downstairsRoot, ScriptRoot.METADATA_FILE);
   }
   async touchFile(file: vscode.Uri, touchType: "lastPulled" | "lastPushed"): Promise<void> {
     const metaData = await this.modifyMetaData(md => {
@@ -62,7 +62,22 @@ export class ScriptRoot {
     }
     return void 0;
   }
-  async modifyMetaData(callBack: ((meta: ScriptMetaData) => void)): Promise<ScriptMetaData> {
+
+  /**
+   * Gets the metadata for the script root.
+   * @returns The metadata for the script root.
+   */
+  async getMetaData(): Promise<ScriptMetaData> {
+    return await this.modifyMetaData();
+  }
+
+  /**
+   * Modifies the metadata for the script root.
+   * it will also save any changes you make to the object passed to the callBack function.
+   * @param callBack 
+   * @returns 
+   */
+  async modifyMetaData(callBack?: ((meta: ScriptMetaData) => void)): Promise<ScriptMetaData> {
     const metadataFileUri = this.getMetadataFileUri();
     let contentObj: ScriptMetaData | undefined;
     let modified = false;
@@ -137,6 +152,10 @@ export class ScriptRoot {
     return contentObj;
   }
 
+  /**
+   * Gets the URI for the downstairs root folder.
+   * @returns The URI for the downstairs root folder.
+   */
   public getDownstairsRootUri() {
     return vscode.Uri.file(this.downstairsRootPath.dir + "/" + this.downstairsRootPath.base);
   }
@@ -170,7 +189,7 @@ export class ScriptRoot {
    * Returns a base URL suitable for pull and push operations.
    * @returns A base URL suitable for pull and push operations.
    */
-  public toBasePullPushUrlString() {
+  public toBaseUpstairsString() {
     return `https://${this.origin}/files/${this.webDavId}/`;
   }
 
@@ -179,6 +198,10 @@ export class ScriptRoot {
    * @returns A base URL suitable for pull and push operations.
    */
   public toBasePullPushUrl(): URL {
-    return new URL(this.toBasePullPushUrlString());
+    return new URL(this.toBaseUpstairsString());
+  }
+
+  static fromRootUri(rootUri: vscode.Uri) {
+    return new ScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, ScriptRoot.METADATA_FILE) });
   }
 }

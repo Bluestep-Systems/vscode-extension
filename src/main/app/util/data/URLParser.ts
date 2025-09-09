@@ -13,7 +13,7 @@ function isValidType(type: string): type is UrlType {
   return URL_TYPES.includes(type as UrlType);
 }
 
-export function parseUrl(str: string): { url: URL; type: UrlType; webDavId: string; trailing?: string; } {
+export function parseUpstairsUrl(str: string): { url: URL; type: UrlType; webDavId: string; trailing?: string; } {
 
   if (!str || !str.trim()) {
     throw new URLParseError("URL string cannot be empty");
