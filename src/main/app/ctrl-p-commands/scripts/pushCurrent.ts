@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getActiveEditorUri } from '../../util/data/getActiveEditorUri';
-import { ScriptFile } from '../../util/data/ScriptUtil';
+import { ScriptFile } from '../../util/script/ScriptFile';
 import { getDirtyDocs } from '../../util/data/getDirtyDocs';
 import { Alert } from '../../util/ui/Alert';
 import pushScript from '../scripts/push';

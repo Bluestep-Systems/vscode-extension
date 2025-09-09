@@ -4,7 +4,7 @@ import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { getScript } from "../../util/data/getScript";
 import { parseUrl } from "../../util/data/URLParser";
 import { Alert } from '../../util/ui/Alert';
-import { ScriptFile } from '../../util/data/ScriptUtil';
+import { ScriptFile } from '../../util/script/ScriptFile';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -69,10 +69,7 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
     }
   } else {
 
-    console.log("ultimatePath:", ultimatePath.toString());
     const sf = new ScriptFile({ downstairsUri: ultimatePath });
-    console.log("ScriptFile downstairsUri:", sf.downstairsUri.fsPath.toString());
-    console.log("ScriptFile upstairsURL:", sf.toUpstairsURL().toString());
     const exists = await sf.fileExists();
 
     const lookupUri = sf.toUpstairsURL();
@@ -80,26 +77,17 @@ async function createIndividualFileOrFolder(path: string, sourceUrl: URL): Promi
     App.logger.info("fetching from:", lookupUri);
     const headers: { [key: string]: string } = {};
     if (exists) {
-      headers['If-Modified-Since'] = new Date((await sf.lastModifiedTime())).toUTCString();
+      //headers['If-Modified-Since'] = new Date((await sf.lastModifiedTime())).toUTCString();
     }
     const response = await SM.fetch(lookupUri, {
       method: "GET",
       headers
     });
-    await sf.getScriptRoot().modifyMetaData(md => {
-      const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === ultimatePath.fsPath);
-      if (existingEntryIndex !== -1) {
-        md.pushPullRecords[existingEntryIndex].lastPulled = Date.now();
-        return;
-      } else {
-        const now = Date.now();
-        md.pushPullRecords.push({
-          downstairsPath: ultimatePath.fsPath,
-          lastPushed: now,
-          lastPulled: now
-        });
-      }
-    });
+    if (response.status >= 400) {
+      App.logger.error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
+      throw new Error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
+    }
+    await sf.getScriptRoot().touchFile(ultimatePath, "lastPulled");
     if (response.status === 304) {
       App.logger.info(`File not modified since last pull: ${ultimatePath.fsPath}`);
       return;

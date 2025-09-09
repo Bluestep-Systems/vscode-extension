@@ -149,7 +149,7 @@ type ScriptMetaData = {
    */
   pushPullRecords: {
     downstairsPath: string;
-    lastPushed: number;
-    lastPulled: number;
+    lastPushed: string;
+    lastPulled: string;
   }[]
 }

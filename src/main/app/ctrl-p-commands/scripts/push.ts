@@ -7,7 +7,7 @@ import { Util } from '../../util';
 import { IdUtility } from '../../util/data/IdUtility';
 import { parseUrl } from '../../util/data/URLParser';
 import { Alert } from '../../util/ui/Alert';
-import { ScriptFile } from '../../util/data/ScriptUtil';
+import { ScriptFile } from '../../util/script/ScriptFile';
 /**
  * Pushes a file to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -135,19 +135,7 @@ text: ${await resp.text()}
 ========`;
     throw new Error('Failed to send file' + details);
   }
-  await scriptFile.getScriptRoot().modifyMetaData(md => {
-    const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsUri.fsPath);
-    if (existingEntryIndex !== -1) {
-      md.pushPullRecords[existingEntryIndex].lastPulled = Date.now();
-      return;
-    } else {
-      md.pushPullRecords.push({
-        downstairsPath: downstairsUri.fsPath,
-        lastPushed: Date.now(),
-        lastPulled: Date.now()
-      });
-    }
-  });
+  await scriptFile.getScriptRoot().touchFile(downstairsUri, "lastPushed");
   App.logger.info("File sent successfully:", localFile);
   return resp;
 }
