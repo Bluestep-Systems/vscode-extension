@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 
-export class DownstairsUrIParser {
+export class DownstairsUriParser {
   private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)\/(\d+)\/(draft|declarations|\.b6p_metadata\.json)(?:\/(.*))?$/;
 
   public readonly type: "draft" | "declarations" | "metadata";
@@ -12,7 +12,7 @@ export class DownstairsUrIParser {
   constructor(downstairsUri: vscode.Uri) {
     const cleanPath = downstairsUri.fsPath;
 
-    const match = cleanPath.match(DownstairsUrIParser.URI_DISAMBIGUATION_REGEX);
+    const match = cleanPath.match(DownstairsUriParser.URI_DISAMBIGUATION_REGEX);
 
     if (!match) {
       throw new Error("The provided URI does not conform to expected structure: " + downstairsUri.toString() + ", expected /^(.*?)\/(\d+)\/(draft|declarations|\.b6p_metadata\.json)(?:\/(.*))?$/");

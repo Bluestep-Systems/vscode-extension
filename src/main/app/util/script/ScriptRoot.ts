@@ -4,7 +4,7 @@ import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
 import { FileDoesNotExistError, FileReadError } from './Errors';
-import { DownstairsUrIParser } from './DownstairsUrIParser';
+import { DownstairsUriParser } from './DownstairsUrIParser';
 
 /**
  * object representing the root of an individual script on the filesystem.
@@ -21,18 +21,29 @@ export class ScriptRoot {
    * @param param0
    */
   constructor({ childUri }: { childUri: vscode.Uri; }) {
-    const parser = new DownstairsUrIParser(childUri);
+    const parser = new DownstairsUriParser(childUri);
     const shavedName = parser.getShavedName();
-    const scriptPath = path.parse(shavedName); // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
+    const scriptPath = path.parse(shavedName);                  // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
     const parentDirBase = path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
     this.downstairsRootPath = scriptPath;
     this.downstairsRootOrgPath = parentDirBase;
   }
 
+  /**
+   * Gets where the metadata file *should* be located
+   * @returns The URI for the metadata file.
+   */
   private getMetadataFileUri() {
     const downstairsRoot = this.getDownstairsRootUri();
     return vscode.Uri.joinPath(downstairsRoot, ScriptRoot.METADATA_FILE);
   }
+
+  /**
+   * Touches a file by updating its last pulled or pushed timestamp.
+   * @param file The file to touch.
+   * @param touchType The type of touch to perform.
+   * @returns 
+   */
   async touchFile(file: vscode.Uri, touchType: "lastPulled" | "lastPushed"): Promise<void> {
     const metaData = await this.modifyMetaData(md => {
       const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === file.fsPath);
@@ -197,11 +208,30 @@ export class ScriptRoot {
    * Returns a base URL suitable for pull and push operations.
    * @returns A base URL suitable for pull and push operations.
    */
-  public toBasePullPushUrl(): URL {
+  public toBaseUpstairsUrl(): URL {
     return new URL(this.toBaseUpstairsString());
   }
 
+  /**
+   * Creates a ScriptRoot from a root URI.
+   * @param rootUri The root URI to create the ScriptRoot from.
+   * @returns A new ScriptRoot instance.
+   */
   static fromRootUri(rootUri: vscode.Uri) {
     return new ScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, ScriptRoot.METADATA_FILE) });
+  }
+
+  /**
+   * Checks if this ScriptRoot is morally equivalent to another ScriptRoot.
+   * @param b The other ScriptRoot to compare against.
+   * @returns True if the ScriptRoots are equal, false otherwise.
+   */
+  equals(b: ScriptRoot) {
+    return (
+      this.origin === b.origin &&
+      this.webDavId === b.webDavId &&
+      this.getDownstairsRootUri().fsPath === b.getDownstairsRootUri().fsPath &&
+      this.toBaseUpstairsString() === b.toBaseUpstairsString()
+    );
   }
 }

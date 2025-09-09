@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
-import { DownstairsUrIParser } from './DownstairsUrIParser';
+import { DownstairsUriParser } from './DownstairsUrIParser';
 import { ScriptRoot } from './ScriptRoot';
 
 /**
@@ -13,15 +13,17 @@ export class ScriptFile {
   /**
    * The downstairs URI (local file system path).
    */
-  private parser: DownstairsUrIParser;
+  private parser: DownstairsUriParser;
+
+  /**
+   * The downstairs root object.
+   */
   private _scriptRoot: ScriptRoot;
 
   constructor({ downstairsUri }: { downstairsUri: vscode.Uri }) {
-    this.parser = new DownstairsUrIParser(downstairsUri);
+    this.parser = new DownstairsUriParser(downstairsUri);
     this._scriptRoot = new ScriptRoot({ childUri: downstairsUri });
   }
-
-
 
   /**
    * Returns the URL for the proper upstairs file.
@@ -33,7 +35,7 @@ export class ScriptFile {
       console.trace();
       throw new Error("Cannot determine the type of this file");
     }
-    const upstairsBaseUrl = this.getScriptRoot().toBasePullPushUrl();
+    const upstairsBaseUrl = this.getScriptRoot().toBaseUpstairsUrl();
     const newUrl = new URL(upstairsBaseUrl);
     newUrl.pathname = upstairsBaseUrl.pathname + this.parser.type + "/" + this.parser.rest;
     return newUrl;
@@ -42,7 +44,6 @@ export class ScriptFile {
   public toDownstairsUri() {
     return vscode.Uri.joinPath(this.getScriptRoot().getDownstairsRootUri(), this.parser.type, this.parser.rest);
   }
-
 
   /**
    * determines if the local file has been modified since last push
@@ -142,6 +143,13 @@ export class ScriptFile {
     return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPushed || null;
   }
 
+  /**
+   * overwrites the script root for this file
+   * 
+   * be mindful, because it becomes easy to create inconsistencies
+   * @param root 
+   * @returns 
+   */
   withScriptRoot(root: ScriptRoot) {
     this._scriptRoot = root;
     if (this.parser.type === "metadata") {
