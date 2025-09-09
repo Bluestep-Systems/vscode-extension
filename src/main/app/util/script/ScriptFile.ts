@@ -134,10 +134,19 @@ export class ScriptFile {
     return this._scriptRoot;
   }
 
+  /**
+   * Gets the last pulled time for the script file.
+   * @returns The last pulled time as a string, or null if not found.
+   */
   public async getLastPulledTime(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
     return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPulled || null;
   }
+
+  /**
+   * Gets the last pushed time for the script file.
+   * @returns The last pushed time as a string, or null if not found.
+   */
   public async getLastPushedTime(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
     return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPushed || null;

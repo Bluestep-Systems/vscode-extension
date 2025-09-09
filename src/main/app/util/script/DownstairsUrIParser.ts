@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 
 
+/**
+ * A utility class to parse downstairs URIs into their components.
+ */
 export class DownstairsUriParser {
   private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)\/(\d+)\/(draft|declarations|\.b6p_metadata\.json)(?:\/(.*))?$/;
 
