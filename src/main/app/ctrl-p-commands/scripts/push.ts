@@ -11,7 +11,7 @@ import { parseUpstairsUrl } from '../../util/data/URLParser';
 import { ScriptFile } from '../../util/script/ScriptFile';
 import { Alert } from '../../util/ui/Alert';
 /**
- * Pushes a file to a WebDAV location.
+ * Pushes a script to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
  * @param sourceOps The source operations to perform.
  * @returns A promise that resolves when the push is complete.
