@@ -52,8 +52,8 @@ export class ScriptRoot {
         const now = new Date().toUTCString();
         md.pushPullRecords.push({
           downstairsPath: file.fsPath,
-          lastPushed: now,
-          lastPulled: now
+          lastPushed: touchType === "lastPushed" ? now : null,
+          lastPulled: touchType === "lastPulled" ? now : null
         });
       }
     });
