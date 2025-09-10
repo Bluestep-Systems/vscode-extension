@@ -85,7 +85,7 @@ export class RemoteScriptFile {
     if (hexArray.length !== 64) {
       throw new Error("Could not compute hash of local file");
     }
-    return hexArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
   }
   public async integrityMatches(): Promise<boolean> {
     const hashHex = await this.getHash();
@@ -99,7 +99,11 @@ export class RemoteScriptFile {
         "Accept": "*/*",
       }
     });
-    return response.headers.get("etag")?.toLowerCase() || (() => { throw new Error("Could not determine etag"); })();
+    const etag = response.headers.get("etag");
+    if (!etag) {
+      throw new Error("Could not determine etag");
+    }
+    return etag.toLowerCase();
   }
 
   public async getDownstairsContent(): Promise<string> {
