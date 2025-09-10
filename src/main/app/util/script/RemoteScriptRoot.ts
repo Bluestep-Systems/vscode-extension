@@ -5,13 +5,14 @@ import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
 import { FileDoesNotExistError, FileReadError } from './Errors';
 import { DownstairsUriParser } from './DownstairsUrIParser';
+import { RemoteScriptFile } from './RemoteScriptFile';
 
 /**
  * object representing the root of an individual script on the filesystem.
  *
  * this originally was the webdavid root file.
  */
-export class ScriptRoot {
+export class RemoteScriptRoot {
   static readonly METADATA_FILE = ".b6p_metadata.json";
   downstairsRootPath: path.ParsedPath;
   downstairsRootOrgPath: path.ParsedPath;
@@ -39,7 +40,7 @@ export class ScriptRoot {
    */
   private getMetadataFileUri() {
     const downstairsRoot = this.getDownstairsRootUri();
-    return vscode.Uri.joinPath(downstairsRoot, ScriptRoot.METADATA_FILE);
+    return vscode.Uri.joinPath(downstairsRoot, RemoteScriptRoot.METADATA_FILE);
   }
 
   /**
@@ -48,19 +49,24 @@ export class ScriptRoot {
    * @param touchType The type of touch to perform.
    * @returns 
    */
-  async touchFile(file: vscode.Uri, touchType: "lastPulled" | "lastPushed"): Promise<void> {
+  async touchFile(file: RemoteScriptFile, touchType: "lastPulled" | "lastPushed"): Promise<void> {
+    const lastHash = await file.getHash();
     const metaData = await this.modifyMetaData(md => {
-      const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === file.fsPath);
+      const downstairsPath = file.toDownstairsUri().fsPath;
+      const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
       if (existingEntryIndex !== -1) {
         const newDateString = new Date().toUTCString();
         
         md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
+        md.pushPullRecords[existingEntryIndex].lastVerifiedHash = lastHash;
       } else {
+        
         const now = new Date().toUTCString();
         md.pushPullRecords.push({
-          downstairsPath: file.fsPath,
+          downstairsPath,
           lastPushed: touchType === "lastPushed" ? now : null,
-          lastPulled: touchType === "lastPulled" ? now : null
+          lastPulled: touchType === "lastPulled" ? now : null,
+          lastVerifiedHash: lastHash
         });
       }
     });
@@ -116,7 +122,7 @@ export class ScriptRoot {
           attempts++;
           if (attempts < maxAttempts) {
             console.error(`File read incomplete, retrying... (attempt ${attempts}/${maxAttempts})`);
-            await Util.sleep(1000); // Wait 1000ms before retry
+            await Util.sleep(1_000); // Wait 1000ms before retry
           }
         } catch (readError) {
           attempts++;
@@ -124,7 +130,7 @@ export class ScriptRoot {
             throw readError; // Re-throw if we've exhausted retries
           }
           console.error(`File read error, retrying... (attempt ${attempts}/${maxAttempts}):`, readError);
-          await Util.sleep(1000); // Wait 1000ms before retry
+          await Util.sleep(1_000); // Wait 1000ms before retry
         }
       }
 
@@ -212,7 +218,7 @@ export class ScriptRoot {
    * @returns A new ScriptRoot instance.
    */
   static fromRootUri(rootUri: vscode.Uri) {
-    return new ScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, ScriptRoot.METADATA_FILE) });
+    return new RemoteScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, RemoteScriptRoot.METADATA_FILE) });
   }
 
   /**
@@ -220,7 +226,7 @@ export class ScriptRoot {
    * @param b The other ScriptRoot to compare against.
    * @returns True if the ScriptRoots are equal, false otherwise.
    */
-  equals(b: ScriptRoot) {
+  equals(b: RemoteScriptRoot) {
     return (
       this.origin === b.origin &&
       this.webDavId === b.webDavId &&

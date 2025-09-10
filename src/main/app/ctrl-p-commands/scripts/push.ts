@@ -8,7 +8,7 @@ import { flattenDirectory } from '../../util/data/flattenDirectory';
 import { getScript } from '../../util/data/getScript';
 import { IdUtility } from '../../util/data/IdUtility';
 import { parseUpstairsUrl } from '../../util/data/URLParser';
-import { ScriptFile } from '../../util/script/ScriptFile';
+import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { Alert } from '../../util/ui/Alert';
 /**
  * Pushes a script to a WebDAV location.
@@ -112,13 +112,11 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   upstairsUrl.pathname = `/files/${webDavId}${desto}`;
   App.logger.info("Destination:", upstairsUrl.toString());
   const downstairsUri = vscode.Uri.file(localFile);
-  const scriptFile = new ScriptFile({ downstairsUri });
-  //TODO figure out if we want to skip files that have not been modified since last push
-  // this is complicated by the fact that we may, or may not, wish to overwrite remote changes
-  // if (await scriptFile.hasNotBeenModified()) {
-  //   App.logger.info("File has not been modified since last push; skipping:", localFile);
-  //   return;
-  // }
+  const scriptFile = new RemoteScriptFile({ downstairsUri });
+  if (await scriptFile.integrityMatches()) {
+    App.logger.info("File integrity matches; skipping:", localFile);
+    return;
+  }
   //TODO investigate if this can be done via streaming
   const fileContents = await vscode.workspace.fs.readFile(downstairsUri);
   const resp = await SM.fetch(upstairsUrl, {
@@ -129,7 +127,18 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
     body: fileContents
   });
   if (!resp.ok) {
-    const details = `
+    const details = await getDetails(resp);
+    throw new Error('Failed to send file' + details);
+  }
+  await scriptFile.getScriptRoot().touchFile(scriptFile, "lastPushed");
+  App.logger.info("File sent successfully:", localFile);
+  return resp;
+
+
+}
+
+async function getDetails(resp: Response) {
+  return `
 ========
 ========
 status: ${resp.status}
@@ -139,11 +148,6 @@ statusText: ${resp.statusText}
 text: ${await resp.text()}
 ========
 ========`;
-    throw new Error('Failed to send file' + details);
-  }
-  await scriptFile.getScriptRoot().touchFile(downstairsUri, "lastPushed");
-  App.logger.info("File sent successfully:", localFile);
-  return resp;
 }
 
 /**

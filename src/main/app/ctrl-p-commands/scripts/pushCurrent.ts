@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getActiveEditorUri } from '../../util/data/getActiveEditorUri';
-import { ScriptFile } from '../../util/script/ScriptFile';
+import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { getDirtyDocs } from '../../util/data/getDirtyDocs';
 import { Alert } from '../../util/ui/Alert';
 import pushScript from '../scripts/push';
@@ -18,7 +18,7 @@ export default async function (): Promise<void> {
     if (activeEditorUri === undefined) {
       return;
     }
-    const fileMetaData = new ScriptFile({ downstairsUri: activeEditorUri });
+    const fileMetaData = new RemoteScriptFile({ downstairsUri: activeEditorUri });
     const dirtyDocs = await getDirtyDocs(fileMetaData.getScriptRoot().getDownstairsRootUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';

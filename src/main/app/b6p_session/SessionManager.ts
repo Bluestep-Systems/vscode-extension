@@ -181,6 +181,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
           await this.sessions.deleteAsync(origin);
           Alert.info(e.stack || e.message || String(e), { modal: false });
           Alert.info("Session expired/etc, attempting to re-authenticate...", { modal: false });
+          await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
           return await this.csrfFetch(url, options, retries - 1);
         }
         if (retries > 0) {
@@ -254,16 +255,18 @@ export const SESSION_MANAGER = new class extends ContextNode {
         ...options,
         headers: {
           ...options?.headers,
-          "Cookie": `JSESSIONID=${sessionData.JSESSIONID}; INGRESSCOOKIE=${sessionData.INGRESSCOOKIE || ""}`,
+          "Cookie": `JSESSIONID=${sessionData.JSESSIONID}; INGRESSCOOKIE=${sessionData.INGRESSCOOKIE}`,
         }
       };
       const response = await globalThis.fetch(url, options);
       return await this.processResponse(response);
     } else {
       console.log("performing login to:", url.origin);
+      //TODO perform this login on a more dedicated endpoint (graphql?)
       const response = await globalThis.fetch(url.origin + "/shared/home.jsp", {
         method: "POST",
         headers: {
+          //TODO try removing this
           "Authorization": `${await this.authManager.authHeaderValue()}`,
           "Content-Type": "application/x-www-form-urlencoded",
         },

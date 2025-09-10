@@ -1,12 +1,11 @@
 import * as vscode from 'vscode';
 import { App } from '../../App';
-import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
-import { getScript } from "../../util/data/getScript";
-import { parseUpstairsUrl } from "../../util/data/URLParser";
-import { ScriptFile } from '../../util/script/ScriptFile';
-import { Alert } from '../../util/ui/Alert';
 import { flattenDirectory } from '../../util/data/flattenDirectory';
 import { getHostFolderUri } from '../../util/data/getHostFolderUri';
+import { getScript } from "../../util/data/getScript";
+import { parseUpstairsUrl } from "../../util/data/URLParser";
+import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
+import { Alert } from '../../util/ui/Alert';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -30,11 +29,13 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       const createdUri = await createOrUpdateIndividualFileOrFolder(path.downstairsPath, url);
       ultimateUris.push(createdUri);
     }
-    const flattenedDirectory = await flattenDirectory(getHostFolderUri(url));
+    const flattenedDirectory = await flattenDirectory(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
+    console.log("Cleaning up unused downstairs paths...", flattenedDirectory);
     cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
     Alert.info('Pull complete!');
   } catch (e) {
-    Alert.error(`Error pulling files: ${e}`);
+    Alert.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);
+    throw e;
   }
 }
 /**
@@ -43,6 +44,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
  * @param validPaths 
  */
 function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPaths: vscode.Uri[]) {
+  // find all existing paths that are not in the valid paths list
   const toDelete = existingPaths.filter(ep => {
     //ignore special files
     if (isASpecialFile(ep)) {
@@ -103,43 +105,17 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
       // if the reason for this error is that the directory exists or not, but I couldn't
       // find some analog of `optFolderExists()`
     }
-    if (dirExists) {
-      console.log(`Directory already exists: ${ultimatePath.fsPath}`);
-    } else {
+    if (!dirExists) {
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const sf = new ScriptFile({ downstairsUri: ultimatePath });
-
-    //TODO figure out how we want to do a "smart" pull that only pulls files that have changed
-    // this is complicated by the fact that we may, or may not, wish to overwrite local changes
-    // const exists = await sf.fileExists();
-    const headers: { [key: string]: string } = {};
-    // if (exists) {
-    //   const lastPulled = await sf.getLastPulledTime();
-    //   if (lastPulled) {
-    //     headers['If-Modified-Since'] = lastPulled;
-    //   }
-    // }
-
-    const lookupUri = sf.toUpstairsURL();
-
-    App.logger.info("fetching from:", lookupUri);
-    const response = await SM.fetch(lookupUri, {
-      method: "GET",
-      headers
-    });
-    if (response.status >= 400) {
-      App.logger.error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
-      throw new Error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
+    const sf = new RemoteScriptFile({ downstairsUri: ultimatePath });
+    if (await sf.fileExists() && await sf.integrityMatches()) {
+      App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
+      await sf.getScriptRoot().touchFile(sf, "lastPulled");
+      return sf.toDownstairsUri();
     }
-    await sf.getScriptRoot().touchFile(ultimatePath, "lastPulled");
-    if (response.status === 304) {
-      App.logger.info(`File not modified since last pull: ${ultimatePath.fsPath}`);
-      return ultimatePath;
-    }
-    const buffer = await response.arrayBuffer();
-    await vscode.workspace.fs.writeFile(ultimatePath, Buffer.from(buffer));
+    await sf.download();
   }
   return ultimatePath;
 }

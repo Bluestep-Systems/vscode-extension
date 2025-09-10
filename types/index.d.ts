@@ -151,5 +151,6 @@ type ScriptMetaData = {
     downstairsPath: string;
     lastPushed: string | null;
     lastPulled: string | null;
+    lastVerifiedHash: string;
   }[]
 }
