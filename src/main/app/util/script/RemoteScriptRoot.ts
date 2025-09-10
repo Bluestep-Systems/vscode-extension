@@ -168,11 +168,11 @@ export class RemoteScriptRoot {
    * @returns The URI for the downstairs root folder.
    */
   public getDownstairsRootUri() {
-    return vscode.Uri.file(this.downstairsRootPath.dir + "/" + this.downstairsRootPath.base);
+    return vscode.Uri.file(this.downstairsRootPath.dir + path.sep + this.downstairsRootPath.base);
   }
 
   public getOrgUri() {
-    return vscode.Uri.file(this.downstairsRootOrgPath.dir + "/" + this.downstairsRootOrgPath.base);
+    return vscode.Uri.file(this.downstairsRootOrgPath.dir + path.sep + this.downstairsRootOrgPath.base);
   }
 
   /**

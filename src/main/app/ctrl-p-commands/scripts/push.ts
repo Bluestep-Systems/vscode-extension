@@ -192,7 +192,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
 
   for (const rawFilePath of rawFilePaths) {
     // note that the only thing with an undefined trailing should be the root itself
-    const curPath = vscode.Uri.joinPath(downstairsRootFolderUri, rawFilePath.trailing || "/");
+    const curPath = vscode.Uri.joinPath(downstairsRootFolderUri, rawFilePath.trailing || path.sep);
     const downstairsPath = flattenedDownstairs.find(dp => dp.fsPath === curPath.fsPath);
     if (!downstairsPath) {
       // If there's no matching downstairs path, we need to delete the upstairs path

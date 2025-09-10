@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 
 /**
  * A utility class to parse downstairs URIs into their components.
  */
 export class DownstairsUriParser {
-  private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)\/(\d+)\/(draft|declarations|\.b6p_metadata\.json)(?:\/(.*))?$/;
+  private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)[\/\\](\d+)[\/\\](draft|declarations|\.b6p_metadata\.json)(?:[\/\\](.*))?$/;
 
   public readonly type: "draft" | "declarations" | "metadata";
   public readonly rest: string;
@@ -18,7 +19,7 @@ export class DownstairsUriParser {
     const match = cleanPath.match(DownstairsUriParser.URI_DISAMBIGUATION_REGEX);
 
     if (!match) {
-      throw new Error("The provided URI does not conform to expected structure: " + downstairsUri.toString() + ", expected /^(.*?)\/(\d+)\/(draft|declarations|\.b6p_metadata\.json)(?:\/(.*))?$/");
+      throw new Error("The provided URI does not conform to expected structure: " + downstairsUri.toString() + ", expected /^(.*?)[/\\\\](\\d+)[/\\\\](draft|declarations|\\.b6p_metadata\\.json)(?:[/\\\\](.*))?$/");
     }
 
     this.prependingPath = match[1]; // Extract the path before the WebDAV ID
@@ -35,6 +36,6 @@ export class DownstairsUriParser {
    * This reconstructs the path using the extracted components instead of substring operations
    */
   public getShavedName(): string {
-    return this.prependingPath + `/${this.webDavId}`;
+    return this.prependingPath + path.sep + this.webDavId;
   }
 }
