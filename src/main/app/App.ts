@@ -4,6 +4,7 @@ import { SESSION_MANAGER as SM } from './b6p_session/SessionManager';
 import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
+import { Alert } from './util/ui/Alert';
 
 
 export const App = new class extends ContextNode {
@@ -50,6 +51,12 @@ export const App = new class extends ContextNode {
     }
   }();
 
+  /**
+   * //TODO remove if unneccessary
+   * 
+   * Checks if the app is initialized
+   * @returns true if the app is initialized, false otherwise.
+   */
   public isInitialized(): boolean {
     return this.#_context !== null;
   }
@@ -72,6 +79,9 @@ export const App = new class extends ContextNode {
     return this.#_settings!;
   }
 
+  /**
+   * the output channel for logging. logs to a channel named "B6P" in the vscode output pane.
+   */
   public get logger() {
     if (this.#_outputChannel === null) {
       throw new Error('Output channel is not set');
@@ -99,7 +109,8 @@ export const App = new class extends ContextNode {
   public clearPersistance() {
     this.settings.clear();
     SM.clearPersistance();
-    App.logger.info("Cleared all settings and auth managers");
+    Alert.info("Cleared all settings and sessions", { modal: false});
+    App.logger.info("Cleared all settings and sessions");
   }
 
   /**

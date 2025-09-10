@@ -46,6 +46,10 @@ export class ScriptFile {
     return newUrl;
   }
 
+  /**
+   * gets the downstairs (local) URI for this file
+   * @returns 
+   */
   public toDownstairsUri() {
     return vscode.Uri.joinPath(this.getScriptRoot().getDownstairsRootUri(), this.parser.type, this.parser.rest);
   }

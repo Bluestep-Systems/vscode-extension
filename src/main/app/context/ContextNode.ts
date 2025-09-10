@@ -30,7 +30,6 @@ export abstract class ContextNode {
    *
    * if the manager has dependencies on other managers, it should also pass themselves as `this` to their `init` methods.
    * @param managerOrContext the context manager to use as parent, or the extension context if this is the root
-   * @param context the extension context
    */
   abstract init(contextOrManager: vscode.ExtensionContext | ContextNode): this;
 

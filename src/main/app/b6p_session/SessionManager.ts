@@ -18,6 +18,8 @@ export const SESSION_MANAGER = new class extends ContextNode {
    */
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
 
+  private readonly MAX_RETRY_ATTEMPTS = 3;
+
   /**
    * Maximum age of a CSRF token before it is considered stale and needs to be refreshed.
    * 
@@ -119,7 +121,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * @param retries 
    * @returns 
    */
-  public async csrfFetch(url: string | URL, options: RequestInit, retries = 2): Promise<Response> {
+  public async csrfFetch(url: string | URL, options: RequestInit, retries = this.MAX_RETRY_ATTEMPTS): Promise<Response> {
     url = new URL(url);
     const origin = url.origin;
     if (!this.sessions.has(origin)) {
@@ -170,8 +172,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
           throw new Error('Request timed out');
         }
         if (e instanceof UnauthorizedError) {
-          this.sessions.delete(origin);
-          await this.sessions.storeAsync();
+          await this.sessions.deleteAsync(origin);
           Alert.info(e.stack || e.message || String(e), { modal: false });
           Alert.info("Session expired/etc, attempting to re-authenticate...", { modal: false });
           return await this.csrfFetch(url, options, retries - 1);
@@ -180,7 +181,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
           session.lastCsrfToken = null; // force a refresh
           Alert.info(`Request didn't work, retrying... (${retries} attempts left)`, { modal: false });
           this.sessions.deleteAsync(origin);
-          await Util.sleep(1_000); // brief pause before retrying
+          await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
           return await this.csrfFetch(url, options, retries - 1);
         }
       }
