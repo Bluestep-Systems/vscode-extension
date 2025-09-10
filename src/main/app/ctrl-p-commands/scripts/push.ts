@@ -181,7 +181,6 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   const rawFilePaths = getScriptRet.rawFilePaths;
   
   const flattenedDownstairs = await flattenDirectory(downstairsRootFolderUri);
-  console.log("Flattened downstairs paths:", flattenedDownstairs);
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
   // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for

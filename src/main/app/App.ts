@@ -101,4 +101,8 @@ export const App = new class extends ContextNode {
     SM.clearPersistance();
     App.logger.info("Cleared all settings and auth managers");
   }
+
+  public isDebugMode() {
+    return this.settings.get('debugMode') === true;
+  }
 }();

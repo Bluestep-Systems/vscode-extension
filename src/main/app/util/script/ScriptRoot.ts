@@ -18,7 +18,11 @@ export class ScriptRoot {
 
   /**
    * we create the script root utilizing any of the children in said script
-   * @param param0
+   * 
+   * The objective here is to use literally any file within the script's downstairs
+   * folder to extrapolate the root of the script.
+   * 
+   * @param childUri any file within the downstairs root folder.
    */
   constructor({ childUri }: { childUri: vscode.Uri; }) {
     const parser = new DownstairsUriParser(childUri);
@@ -49,16 +53,8 @@ export class ScriptRoot {
       const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === file.fsPath);
       if (existingEntryIndex !== -1) {
         const newDateString = new Date().toUTCString();
-        if (file.fsPath.includes("tsconfig.json")) {
-          console.log("index", existingEntryIndex);
-          console.log("md.pushPullRecords[existingEntryIndex][touchType]", md.pushPullRecords[existingEntryIndex][touchType]);
-          console.log("new Date().toUTCString()", newDateString);
-        }
         
         md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
-        if (file.fsPath.includes("tsconfig.json")) {
-          console.log("after", md.pushPullRecords[existingEntryIndex][touchType]);
-        }
       } else {
         const now = new Date().toUTCString();
         md.pushPullRecords.push({
@@ -68,9 +64,7 @@ export class ScriptRoot {
         });
       }
     });
-    if (file.fsPath.includes("tsconfig.json")) {
-      console.log("touched metadata:", metaData);
-    }
+    App.isDebugMode() && console.log("Updated metadata:", metaData); 
     return void 0;
   }
 

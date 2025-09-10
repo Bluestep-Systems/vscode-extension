@@ -20,6 +20,11 @@ export class ScriptFile {
    */
   private _scriptRoot: ScriptRoot;
 
+  /**
+   * Creates a ScriptFile instance.
+   * 
+   * @param param0 The downstairs URI (local file system path).
+   */
   constructor({ downstairsUri }: { downstairsUri: vscode.Uri }) {
     this.parser = new DownstairsUriParser(downstairsUri);
     this._scriptRoot = new ScriptRoot({ childUri: downstairsUri });
