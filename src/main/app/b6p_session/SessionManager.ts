@@ -5,6 +5,9 @@ import { ContextNode } from "../context/ContextNode";
 import { Alert } from "../util/ui/Alert";
 import { Util } from "../util";
 
+/**
+ * The session manager is responsible for managing individual sessions with BlueStep servers.
+ */
 export const SESSION_MANAGER = new class extends ContextNode {
 
 
