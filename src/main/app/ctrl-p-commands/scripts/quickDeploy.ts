@@ -23,16 +23,18 @@ export default async function (): Promise<void> {
   }
   const { recipientOrgs, topIds, sourceOrigin } = getArgs();
   console.log("Quick Deploy triggered");
-  await Promise.all(recipientOrgs.map(v => new URL(v).origin).map(async (origin) => {
-    for (let I = 0; I < topIds.length; I++) {
-      const webDavId = await getScriptWebdavId(origin, topIds[I]);
+  const origins = recipientOrgs.map(v => new URL(v).origin);
+  for (const origin of origins) {
+    for (const topId of topIds) {
+      const webDavId = await getScriptWebdavId(origin, topId);
       if (webDavId !== null) {
-        return await push(`${origin}/files/${webDavId}/`, { sourceOrigin, topId: topIds[I], skipMessage: true });
+        await push(`${origin}/files/${webDavId}/`, { sourceOrigin, topId, skipMessage: true });
       } else {
-        Alert.error(`Could not find script at ${origin} with topId ${topIds[I]}`);
+        Alert.error(`Could not find script at ${origin} with topId ${topId}`);
       }
     }
-  }));
+  }
+
   Alert.info("Quick Deploy complete!");
 }
 
