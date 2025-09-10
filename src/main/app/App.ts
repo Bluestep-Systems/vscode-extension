@@ -102,6 +102,11 @@ export const App = new class extends ContextNode {
     App.logger.info("Cleared all settings and auth managers");
   }
 
+  /**
+   * //TODO enable debug logging throughout the app
+   * depending on a setting; or delete this entirely if unneccessary
+   * @returns 
+   */
   public isDebugMode() {
     return false;
   }
