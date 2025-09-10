@@ -4,6 +4,7 @@ import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
 import { ContextNode } from "../context/ContextNode";
 import { Alert } from "../util/ui/Alert";
 import { Util } from "../util";
+import { App } from "../App";
 
 /**
  * The session manager is responsible for managing individual sessions with BlueStep servers.
@@ -251,6 +252,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     url = new URL(url);
     const sessionData = this.sessions.get(url.origin);
     if (sessionData && (sessionData.JSESSIONID) && (sessionData.lastTouched > (Date.now() - this.MAX_SESSION_DURATION))) {
+      App.logger.info("using existing session for fetch to:" + url.href + "\n " + JSON.stringify(sessionData));
       options = {
         ...options,
         headers: {
@@ -261,7 +263,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       const response = await globalThis.fetch(url, options);
       return await this.processResponse(response);
     } else {
-      console.log("performing login to:", url.origin);
+      App.logger.info("performing login to:" + url.origin);
       //TODO perform this login on a more dedicated endpoint (graphql?)
       const response = await globalThis.fetch(url.origin + "/shared/home.jsp", {
         method: "POST",
@@ -272,7 +274,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         },
         body: `${await this.authManager.authLoginBodyValue()}`
       });
-      console.log("login status:", response.status);
+      App.logger.info("login status:" + response.status);
       if (response.status >= 400) {
         throw new SessionError(`HTTP Error: ${response.status} ${response.statusText}`);
       }

@@ -40,3 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Private distribution support
 - Comprehensive error handling
 - VS Code API 1.103.0+ compatibility
+
+## [0.0.12] - 2025-09-10
+### Fixed
+- Improved error handling
+- Fixed UI glitches in the sidebar panel
+- Fixed concurrency issues
+- Fixed update notification bugs
+- Fixed credential storage issues
+- Fixed file path handling for different OSes
+- Fixed issues with large file uploads/downloads

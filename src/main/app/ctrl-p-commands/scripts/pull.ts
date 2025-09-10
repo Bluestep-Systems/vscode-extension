@@ -30,7 +30,6 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       ultimateUris.push(createdUri);
     }
     const flattenedDirectory = await flattenDirectory(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
-    console.log("Cleaning up unused downstairs paths...", flattenedDirectory);
     cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
     Alert.info('Pull complete!');
   } catch (e) {
