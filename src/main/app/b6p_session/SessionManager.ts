@@ -18,6 +18,9 @@ export const SESSION_MANAGER = new class extends ContextNode {
    */
   private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
 
+  /**
+   * Maximum number of retry attempts for fetch requests that fail due to network issues or authentication problems.
+   */
   private readonly MAX_RETRY_ATTEMPTS = 3;
 
   /**
