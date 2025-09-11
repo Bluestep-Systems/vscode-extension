@@ -108,8 +108,9 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   App.logger.info("Preparing to send file:", localFile);
   App.logger.info("To target formula URI:", upstairsRootUrlString);
   const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
+  //const sf = new RemoteScriptFile({ downstairsUri: vscode.Uri.file(localFile) });
   const desto = localFile
-    .split(upstairsUrl.host + "/" + webDavId)[1];
+    .split(upstairsUrl.host + path.sep + webDavId)[1];
   upstairsUrl.pathname = `/files/${webDavId}${desto}`;
   App.logger.info("Destination:", upstairsUrl.toString());
   const downstairsUri = vscode.Uri.file(localFile);
