@@ -4,6 +4,9 @@ import { DownstairsUriParser } from './DownstairsUrIParser';
 import { RemoteScriptRoot } from './RemoteScriptRoot';
 import { App } from '../../App';
 import * as fs from 'fs/promises';
+import { readFileText } from '../data/readFile';
+import * as path from 'path';
+import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
 
 /**
  * A class representing metadata extracted from a file path.
@@ -12,6 +15,7 @@ import * as fs from 'fs/promises';
  * to extract the WebDAV ID and domain associated with that formula.
  */
 export class RemoteScriptFile {
+
   /**
    * The downstairs URI (local file system path).
    */
@@ -75,6 +79,12 @@ export class RemoteScriptFile {
     return new Date(lastModifiedHeaderValue);
   }
 
+  /**
+   * determines if the local file should be pushed to upstairs;
+   * 
+   * we have the definition being "if the integrity does not match"
+   * @returns 
+   */
   public async shouldPush(): Promise<boolean> {
     return !(await this.integrityMatches());
   }
@@ -92,6 +102,11 @@ export class RemoteScriptFile {
     return hashHex === await this.getUpstairsHash();
   }
 
+  /**
+   * gets the hash of the upstairs file, or null if it doesn't exist
+   * @param required 
+   * @returns 
+   */
   public async getUpstairsHash(required: boolean = false): Promise<string | null> {
     const response = await SM.fetch(this.toUpstairsURL(), {
       method: "GET",
@@ -110,7 +125,10 @@ export class RemoteScriptFile {
     }
     return etag.toLowerCase();
   }
-
+  /**
+   * Gets the content of the local file.
+   * @returns The content of the local file.
+   */
   public async getDownstairsContent(): Promise<string> {
     const downstairsUri = this.toDownstairsUri();
     try {
@@ -126,6 +144,10 @@ export class RemoteScriptFile {
     }
   }
 
+  /**
+   * Gets the content of the upstairs file.
+   * @returns The content of the upstairs file.
+   */
   public async getUpstairsContent(): Promise<string> {
     const response = await SM.fetch(this.toUpstairsURL(), {
       method: "GET",
@@ -140,25 +162,9 @@ export class RemoteScriptFile {
   }
 
   /**
-   * determines if the file exists or not
+   * Downloads the file from the upstairs location. If the download is successful, it writes the content to the local file system.
    * @returns 
    */
-  public async fileExists(): Promise<boolean> {
-    try {
-      const stat = await vscode.workspace.fs.stat(this.toDownstairsUri());
-      if (stat.type === vscode.FileType.Directory) {
-        return false;
-      }
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-/**
- * Downloads the file from the upstairs location. If the download is successful, it writes the content to the local file system.
- * @returns 
- */
   public async download(): Promise<Response> {
     const lookupUri = this.toUpstairsURL();
     App.logger.info("downloading from:" + lookupUri);
@@ -183,16 +189,36 @@ export class RemoteScriptFile {
     return response;
   }
 
+  /**
+   * Writes the content to the local file.
+   * @param buffer The content to write.
+   */
   public async writeContent(buffer: ArrayBuffer) {
     await vscode.workspace.fs.writeFile(this.toDownstairsUri(), Buffer.from(buffer));
   }
 
   /**
-   * inverse of {@link fileExists}, for readability
+   * determines if the file exists, and cooresponds to an actual file or not
+   * @returns 
+   */
+  public async exists(): Promise<boolean> {
+    try {
+      const stat = await vscode.workspace.fs.stat(this.toDownstairsUri());
+      if (stat.type === vscode.FileType.Directory) {
+        return false;
+      }
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /**
+   * inverse of {@link exists}, for readability
    * @returns 
    */
   public async fileDoesNotExist(): Promise<boolean> {
-    return !(await this.fileExists());
+    return !(await this.exists());
   }
 
   /**
@@ -243,6 +269,10 @@ export class RemoteScriptFile {
     return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPushed || null;
   }
 
+  /**
+   * Gets the last pushed time for the script file.
+   * @returns The last pushed time as a Date object, or null if not found.
+   */
   public async getLastPushedTime(): Promise<Date | null> {
     const lastPushedStr = await this.getLastPushedTimeStr();
     if (!lastPushedStr) {
@@ -266,6 +296,58 @@ export class RemoteScriptFile {
     return this;
   }
 
+  /**
+   * Compares this script file to another for equality.
+   * @param other The other script file to compare against.
+   * @returns True if the script files are equal, false otherwise.
+   */
+  public equals(other: RemoteScriptFile): boolean {
+    return this._scriptRoot.equals(other._scriptRoot) &&
+      this.parser.equals(other.parser);
+  }
+
+  /**
+   * Generic method to find and parse a JSON configuration file.
+   * @param fileName The name of the file to search for
+   * @returns The parsed JSON content
+   */
+  private async getConfigurationFile<T>(fileName: string): Promise<T> {
+    const files = await vscode.workspace.findFiles(new vscode.RelativePattern(this._scriptRoot.getDownstairsRootUri(), `**/${fileName}`));
+    if (!files || files.length !== 1) {
+      throw new Error(`Could not find ${fileName} file, found: ${files ? files.length : 'none'}`);
+    }
+    const configFileUri = files[0];
+    const configFileContent = await readFileText(configFileUri);
+    const config = JSON.parse(configFileContent) as T;
+    return config;
+  }
+
+  /**
+   * Gets the configuration file for the script.
+   * @returns The configuration file content as a Promise.
+   */
+  public async getConfigFile(): Promise<ConfigJsonContent> {
+    return this.getConfigurationFile<ConfigJsonContent>('config.json');
+  }
+
+  /**
+   * Gets the metadata file for the script.
+   * @returns The metadata file content as a Promise.
+   */
+  public async getMetadataFile(): Promise<MetaDataJsonFileContent> {
+    return this.getConfigurationFile<MetaDataJsonFileContent>('metadata.json');
+  }
+  
+  public getFileName(): string {
+    return path.parse(this.toDownstairsUri().fsPath).base;
+  }
+
+  public isInDeclarations(): boolean {
+    return this.parser.type === "declarations";
+  }
+  public isInDraft(): boolean {
+    return this.parser.type === "draft";
+  }
 }
 
 

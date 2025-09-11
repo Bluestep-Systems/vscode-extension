@@ -122,7 +122,7 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
     }
   } else {
     const sf = new RemoteScriptFile({ downstairsUri: ultimatePath });
-    if (await sf.fileExists() && await sf.integrityMatches()) {
+    if (await sf.exists() && await sf.integrityMatches()) {
       App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
       await sf.getScriptRoot().touchFile(sf, "lastPulled");
       return sf.toDownstairsUri();

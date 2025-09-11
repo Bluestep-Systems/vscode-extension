@@ -3,8 +3,10 @@ import type { ReadOnlyMap, SavableObject } from '../../../types';
 import { SESSION_MANAGER as SM } from './b6p_session/SessionManager';
 import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
+import readOnlyCheck from './services/ReadOnlyChecker';
 import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
 import { Alert } from './util/ui/Alert';
+
 
 
 export const App = new class extends ContextNode {
@@ -30,14 +32,14 @@ export const App = new class extends ContextNode {
       ['bsjs-push-pull.checkForUpdates', vscode.commands.registerCommand('bsjs-push-pull.checkForUpdates', ctrlPCommands.checkForUpdates)],
       ['bsjs-push-pull.notify', vscode.commands.registerCommand('bsjs-push-pull.notify', ctrlPCommands.notify)],
       ['bsjs-push-pull.quickDeploy', vscode.commands.registerCommand('bsjs-push-pull.quickDeploy', ctrlPCommands.quickDeploy)],
+      ['bsjs-push-pull.testTask', vscode.commands.registerCommand('bsjs-push-pull.testTask', ctrlPCommands.testTask)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
         console.log("STATE", App.settings.toJSON());
         App.logger.info("STATE", App.settings.toJSON());
       })],
       ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
         App.clearPersistance();
-      })],
-      ['bsjs-push-pull.testTask', vscode.commands.registerCommand('bsjs-push-pull.testTask', ctrlPCommands.testTask)],
+      })]
     ]);
     constructor() { }
     forEach(callback: (disposable: vscode.Disposable, key: string, map: this) => void) {
@@ -102,6 +104,15 @@ export const App = new class extends ContextNode {
     });
     this.context.subscriptions.push(this.#_outputChannel);
     this.#_settings = new PublicPersistanceMap(PublicKeys.SETTINGS, App.context);
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+      if (editor) {
+        readOnlyCheck();
+      } else {
+        //TODO figure out why this is triggering multiple times
+        // console.log('No active editor.');
+      }
+    }, this, this.context.subscriptions);
+    readOnlyCheck(); // run it once on startup
     SM.init(this);
     return this;
   }

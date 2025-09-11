@@ -152,7 +152,8 @@ type ScriptMetaData = {
     lastPushed: string | null;
     lastPulled: string | null;
     lastVerifiedHash: string;
-  }[]
+  }[];
+
 }
 /**
  * This is the content of a metadata.json found in every script folder.
@@ -214,12 +215,71 @@ export type MetaDataJsonFileContent = {
    * //TODO
    */
   basicPermissionOption: "Error";
-    /**
-   * //TODO
-   */
+  /**
+ * //TODO
+ */
   httpOption: "HttpsRedirect" | "HttpsOnly" | "HttpAndHttps";
   /**
    * //TODO
    */
   allowedMethods: string[];
 }
+
+type PropagationBehaviorTypes = "MANDATORY" | "NESTED" | "NEVER" | "NOT_SUPPORTED" | "REQUIRED" | "REQUIRES_NEW" | "SUPPORTS";
+type SandboxSizes = "XXX_SMALL" | "XX_SMALL" | "X_SMALL" | "SMALL" | "MEDIUM_SMALL" | "MEDIUM" | "MEDIUM_LARGE" | "LARGE" | "X_LARGE" | "XX_LARGE" | "XXX_LARGE" | "UNLIMITED";
+
+/**
+ * This is the content of a config.json found in every script folder.
+ */
+type ConfigJsonContent = {
+
+  /**
+   * the main script file to execute (relative to the script folder)
+   * 
+   * technically this can be any path but by convention it is always "../scripts/app"
+   */
+  main: "../scripts/app",
+
+  /**
+   * propagation behavior for this script
+   */
+  propagationBehavior: PropagationBehaviorTypes,
+
+  /**
+   * //TODO
+   */
+  transactionReadonly: boolean,
+
+  /**
+   * //TODO
+   */
+  transactionTimeout: string | number,
+
+  /**
+   * sandbox size
+   */
+  sandbox: SandboxSizes,
+
+  /**
+   * //TODO
+   */
+  expiresBy: string,
+
+  /**
+   * Local external modules
+   */
+  models?: {
+    name: string, 
+    url: string
+  }[],
+
+  /**
+   * //TODO
+   */
+  language: "mjs",
+  
+  /**
+   * //TODO
+   */
+  scriptlibrary: "private"
+};

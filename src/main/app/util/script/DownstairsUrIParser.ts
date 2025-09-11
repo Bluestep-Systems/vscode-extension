@@ -38,4 +38,16 @@ export class DownstairsUriParser {
   public getShavedName(): string {
     return this.prependingPath + path.sep + this.webDavId;
   }
+
+  /**
+   * Compares this parser with another for equality.
+   * @param other The other parser to compare against.
+   * @returns True if the parsers are equal, false otherwise.
+   */
+  public equals(other: DownstairsUriParser): boolean {
+    return this.prependingPath === other.prependingPath &&
+      this.webDavId === other.webDavId &&
+      this.type === other.type &&
+      this.rest === other.rest;
+  }
 }

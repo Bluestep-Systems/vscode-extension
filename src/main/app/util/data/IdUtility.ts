@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Alert } from '../ui/Alert';
 import { MetaDataJsonFileContent } from '../../../../../types';
+import { readFileText } from './readFile';
 
 /**
  * A utility class for dealing with IDs in the format `363769__FID_dummyTestEndpoint`.
@@ -53,10 +54,7 @@ export class IdUtility {
    * @returns
    */
   private async isContainedInThisMetadataJsonFile(uri: vscode.Uri): Promise<boolean> {
-    const fileData = await vscode.workspace.fs.readFile(uri);
-    const textContent = Buffer.from(fileData).toString('utf8');
-
-    //TODO type this to the actual metadata.json format
+    const textContent = await readFileText(uri);
     const metadata = JSON.parse(textContent) as MetaDataJsonFileContent;
     if (!metadata.altIds) {
       throw new Error("Invalid metadata.json format: missing altIds field");

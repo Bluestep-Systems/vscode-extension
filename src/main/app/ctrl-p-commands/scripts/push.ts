@@ -50,7 +50,7 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
 
     // Create tasks for progress helper
     const pushTasks = fileList.map(file => ({
-      execute: async () => await sendFile({ localFile: file, upstairsRootUrlString: targetFormulaUri }),
+      execute: () => sendFile({ localFile: file, upstairsRootUrlString: targetFormulaUri }),
       description: `scripts`
     }));
 
@@ -110,9 +110,6 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
   const desto = localFile
     .split(upstairsUrl.host + "/" + webDavId)[1];
-  if (!desto) {
-    throw new Error("Could not determine destination path for file: " + localFile + " with upstairsUrl: " + upstairsUrl.toString() + ", desto: " + desto);
-  }
   upstairsUrl.pathname = `/files/${webDavId}${desto}`;
   App.logger.info("Destination:", upstairsUrl.toString());
   const downstairsUri = vscode.Uri.file(localFile);
