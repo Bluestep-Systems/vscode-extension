@@ -27,7 +27,7 @@ export default async function () {
 
 async function determine(sf: RemoteScriptFile) {
   const curFileName = sf.getFileName();
-  const specialFileNames = ['metadata.json', 'config.json', 'b6p_metadata.json'];
+  const specialFileNames = ['metadata.json', 'config.json', '.b6p_metadata.json'];
   if (specialFileNames.includes(curFileName)) {
     return true;
   }
