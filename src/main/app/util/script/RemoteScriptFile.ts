@@ -92,7 +92,7 @@ export class RemoteScriptFile {
     return hashHex === await this.getUpstairsHash();
   }
 
-  public async getUpstairsHash(): Promise<string> {
+  public async getUpstairsHash(required: boolean = false): Promise<string | null> {
     const response = await SM.fetch(this.toUpstairsURL(), {
       method: "GET",
       headers: {
@@ -101,7 +101,12 @@ export class RemoteScriptFile {
     });
     const etag = response.headers.get("etag");
     if (!etag) {
-      throw new Error("Could not determine etag");
+      if (required) {
+        throw new Error("Could not determine required upstairs hash");
+      }
+      //TODO determine if there is a legitimate reason that this could be undefined and we should throw an error instead
+      // otherwise we can only assume it just doesn't exist upstairs
+      return null;
     }
     return etag.toLowerCase();
   }
