@@ -20,7 +20,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
   /**
    * Maximum duration of a session before it is considered expired and needs to be re-authenticated.
    */
-  private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 5; // 5 minutes
+  private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 30; // 30 minutes
 
   /**
    * Maximum number of retry attempts for fetch requests that fail due to network issues or authentication problems.
@@ -128,7 +128,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * @param retries 
    * @returns 
    */
-  public async csrfFetch(url: string | URL, options: RequestInit, retries = this.MAX_RETRY_ATTEMPTS): Promise<Response> {
+  public async csrfFetch(url: string | URL, options?: RequestInit, retries = this.MAX_RETRY_ATTEMPTS): Promise<Response> {
     url = new URL(url);
     const origin = url.origin;
     if (!this.sessions.has(origin)) {
@@ -145,6 +145,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       const tokenValue = await this.fetch(`${origin}/csrf-token`).then(r => r.text());
       session.lastCsrfToken = tokenValue;
       await this.sessions.setAsync(origin, session);
+      await this.sessions.storeAsync(); // TODO find why this keeps being needed
       //}
 
       options = options || {};
@@ -280,6 +281,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       }
       await this.processResponse(response);
       return await this.fetch(url, options);
+      
     }
   }
 
