@@ -175,7 +175,7 @@ export class UpdateChecker {
   private getCurrentVersion(): string {
     // Get version from the extension's package.json via VS Code API
     const extension = vscode.extensions.getExtension('bluestep-systems.bsjs-push-pull');
-    return extension?.packageJSON?.version || '0.0.1';
+    return extension?.packageJSON?.version || (() => { throw new Error('Failed to get current version'); })();
   }
 
   /**

@@ -4,6 +4,7 @@ import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { getDirtyDocs } from '../../util/data/getDirtyDocs';
 import { Alert } from '../../util/ui/Alert';
 import pushScript from '../scripts/push';
+import { App } from '../../App';
 
 
 /**
@@ -44,10 +45,10 @@ export default async function (): Promise<void> {
     
     if (e instanceof Error) { 
       Alert.error(`Error pushing current file: ${e.message}`);
-      console.error('Push current file error:', e.stack || e.message || e);
+      App.logger.error(e);
     } else {
       Alert.error(`Error pushing current file: ${e}`);
-      console.error('Push current file error:', e);
+      App.logger.error('Push current file error: ' + e);
     }
   }
 }

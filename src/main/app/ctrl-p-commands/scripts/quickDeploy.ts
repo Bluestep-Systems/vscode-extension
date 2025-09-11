@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SESSION_MANAGER as SM} from "../../b6p_session/SessionManager";
 import { Alert } from "../../util/ui/Alert";
+import { ProgressHelper } from "../../util/ui/ProgressHelper";
 import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../../types";
 import push from "./push";
 
@@ -24,17 +25,32 @@ export default async function (): Promise<void> {
   const { recipientOrgs, topIds, sourceOrigin } = getArgs();
   console.log("Quick Deploy triggered");
   const origins = recipientOrgs.map(v => new URL(v).origin);
+
+  // Create tasks for all origin/topId combinations
+  const deployTasks = [];
   for (const origin of origins) {
     for (const topId of topIds) {
-      const webDavId = await getScriptWebdavId(origin, topId);
-      if (webDavId !== null) {
-        await push(`${origin}/files/${webDavId}/`, { sourceOrigin, topId, skipMessage: true });
-      } else {
-        Alert.error(`Could not find script at ${origin} with topId ${topId}`);
-        return;
-      }
+      deployTasks.push({
+        execute: async () => {
+          const webDavId = await getScriptWebdavId(origin, topId);
+          if (webDavId !== null) {
+            await push(`${origin}/files/${webDavId}/`, { sourceOrigin, topId, skipMessage: true });
+            return { origin, topId, webDavId };
+          } else {
+            Alert.error(`Could not find script at ${origin} with topId ${topId}`);
+            throw new Error(`Could not find script at ${origin} with topId ${topId}`);
+          }
+        },
+        description: `${origin} - ${topId}`
+      });
     }
   }
+
+  await ProgressHelper.withProgress(deployTasks, {
+    title: "Doing Quick Deploy...",
+    showItemCount: true
+  });
+
 
   Alert.info("Quick Deploy complete!");
 }

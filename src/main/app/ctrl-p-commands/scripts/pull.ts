@@ -6,6 +6,7 @@ import { getScript } from "../../util/data/getScript";
 import { parseUpstairsUrl } from "../../util/data/URLParser";
 import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { Alert } from '../../util/ui/Alert';
+import { ProgressHelper } from '../../util/ui/ProgressHelper';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -24,13 +25,25 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     }
     const rawFilePaths = fetchedScriptObject.rawFilePaths;
     const ultimateUris: vscode.Uri[] = [];
-    for (let i = 0; i < rawFilePaths.length; i++) {
-      const path = rawFilePaths[i];
-      const createdUri = await createOrUpdateIndividualFileOrFolder(path.downstairsPath, url);
-      ultimateUris.push(createdUri);
-    }
+    
+    // Create tasks for progress helper
+    const pullTasks = rawFilePaths.map(path => ({
+      execute: async () => {
+        const createdUri = await createOrUpdateIndividualFileOrFolder(path.downstairsPath, url);
+        ultimateUris.push(createdUri);
+        return createdUri;
+      },
+      description: `scripts`
+    }));
+
+    await ProgressHelper.withProgress(pullTasks, {
+      title: "Pulling Script...",
+      cleanupMessage: "Cleaning up the downstairs folder..."
+    });
+
     const flattenedDirectory = await flattenDirectory(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
     cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
+
     Alert.info('Pull complete!');
   } catch (e) {
     Alert.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);

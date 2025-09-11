@@ -10,6 +10,7 @@ import { IdUtility } from '../../util/data/IdUtility';
 import { parseUpstairsUrl } from '../../util/data/URLParser';
 import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { Alert } from '../../util/ui/Alert';
+import { ProgressHelper } from '../../util/ui/ProgressHelper';
 /**
  * Pushes a script to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -47,19 +48,19 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
       .readDirectory(downstairsRootFolderUri)
       .then(async node => await tunnelNode(node, { nodeURI: uriStringToFilePath(sourceFolder) }));
 
-    for (const file of fileList) {
-      /**
-       * NOTE:
-       * 
-       * we want to `await` each one here so that they run sequentially, and not in parallel.
-       *
-       * This
-       * (1) prevents us from overloading the server with the plurality of requests
-       * (2) prevents duplicate folders from being created by the webdav PUT method.
-       */
-      await sendFile({ localFile: file, upstairsRootUrlString: targetFormulaUri });
-    }
+    // Create tasks for progress helper
+    const pushTasks = fileList.map(file => ({
+      execute: () => sendFile({ localFile: file, upstairsRootUrlString: targetFormulaUri }),
+      description: `scripts`
+    }));
+
+    await ProgressHelper.withProgress(pushTasks, {
+      title: "Pushing Script...",
+      cleanupMessage: "Cleaning up the upstairs draft folder..."
+    });
+
     cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaUri);
+
     if (!sourceOps?.skipMessage) {
       Alert.info('Push complete!');
     }
@@ -183,7 +184,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     throw new Error("Failed to get script for cleanup");
   }
   const rawFilePaths = getScriptRet.rawFilePaths;
-  
+
   const flattenedDownstairs = await flattenDirectory(downstairsRootFolderUri);
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
