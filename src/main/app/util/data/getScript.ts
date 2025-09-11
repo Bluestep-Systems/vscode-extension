@@ -35,7 +35,6 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
     App.logger.info("Response Status:", response.status);
     const parser = new XMLParser();
     const responseObj: XMLResponse = parser.parse(await response.text());
-    App.logger.info("Response Object:", responseObj);
     //TODO remove magic strings
     const rawFiles = responseObj["D:multistatus"]["D:response"]
       //TODO this only goes 4 layers deep
