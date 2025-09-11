@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Alert } from '../ui/Alert';
+import { MetaDataJsonFileContent } from '../../../../../types';
 
 /**
  * A utility class for dealing with IDs in the format `363769__FID_dummyTestEndpoint`.
@@ -51,10 +52,17 @@ export class IdUtility {
    * @param uri
    * @returns
    */
-  private async isContainedIn(uri: vscode.Uri): Promise<boolean> {
-    const fileContent = await vscode.workspace.fs.readFile(uri);
-    const textContent = new TextDecoder().decode(fileContent);
-    if (textContent.includes(this.toSearchableString())) {
+  private async isContainedInThisMetadataJsonFile(uri: vscode.Uri): Promise<boolean> {
+    const fileData = await vscode.workspace.fs.readFile(uri);
+    const textContent = Buffer.from(fileData).toString('utf8');
+
+    //TODO type this to the actual metadata.json format
+    const metadata = JSON.parse(textContent) as MetaDataJsonFileContent;
+    if (!metadata.altIds) {
+      throw new Error("Invalid metadata.json format: missing altIds field");
+    }
+    const existingIds = metadata.altIds.split("\n");
+    if (existingIds.includes(this.toSearchableString())) {
       return true;
     }
     return false;
@@ -76,7 +84,7 @@ export class IdUtility {
         try {
           const files = await vscode.workspace.findFiles(new vscode.RelativePattern(nestedFolderUri, '**/metadata.json'));
           for (const file of files) {
-            const isContained = await this.isContainedIn(file);
+            const isContained = await this.isContainedInThisMetadataJsonFile(file);
             if (isContained) {
               return file;
             }

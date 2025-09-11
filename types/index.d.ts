@@ -154,3 +154,72 @@ type ScriptMetaData = {
     lastVerifiedHash: string;
   }[]
 }
+/**
+ * This is the content of a metadata.json found in every script folder.
+ *
+ * It is used to store various metadata about the script.
+ */
+export type MetaDataJsonFileContent = {
+  /**
+   * //TODO
+   */
+  displayName: string;
+  /**
+   * //TODO
+   */
+  description: string;
+  /**
+   * //TODO
+   */
+  _postAncestorId: string;
+  /**
+   * //TODO
+   */
+  disabled: boolean;
+  /**
+   * //TODO
+   */
+  frozen: boolean;
+  /**
+   * //TODO
+   */
+  fixedId: string;
+  /**
+   * this is a newline separated list of key=value altids
+   * @example
+   * altIds: "FID=value1\nSID=value2\nGID=value3"
+   */
+  altIds: string;
+  /**
+   * //TODO
+   */
+  path: string;
+  /**
+   * //TODO
+   */
+  deniedIPs: string;
+  /**
+   * //TODO
+   */
+  allowedIPs: string;
+  /**
+   * //TODO
+   */
+  IPFilterExemptGroupKey: string;
+  /**
+   * //TODO
+   */
+  IPFilterPermissionOption: "Error";
+  /**
+   * //TODO
+   */
+  basicPermissionOption: "Error";
+    /**
+   * //TODO
+   */
+  httpOption: "HttpsRedirect" | "HttpsOnly" | "HttpAndHttps";
+  /**
+   * //TODO
+   */
+  allowedMethods: string[];
+}
