@@ -37,7 +37,7 @@ export default async function (): Promise<void> {
             await push(`${origin}/files/${webDavId}/`, { sourceOrigin, topId, skipMessage: true });
             return { origin, topId, webDavId };
           } else {
-            Alert.error(`Could not find script at ${origin} with topId ${topId}`);
+            await Alert.error(`Could not find script at ${origin} with topId ${topId}`);
             throw new Error(`Could not find script at ${origin} with topId ${topId}`);
           }
         },

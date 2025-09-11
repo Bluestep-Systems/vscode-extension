@@ -50,7 +50,7 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
 
     // Create tasks for progress helper
     const pushTasks = fileList.map(file => ({
-      execute: () => sendFile({ localFile: file, upstairsRootUrlString: targetFormulaUri }),
+      execute: async () => await sendFile({ localFile: file, upstairsRootUrlString: targetFormulaUri }),
       description: `scripts`
     }));
 
