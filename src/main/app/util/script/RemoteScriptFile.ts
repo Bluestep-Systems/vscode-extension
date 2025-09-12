@@ -434,16 +434,28 @@ export class RemoteScriptFile {
     return this.parser.type === "declarations";
   }
 
+  /**
+   * Checks if the script file is in the info folder.
+   * @returns True if the script file is in the info folder, false otherwise.
+   */
   public async isInInfo(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolder();
     return infoFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
   }
 
+  /**
+   * Checks if the script file is in the objects folder.
+   * @returns True if the script file is in the objects folder, false otherwise.
+   */
   public async isInObjects(): Promise<boolean> {
     const objectsFolder = await this.getScriptRoot().getObjectsFolder();
     return objectsFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
   }
 
+  /**
+   * Checks if the script file is in the info or objects folder.
+   * @returns True if the script file is in the info or objects folder, false otherwise.
+   */
   public async isInInfoOrObjects(): Promise<boolean> {
     return await this.isInInfo() || await this.isInObjects();
   }
