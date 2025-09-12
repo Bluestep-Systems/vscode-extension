@@ -7,7 +7,7 @@ import { readFileText } from '../data/readFile';
 import * as path from 'path';
 import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
 import { FileSystem } from '../fs/FileSystemFactory';
-
+const fs = FileSystem.getInstance;
 /**
  * A class representing metadata extracted from a file path.
  * 
@@ -93,7 +93,7 @@ export class RemoteScriptFile {
    * Gets the lowercased SHA-512 hash of the local file.
    */
   public async getHash(): Promise<string> {
-    const bufferSource = await FileSystem.getInstance().readFile(this.toDownstairsUri());
+    const bufferSource = await fs().readFile(this.toDownstairsUri());
     const localHashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
     if (hexArray.length !== 64) {
@@ -142,7 +142,7 @@ export class RemoteScriptFile {
   public async getDownstairsContent(): Promise<string> {
     const downstairsUri = this.toDownstairsUri();
     try {
-      const fileData = await FileSystem.getInstance().readFile(downstairsUri);
+      const fileData = await fs().readFile(downstairsUri);
       return Buffer.from(fileData).toString('utf8');
     } catch (e) {
       if (e instanceof Error || typeof e === 'string') {
@@ -204,7 +204,7 @@ export class RemoteScriptFile {
    * @param buffer The content to write.
    */
   public async writeContent(buffer: ArrayBuffer) {
-    await FileSystem.getInstance().writeFile(this.toDownstairsUri(), Buffer.from(buffer));
+    await fs().writeFile(this.toDownstairsUri(), Buffer.from(buffer));
   }
 
   /**
@@ -213,7 +213,11 @@ export class RemoteScriptFile {
    */
   public async exists(): Promise<boolean> {
     try {
-      const stat = await FileSystem.getInstance().stat(this.toDownstairsUri());
+      if (this.parser.type === "metadata") {
+        return true;
+      }
+      const stat = await fs().stat(this.toDownstairsUri());
+      console.log("stat", stat);
       if (stat.type === vscode.FileType.Directory) {
         return false;
       }
@@ -237,7 +241,7 @@ export class RemoteScriptFile {
    */
   public async fileStat(): Promise<vscode.FileStat | null> {
     try {
-      return await FileSystem.getInstance().stat(this.toDownstairsUri());
+      return await fs().stat(this.toDownstairsUri());
     } catch (e) {
       return null;
     }
@@ -322,7 +326,7 @@ export class RemoteScriptFile {
    * @returns The parsed JSON content
    */
   private async getConfigurationFile<T>(fileName: string): Promise<T> {
-    const files = await FileSystem.getInstance().findFiles(new vscode.RelativePattern(this._scriptRoot.getDownstairsRootUri(), `**/${fileName}`));
+    const files = await fs().findFiles(new vscode.RelativePattern(this._scriptRoot.getDownstairsRootUri(), `**/${fileName}`));
     if (!files || files.length !== 1) {
       throw new Error(`Could not find ${fileName} file, found: ${files ? files.length : 'none'}`);
     }
@@ -364,12 +368,31 @@ export class RemoteScriptFile {
     return this.parser.type === "declarations";
   }
 
+  public async isInInfo(): Promise<boolean> {
+    const infoFolder = await this.getScriptRoot().getInfoFolder();
+    return infoFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
+  }
+
+  public async isInObjects(): Promise<boolean> {
+    const objectsFolder = await this.getScriptRoot().getObjectsFolder();
+    return objectsFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
+  }
+
+  public async isInInfoOrObjects(): Promise<boolean> {
+    return await this.isInInfo() || await this.isInObjects();
+  }
+
   /**
    * Checks if the script file is in the draft folder.
    * @returns True if the script file is in the draft folder, false otherwise.
    */
   public isInDraft(): boolean {
     return this.parser.type === "draft";
+  }
+
+  public async isInInfoFolder(): Promise<boolean> {
+    const infoFolder = await this.getScriptRoot().getInfoFolder();
+    return infoFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
   }
 
   /**

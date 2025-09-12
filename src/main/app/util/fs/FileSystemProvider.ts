@@ -9,6 +9,9 @@ export interface FileSystemProvider {
   writeFile(uri: vscode.Uri, content: Uint8Array): Promise<void>;
   stat(uri: vscode.Uri): Promise<vscode.FileStat>;
   findFiles(include: vscode.GlobPattern, exclude?: vscode.GlobPattern | null, maxResults?: number, token?: vscode.CancellationToken): Promise<vscode.Uri[]>;
+  readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]>;
+  delete(uri: vscode.Uri): Promise<void>; 
+
 }
 
 /**
@@ -29,6 +32,12 @@ export class VSCodeFileSystem implements FileSystemProvider {
 
   async findFiles(include: vscode.GlobPattern, exclude?: vscode.GlobPattern | null, maxResults?: number, token?: vscode.CancellationToken): Promise<vscode.Uri[]> {
     return vscode.workspace.findFiles(include, exclude, maxResults, token);
+  }
+  async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
+    return vscode.workspace.fs.readDirectory(uri);
+  }
+  async delete(uri: vscode.Uri): Promise<void> {
+    return vscode.workspace.fs.delete(uri, { recursive: true, useTrash: false });
   }
 }
 
@@ -167,5 +176,39 @@ export class MockFileSystem implements FileSystemProvider {
     }
     
     return results;
+  }
+  async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
+    const key = uri.toString();
+    const stat = this.stats.get(key);
+    
+    if (!stat || stat instanceof Error || stat.type !== vscode.FileType.Directory) {
+      throw new Error(`Directory not found: ${uri.toString()}`);
+    }
+    
+    // Simple mock implementation - in real tests you'd set up specific files/directories
+    const entries: [string, vscode.FileType][] = [];
+    
+    for (const [fileUriStr, _fileContent] of this.files) {
+      const fileUri = vscode.Uri.parse(fileUriStr);
+      if (fileUri.path.startsWith(uri.path) && fileUri.path !== uri.path) {
+        const relativePath = fileUri.path.slice(uri.path.length + 1).split('/')[0];
+        if (!entries.find(entry => entry[0] === relativePath)) {
+          const fileStat = this.stats.get(fileUriStr);
+          entries.push([relativePath, fileStat ? fileStat.type : vscode.FileType.File]);
+        }
+      }
+    }
+    
+    return entries;
+  }
+  
+  async delete(uri: vscode.Uri): Promise<void> {
+    const key = uri.toString();
+    if (this.files.has(key)) {
+      this.files.delete(key);
+      this.stats.delete(key);
+    } else {
+      throw new Error(`File not found: ${uri.toString()}`);
+    }
   }
 }

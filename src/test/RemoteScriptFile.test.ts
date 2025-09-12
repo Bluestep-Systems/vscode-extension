@@ -5,19 +5,40 @@ import { RemoteScriptFile } from '../main/app/util/script/RemoteScriptFile';
 import { RemoteScriptRoot } from '../main/app/util/script/RemoteScriptRoot';
 import { FileSystem } from '../main/app/util/fs/FileSystemFactory';
 import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
+import { App } from '../main/app/App';
 
 suite('RemoteScriptFile Tests', () => {
     let mockFileSystemProvider: MockFileSystem;
     let remoteScriptFile: RemoteScriptFile;
+    let originalLogger: any;
 
     suiteSetup(() => {
         // Enable test mode with mock file system
         mockFileSystemProvider = FileSystem.enableTestMode();
+        
+        // Mock the App logger by overriding the getter
+        const mockLogger = {
+            error: () => {},
+            warn: () => {},
+            info: () => {},
+            debug: () => {},
+            trace: () => {}
+        };
+        
+        // Override the logger getter
+        originalLogger = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(App), 'logger');
+        Object.defineProperty(App, 'logger', {
+            get: () => mockLogger,
+            configurable: true
+        });
     });
 
     suiteTeardown(() => {
-        // Restore production mode
+        // Restore production mode and original logger
         FileSystem.enableProductionMode();
+        if (originalLogger) {
+            Object.defineProperty(App, 'logger', originalLogger);
+        }
     });
 
     setup(() => {
@@ -188,7 +209,7 @@ suite('RemoteScriptFile Tests', () => {
       
       await assert.rejects(
         () => remoteScriptFile.getDownstairsContent(),
-        /Output channel is not set/
+        /Error reading downstairs file: Error: Read failed/
       );
     });
 

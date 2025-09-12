@@ -11,6 +11,7 @@ export default async function () {
     }
     const sf = new RemoteScriptFile({ downstairsUri: activeEditorUri });
     if (!(await sf.exists())) {
+      console.log(`${sf.getFileName()} is not part of a script`);
       return; // if the active editor is not part of a script, just return. not our problem
     }
 
@@ -27,11 +28,15 @@ export default async function () {
 
 async function determine(sf: RemoteScriptFile) {
   const curFileName = sf.getFileName();
-  const specialFileNames = ['metadata.json', 'config.json', '.b6p_metadata.json'];
+  console.log("curFileName", curFileName);
+  const specialFileNames = ['metadata'];
   if (specialFileNames.includes(curFileName)) {
     return true;
   }
   if (sf.isInDeclarations()) {
+    return true;
+  }
+  if (await sf.isInInfoOrObjects()) {
     return true;
   }
   const config = await sf.getConfigFile();

@@ -6,13 +6,15 @@ import { App } from '../../App';
 import { FileDoesNotExistError, FileReadError } from './Errors';
 import { DownstairsUriParser } from './DownstairsUrIParser';
 import { RemoteScriptFile } from './RemoteScriptFile';
-
+import { FileSystem } from '../fs/FileSystemFactory';
+const fs = FileSystem.getInstance;
 /**
  * object representing the root of an individual script on the filesystem.
  *
  * this originally was the webdavid root file.
  */
 export class RemoteScriptRoot {
+  private static specialFolders = ["info", "scripts", "objects"] as const;
   static readonly METADATA_FILE = ".b6p_metadata.json";
   downstairsRootPath: path.ParsedPath;
   downstairsRootOrgPath: path.ParsedPath;
@@ -94,7 +96,7 @@ export class RemoteScriptRoot {
     let modified = false;
     try {
       try {
-        await vscode.workspace.fs.stat(metadataFileUri);
+        await fs().stat(metadataFileUri);
       } catch (e) {
         throw new FileDoesNotExistError("Metadata file does not exist");
       }
@@ -105,7 +107,7 @@ export class RemoteScriptRoot {
 
       while (attempts < maxAttempts) {
         try {
-          fileContents = await vscode.workspace.fs.readFile(metadataFileUri);
+          fileContents = await fs().readFile(metadataFileUri);
 
           // Check if we got valid contents
           if (fileContents && fileContents.length > 0) {
@@ -113,18 +115,32 @@ export class RemoteScriptRoot {
 
             // Ensure we have a valid JSON string
             if (fileString.trim()) {
-              contentObj = JSON.parse(fileString) as ScriptMetaData;
-              break; // Successfully read and parsed
+              try {
+                contentObj = JSON.parse(fileString) as ScriptMetaData;
+                break; // Successfully read and parsed
+              } catch (jsonError) {
+                // JSON parsing error - don't retry, treat as malformed file
+                App.logger.warn("Malformed JSON in metadata file, creating new metadata");
+                throw new FileReadError("Malformed JSON in metadata file");
+              }
+            } else {
+              // Empty string content - treat as malformed file
+              App.logger.warn("Empty content in metadata file, creating new metadata");
+              throw new FileReadError("Empty content in metadata file");
             }
-          }
-
-          // If we get here, the file wasn't fully read, wait and retry
-          attempts++;
-          if (attempts < maxAttempts) {
-            console.error(`File read incomplete, retrying... (attempt ${attempts}/${maxAttempts})`);
-            await Util.sleep(1_000); // Wait 1000ms before retry
+          } else {
+            // Empty file - treat as malformed file 
+            App.logger.warn("Empty metadata file, creating new metadata");
+            throw new FileReadError("Empty metadata file");
           }
         } catch (readError) {
+          // Check if this is a JSON parsing error or file content error
+          if (readError instanceof FileReadError) {
+            // Don't retry content/parsing errors, fall through to create new metadata
+            throw readError;
+          }
+          
+          // For other file system errors, retry
           attempts++;
           if (attempts >= maxAttempts) {
             throw readError; // Re-throw if we've exhausted retries
@@ -134,14 +150,14 @@ export class RemoteScriptRoot {
         }
       }
 
-      // If we exhausted all attempts without success, fall through to create new file
-      if (attempts >= maxAttempts || !contentObj) {
+      // If we get here without contentObj, we exhausted retries on file system errors
+      if (!contentObj) {
         throw new FileReadError("Failed to read file after multiple attempts");
       }
 
     } catch (e) {
       App.logger.error("Error reading metadata file: " + e);
-      if (!(e instanceof FileDoesNotExistError)) {
+      if (!(e instanceof FileDoesNotExistError) && !(e instanceof FileReadError)) {
         throw e;
       }
       App.logger.warn("Metadata file does not exist or is invalid; creating a new one.");
@@ -158,7 +174,7 @@ export class RemoteScriptRoot {
       Util.isDeepEqual(preModified, contentObj) || (modified = true);
     }
     if (modified) {
-      await vscode.workspace.fs.writeFile(this.getMetadataFileUri(), Buffer.from(JSON.stringify(contentObj, null, 2)));
+      await fs().writeFile(this.getMetadataFileUri(), Buffer.from(JSON.stringify(contentObj, null, 2)));
     }
     return contentObj;
   }
@@ -219,6 +235,72 @@ export class RemoteScriptRoot {
    */
   static fromRootUri(rootUri: vscode.Uri) {
     return new RemoteScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, RemoteScriptRoot.METADATA_FILE) });
+  }
+
+  /**
+   * Generic helper to get a folder URI under the downstairs root.
+   */
+  private getFolderUri(folderName: typeof RemoteScriptRoot.specialFolders[number]) {
+    return vscode.Uri.joinPath(this.getDownstairsRootUri(), "draft", folderName);
+  }
+
+  /**
+   * Generic helper to get the contents of a folder.
+   */
+  private async getFolderContents(folderName: typeof RemoteScriptRoot.specialFolders[number]): Promise<vscode.Uri[]> {
+    const folderUri = this.getFolderUri(folderName);
+    const dirContents = await fs().readDirectory(folderUri);
+    return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folderUri, name));
+  }
+
+  
+  /**
+   * Gets the contents of the info folder.
+   */
+  public async getInfoFolder() {
+    return this.getFolderContents("info");
+  }
+  
+  /**
+   * Gets the contents of the scripts folder.
+   */
+  public async getScriptsFolder() {
+    return this.getFolderContents("scripts");
+  }
+  
+  /**
+   * Gets the contents of the objects folder.
+   */
+  public async getObjectsFolder() {
+    return this.getFolderContents("objects");
+  }
+
+  /**
+   * determines if this script root is for a file that is in good condition
+   */
+  public async isCopacetic(): Promise<boolean> {
+    const infoContent = await this.getInfoFolder();
+    const objectsContent = await this.getObjectsFolder();
+    const reasonsWhyBad: string[] = [];
+    if (infoContent.length !== 3) {
+      reasonsWhyBad.push("`info` folder must have 3 elements");
+    }
+    ["metadata.json", "permissions.json", "config.json"].forEach(expectedFile => {
+      if (!infoContent.some(file => file.path.endsWith(expectedFile))) {
+        reasonsWhyBad.push(`Info folder is missing expected file: ${expectedFile}`);
+      }
+    });
+    if (objectsContent.length !== 1) {
+      reasonsWhyBad.push("`objects` folder must have exactly one file");
+    }
+    if (!objectsContent[0]?.path.endsWith("imports.ts")) {
+      reasonsWhyBad.push("`objects` folder must contain an imports.ts file");
+    }
+    if (reasonsWhyBad.length > 0) {
+      App.logger.warn(`Script at ${this.getDownstairsRootUri().fsPath} is not copacetic:`);
+      reasonsWhyBad.forEach(reason => App.logger.warn(` - ${reason}`));
+    }
+    return reasonsWhyBad.length === 0;
   }
 
   /**
