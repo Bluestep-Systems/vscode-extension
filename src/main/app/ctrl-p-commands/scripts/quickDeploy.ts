@@ -4,6 +4,7 @@ import { Alert } from "../../util/ui/Alert";
 import { ProgressHelper } from "../../util/ui/ProgressHelper";
 import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../../types";
 import push from "./push";
+import { App } from '../../App';
 
 /**
  * Pushes the current file to multiple origins and topIds as specified by a function in the current file.
@@ -23,7 +24,7 @@ export default async function (): Promise<void> {
     return;
   }
   const { recipientOrgs, topIds, sourceOrigin } = getArgs();
-  console.log("Quick Deploy triggered");
+  App.logger.info("Quick Deploy triggered");
   const origins = recipientOrgs.map(v => new URL(v).origin);
 
   // Create tasks for all origin/topId combinations

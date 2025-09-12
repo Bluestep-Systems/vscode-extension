@@ -124,7 +124,9 @@ export class RemoteScriptFile {
    */
   public async integrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
     const hashHex = await this.getHash();
-    return hashHex === await this.getUpstairsHash(ops);
+    const matches = hashHex === await this.getUpstairsHash(ops);
+    App.isDebugMode() && console.log("matches:", matches, "local:", hashHex, "upstairs:", await this.getUpstairsHash(ops));
+    return matches;
   }
 
   /**
@@ -141,7 +143,19 @@ export class RemoteScriptFile {
         "Accept": "*/*",
       }
     });
-    const etag = response.headers.get("etag");
+    const etagHeader = response.headers.get("etag");
+
+    //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
+    let etag: string | null = null;
+    if (RemoteScriptFile.EtagPattern.test(etagHeader || "")) {
+      etag = JSON.parse(etagHeader?.toLowerCase() || "null");
+    } else if (RemoteScriptFile.WeakEtagPattern.test(etagHeader || "")) {
+      // weak etags are prefixed with W/ and we ignore the weakness for our purposes
+      App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
+      etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
+    } else {
+      App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
+    }
     if (!etag) {
       if (ops?.required) {
         throw new Error("Could not determine required upstairs hash");

@@ -253,7 +253,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     url = new URL(url);
     const sessionData = this.sessions.get(url.origin);
     if (sessionData && (sessionData.JSESSIONID) && (sessionData.lastTouched > (Date.now() - this.MAX_SESSION_DURATION))) {
-      App.logger.info("using existing session for fetch to:" + url.href + "\n " + JSON.stringify(sessionData));
+      App.isDebugMode() && App.logger.info("using existing session for fetch to:" + url.href + "\n " + JSON.stringify(sessionData));
       options = {
         ...options,
         headers: {

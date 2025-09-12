@@ -25,7 +25,6 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     }
     const rawFilePaths = fetchedScriptObject;
     const ultimateUris: vscode.Uri[] = [];
-    console.log("rawFilePaths", rawFilePaths);
     // Create tasks for progress helper
     const pullTasks = rawFilePaths.map(path => ({
       execute: async () => {
@@ -67,7 +66,7 @@ function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPaths: vsc
   });
   // delete all unused paths
   for (const del of toDelete) {
-    console.log("Deleting unused path:", del.fsPath);
+    App.logger.warn("Deleting unused path:" +  del.fsPath);
     vscode.workspace.fs.delete(del, { recursive: true, useTrash: false });
   }
 }

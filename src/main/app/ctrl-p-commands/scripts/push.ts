@@ -202,7 +202,6 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     const downstairsPath = flattenedDownstairs.find(dp => dp.fsPath === curPath.fsPath);
     if (!downstairsPath) {
       // If there's no matching downstairs path, we need to delete the upstairs path
-      console.log("going to delete upstairs path with no downstairs match:", rawFilePath.upstairsPath);
       await SM.fetch(rawFilePath.upstairsPath, {
         method: "DELETE"
       });
