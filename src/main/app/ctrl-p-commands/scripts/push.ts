@@ -95,6 +95,7 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   }));
   return pathList;
 }
+
 /**
  * Sends a specific file to a WebDAV location.
  * @param param0 The parameters for sending the file.
@@ -102,14 +103,42 @@ async function tunnelNode(node: [string, vscode.FileType][], {
  */
 async function sendFile({ localFile, upstairsRootUrlString }: { localFile: string; upstairsRootUrlString: string; }) {
 
-  //TODO tighten this up 
-  if (localFile.includes(`/declarations/`) || localFile.endsWith(".b6p_metadata.json")) {
-    // we skip these special files -- since they are not part of the actual script
-    return;
-  }
   App.logger.info("Preparing to send file:", localFile);
   App.logger.info("To target formula URI:", upstairsRootUrlString);
   const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
+  const downstairsUri = vscode.Uri.file(localFile);
+  const scriptFile = new RemoteScriptFile({ downstairsUri });
+
+  if (await scriptFile.isExternalModel()) {
+    App.logger.info(`File is an external model; skipping: ${localFile}`);
+    return;
+  }
+
+  if (await scriptFile.isInInfoOrObjects()) {
+    App.logger.info(`File is in Info or Objects; skipping: ${localFile}`);
+    return;
+  }
+  if (scriptFile.isInDeclarations()) {
+    App.logger.info(`File is in Declarations; skipping: ${localFile}`);
+    return;
+  }
+
+  //TODO remove this after getfilename "metadata" change is done
+  if (scriptFile.getFileName() === "metadata") {
+    App.logger.info(`File is metadata; skipping: ${localFile}`);
+    return;
+  }
+  //TODO fix this up after the getfilename "metadata" change is done
+  if (localFile.endsWith(".b6p_metadata.json")) {
+    App.logger.info(`File is .b6p_metadata.json; skipping: ${localFile}`);
+    return;
+  }
+
+  if (await scriptFile.integrityMatches({ upstairsOverride: upstairsUrl })) {
+    App.logger.info(`File integrity matches; skipping: ${localFile}`);
+    return;
+  }
+
   const desto = localFile
     .split(upstairsUrl.host + "/" + webDavId)[1];
   if (typeof desto === 'undefined') {
@@ -117,12 +146,8 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   }
   upstairsUrl.pathname = `/files/${webDavId}${desto}`;
   App.logger.info("Destination:", upstairsUrl.toString());
-  const downstairsUri = vscode.Uri.file(localFile);
-  const scriptFile = new RemoteScriptFile({ downstairsUri });
-  if (await scriptFile.integrityMatches({ upstairsOverride: upstairsUrl })) {
-    App.logger.info("File integrity matches; skipping:", localFile);
-    return;
-  }
+
+  
   //TODO investigate if this can be done via streaming
   const fileContents = await fs().readFile(downstairsUri);
   const resp = await SM.fetch(upstairsUrl, {

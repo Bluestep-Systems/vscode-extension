@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-
+import { FileSystem } from "../fs/FileSystemFactory";
+const fs = FileSystem.getInstance;
 /**
  * Reads the text content of a file.
  * @param uri The URI of the file to read.
@@ -17,6 +18,6 @@ export async function readFileText(uri: vscode.Uri) {
  * @returns The raw binary content of the file.
  */
 export async function readFileRaw(uri: vscode.Uri) {
-  const fileData = await vscode.workspace.fs.readFile(uri);
+  const fileData = await fs().readFile(uri);
   return fileData;
 }

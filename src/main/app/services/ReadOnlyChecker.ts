@@ -44,8 +44,7 @@ async function determine(sf: RemoteScriptFile) {
   if (await sf.isInInfoOrObjects()) {
     return true;
   }
-  const config = await sf.getConfigFile();
-  if (config.models?.map(m => m.name).includes(curFileName)) {
+  if (await sf.isExternalModel()) {
     return true;
   }
   return false;

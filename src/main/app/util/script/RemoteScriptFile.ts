@@ -397,6 +397,20 @@ export class RemoteScriptFile {
   }
 
   /**
+   * determines if the file is an external model
+   * 
+   * external models are defined in the config.json file, and are not to be pushed or pulled
+   * @returns 
+   */
+  public async isExternalModel(): Promise<boolean> {
+    const config = await this.getConfigFile();
+    if (config.models?.map(m => m.name).includes(this.getFileName())) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Gets the metadata file for the script.
    * @returns The metadata file content as a Promise.
    */
