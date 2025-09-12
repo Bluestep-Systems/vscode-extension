@@ -1,18 +1,19 @@
 /**
- * A pseud-map interface that only allows read operations.
+ * A pseudo-map interface that only allows read operations.
  */
 declare interface ReadOnlyMap<T> {
   get(key: string): T | undefined;
   has(key: string): boolean;
   forEach(callback: (value: T, key: string, map: this) => void): void;
 }
-export type Primitive = string | number | boolean | null | bigint;
+
+export type PrimitiveSerializable = string | number | boolean | null;
 
 /**
  * A nested object where all values are primitives or other nested objects.
  */
 export type PrimitiveNestedObject = {
-  [key: string]: Primitive | PrimitiveNestedObject
+  [key: string]: PrimitiveSerializable | PrimitiveNestedObject
 }
 
 /**
@@ -21,7 +22,7 @@ export type PrimitiveNestedObject = {
  * By design, this should be an object such that it can be serialized to JSON and back without loss of information.
  */
 export type SavableObject =
-  | Primitive
+  | PrimitiveSerializable
   | SavableObject[]
   | { [key: string]: SavableObject };
 
@@ -62,8 +63,9 @@ export type XMLResponse = {
     }[];
   };
 }
+
 /**
- * data requisite to manage an individual session
+ * data requisite to manage an individual login session
  */
 export type SessionData = {
 
@@ -87,8 +89,9 @@ export type SessionData = {
    */
   lastCsrfToken: string | null;
 }
+
 /**
- * Basic auth parameters.
+ * Basic auth information.
  */
 export type BasicAuthParams = {
   username: string;
@@ -96,12 +99,14 @@ export type BasicAuthParams = {
 };
 
 /**
- * //TODO
+ * GQL response for script queries, either good or bad.
  */
 type ScriptGqlResp = ScriptGQLGoodResp | ScriptGQLBadResp;
 
 /**
- * //TODO
+ * how a GQL response looks when it is good
+ * 
+ * //TODO this is incomplete for every GQL query possible
  */
 type ScriptGQLGoodResp = {
   "data": {
@@ -120,7 +125,7 @@ type ScriptGQLGoodResp = {
 };
 
 /**
- * //TODO
+ * how a GQL response looks when there were errors with the query
  */
 type ScriptGQLBadResp = {
   "errors": [
@@ -135,22 +140,44 @@ type ScriptGQLBadResp = {
  */
 type SourceOps = { sourceOrigin: string, topId: string, skipMessage?: true };
 
+/**
+ * The metadata for the RemoteScript objects used locally.
+ */
 type ScriptMetaData = {
+
   /**
    * The WebDAV ID extracted from the file path.
    */
   webdavId: string;
+
   /**
    * The name of the script.
    */
   scriptName: string;
+
   /**
    * push/pull records for the script.
    */
   pushPullRecords: {
+
+    /**
+     * actual location of the file locally
+     */
     downstairsPath: string;
+
+    /**
+     * the time `new Date().toUTCString()` when the last push happened
+     */
     lastPushed: string | null;
+
+    /**
+     * the time `new Date().toUTCString()` when the last pull happened
+     */
     lastPulled: string | null;
+
+    /**
+     * the hash of the file when it was last verified (after a push or pull)
+     */
     lastVerifiedHash: string;
   }[];
 
@@ -225,8 +252,29 @@ export type MetaDataJsonFileContent = {
   allowedMethods: string[];
 }
 
+/**
+ * propagation behavior options for scripts
+ */
 type PropagationBehaviorTypes = "MANDATORY" | "NESTED" | "NEVER" | "NOT_SUPPORTED" | "REQUIRED" | "REQUIRES_NEW" | "SUPPORTS";
-type SandboxSizes = "XXX_SMALL" | "XX_SMALL" | "X_SMALL" | "SMALL" | "MEDIUM_SMALL" | "MEDIUM" | "MEDIUM_LARGE" | "LARGE" | "X_LARGE" | "XX_LARGE" | "XXX_LARGE" | "UNLIMITED";
+
+/**
+ * sandbox size options for scripts
+ * 
+ * see platform documentation for details
+ */
+type SandboxSizes = 
+  "XXX_SMALL" 
+  | "XX_SMALL" 
+  | "X_SMALL" 
+  | "SMALL" 
+  | "MEDIUM_SMALL" 
+  | "MEDIUM" 
+  | "MEDIUM_LARGE" 
+  | "LARGE" 
+  | "X_LARGE" 
+  | "XX_LARGE" 
+  | "XXX_LARGE" 
+  | "UNLIMITED";
 
 /**
  * This is the content of a config.json found in every script folder.
