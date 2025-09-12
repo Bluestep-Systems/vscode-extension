@@ -11,6 +11,8 @@ import { parseUpstairsUrl } from '../../util/data/URLParser';
 import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { Alert } from '../../util/ui/Alert';
 import { ProgressHelper } from '../../util/ui/ProgressHelper';
+import { FileSystem } from '../../util/fs/FileSystemFactory';
+const fs = FileSystem.getInstance;
 /**
  * Pushes a script to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -44,7 +46,7 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
     App.logger.info("Source folder URI:", sourceFolder);
     const downstairsRootFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
     App.logger.info("Reading directory:", downstairsRootFolderUri.toString());
-    const fileList = await vscode.workspace.fs
+    const fileList = await fs()
       .readDirectory(downstairsRootFolderUri)
       .then(async node => await tunnelNode(node, { nodeURI: uriStringToFilePath(sourceFolder) }));
 
@@ -85,7 +87,7 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   await Promise.all(node.map(async ([name, type]) => {
     const newNodeUri = nodeURI + "/" + name;
     if (type === vscode.FileType.Directory) {
-      const nestedNode = await vscode.workspace.fs.readDirectory(vscode.Uri.file(newNodeUri));
+      const nestedNode = await fs().readDirectory(vscode.Uri.file(newNodeUri));
       await tunnelNode(nestedNode, { pathList, nodeURI: newNodeUri });
     } else {
       pathList.push(newNodeUri);
@@ -110,16 +112,19 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
   const desto = localFile
     .split(upstairsUrl.host + "/" + webDavId)[1];
+  if (typeof desto === 'undefined') {
+    throw new Error('Failed to determine destination path for file: ' + localFile);
+  }
   upstairsUrl.pathname = `/files/${webDavId}${desto}`;
   App.logger.info("Destination:", upstairsUrl.toString());
   const downstairsUri = vscode.Uri.file(localFile);
   const scriptFile = new RemoteScriptFile({ downstairsUri });
-  if (await scriptFile.integrityMatches()) {
+  if (await scriptFile.integrityMatches({ upstairsOverride: upstairsUrl })) {
     App.logger.info("File integrity matches; skipping:", localFile);
     return;
   }
   //TODO investigate if this can be done via streaming
-  const fileContents = await vscode.workspace.fs.readFile(downstairsUri);
+  const fileContents = await fs().readFile(downstairsUri);
   const resp = await SM.fetch(upstairsUrl, {
     method: 'PUT',
     headers: {
@@ -219,7 +224,7 @@ async function getDownstairsFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> 
   const url = new URL(sourceOrigin);
   let found = false;
   const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
-  const wsDir = await vscode.workspace.fs.readDirectory(curWorkspaceFolder.uri);
+  const wsDir = await fs().readDirectory(curWorkspaceFolder.uri);
 
   const folderUri = wsDir.reduce(
     (curValue, [subFolderName, _fileType]) => {

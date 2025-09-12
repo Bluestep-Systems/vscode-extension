@@ -26,6 +26,22 @@ export class RemoteScriptFile {
    */
   private _scriptRoot: RemoteScriptRoot;
 
+
+  /**
+   * Regex specifically for myassn document key patterns:
+   */
+  private static ComplexEtagPattern = /^"?\d{10,13}-\{.*?"class":\s*"myassn\.document\.(Proxy|LibraryServlet)MemoryDocumentKey".*?"classId":\s*\d+.*?\}"?$/;
+
+  /**
+   * Regex for standard etags (SHA-512 hashes).
+   */
+  private static EtagPattern = /^"[a-f0-9]{128}"$/;
+  
+  /**
+   * Regex for weak etags (SHA-512 hashes).
+   */
+  private static WeakEtagPattern = /^W\/"[a-f0-9]{128}"$/;
+
   /**
    * Creates a ScriptFile instance.
    * 
@@ -85,8 +101,8 @@ export class RemoteScriptFile {
    * we have the definition being "if the integrity does not match"
    * @returns 
    */
-  public async shouldPush(): Promise<boolean> {
-    return !(await this.integrityMatches());
+  public async shouldPush(ops?: { upstairsOverride?: URL }): Promise<boolean> {
+    return !(await this.integrityMatches(ops));
   }
 
   /**
@@ -106,26 +122,28 @@ export class RemoteScriptFile {
    * Checks if the local file's integrity matches the upstairs file.
    * @returns True if the integrity matches, false otherwise.
    */
-  public async integrityMatches(): Promise<boolean> {
+  public async integrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
     const hashHex = await this.getHash();
-    return hashHex === await this.getUpstairsHash();
+    return hashHex === await this.getUpstairsHash(ops);
   }
 
   /**
    * gets the hash of the upstairs file, or null if it doesn't exist
-   * @param required 
+   * @param ops.required determines if we should throw an error if it is not found upstairs
+   * @param ops.upstairsOverride gives an override URL of whom to check -- otherwise we assume the script cooresponding with this object
    * @returns 
    */
-  public async getUpstairsHash(required: boolean = false): Promise<string | null> {
-    const response = await SM.fetch(this.toUpstairsURL(), {
+  public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
+    const response = await SM.fetch(ops?.upstairsOverride || this.toUpstairsURL(), {
       method: "GET",
+      //TODO determine if we can simply omit these headers
       headers: {
         "Accept": "*/*",
       }
     });
     const etag = response.headers.get("etag");
     if (!etag) {
-      if (required) {
+      if (ops?.required) {
         throw new Error("Could not determine required upstairs hash");
       }
       //TODO determine if there is a legitimate reason that this could be undefined and we should throw an error instead
@@ -190,11 +208,32 @@ export class RemoteScriptFile {
     }
     const buffer = await response.arrayBuffer();
     await this.writeContent(buffer);
-    //uncomment when etag code is changed
-    // if (!(await this.getHash() === response.headers.get("etag")?.toLowerCase())) {
-    //   console.log(await this.getHash(), response.headers.get("etag")?.toLowerCase());
-    //   throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
-    // }
+    const etagHeader = response.headers.get("etag");
+
+
+    //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
+    if (RemoteScriptFile.EtagPattern.test(etagHeader || "")) {
+      const etag = JSON.parse(etagHeader?.toLowerCase() || "null");
+      const hash = await this.getHash();
+      if (hash !== etag) {
+        throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
+      }
+    } else if (RemoteScriptFile.WeakEtagPattern.test(etagHeader || "")) {
+      // weak etags are prefixed with W/ and we ignore the weakness for our purposes
+      console.log("weak etagHeader:", etagHeader);
+      const etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
+      const hash = await this.getHash();
+      if (hash !== etag) {
+        throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
+      }
+    } else if (RemoteScriptFile.ComplexEtagPattern.test(etagHeader || "")) {
+      console.log("complex etagHeader:", etagHeader);
+      // complex etags are from the illusory document files and we skip the integrity check on them
+    } else {
+      throw new Error(`Could not parse upstairs etag; \`${etagHeader}\`,\n cannot verify integrity`);
+    }
+
+    // touch the lastPulled time
     await this.getScriptRoot().touchFile(this, "lastPulled");
     return response;
   }
@@ -217,7 +256,6 @@ export class RemoteScriptFile {
         return true;
       }
       const stat = await fs().stat(this.toDownstairsUri());
-      console.log("stat", stat);
       if (stat.type === vscode.FileType.Directory) {
         return false;
       }
@@ -351,7 +389,7 @@ export class RemoteScriptFile {
   public async getMetadataFile(): Promise<MetaDataJsonFileContent> {
     return this.getConfigurationFile<MetaDataJsonFileContent>('metadata.json');
   }
-  
+
   /**
    * Gets the file name from the downstairs URI.
    * @returns The file name as a string.

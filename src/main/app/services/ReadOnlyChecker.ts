@@ -26,6 +26,13 @@ export default async function () {
   }
 }
 
+/**
+ * perform a determination on if the current file should be set to read only.
+ * 
+ * //TODO improve this logic to be more efficient
+ * @param sf 
+ * @returns 
+ */
 async function determine(sf: RemoteScriptFile) {
   const curFileName = sf.getFileName();
   console.log("curFileName", curFileName);
