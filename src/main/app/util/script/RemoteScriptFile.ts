@@ -6,7 +6,7 @@ import { App } from '../../App';
 import { readFileText } from '../data/readFile';
 import * as path from 'path';
 import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
-import { FileSystemFactory } from '../fs/FileSystemFactory';
+import { FileSystem } from '../fs/FileSystemFactory';
 
 /**
  * A class representing metadata extracted from a file path.
@@ -93,7 +93,7 @@ export class RemoteScriptFile {
    * Gets the lowercased SHA-512 hash of the local file.
    */
   public async getHash(): Promise<string> {
-    const bufferSource = await FileSystemFactory.getInstance().readFile(this.toDownstairsUri());
+    const bufferSource = await FileSystem.getInstance().readFile(this.toDownstairsUri());
     const localHashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
     if (hexArray.length !== 64) {
@@ -134,6 +134,7 @@ export class RemoteScriptFile {
     }
     return etag.toLowerCase();
   }
+
   /**
    * Gets the content of the local file.
    * @returns The content of the local file.
@@ -141,7 +142,7 @@ export class RemoteScriptFile {
   public async getDownstairsContent(): Promise<string> {
     const downstairsUri = this.toDownstairsUri();
     try {
-      const fileData = await FileSystemFactory.getInstance().readFile(downstairsUri);
+      const fileData = await FileSystem.getInstance().readFile(downstairsUri);
       return Buffer.from(fileData).toString('utf8');
     } catch (e) {
       if (e instanceof Error || typeof e === 'string') {
@@ -203,7 +204,7 @@ export class RemoteScriptFile {
    * @param buffer The content to write.
    */
   public async writeContent(buffer: ArrayBuffer) {
-    await FileSystemFactory.getInstance().writeFile(this.toDownstairsUri(), Buffer.from(buffer));
+    await FileSystem.getInstance().writeFile(this.toDownstairsUri(), Buffer.from(buffer));
   }
 
   /**
@@ -212,7 +213,7 @@ export class RemoteScriptFile {
    */
   public async exists(): Promise<boolean> {
     try {
-      const stat = await FileSystemFactory.getInstance().stat(this.toDownstairsUri());
+      const stat = await FileSystem.getInstance().stat(this.toDownstairsUri());
       if (stat.type === vscode.FileType.Directory) {
         return false;
       }
@@ -236,7 +237,7 @@ export class RemoteScriptFile {
    */
   public async fileStat(): Promise<vscode.FileStat | null> {
     try {
-      return await FileSystemFactory.getInstance().stat(this.toDownstairsUri());
+      return await FileSystem.getInstance().stat(this.toDownstairsUri());
     } catch (e) {
       return null;
     }
@@ -321,7 +322,7 @@ export class RemoteScriptFile {
    * @returns The parsed JSON content
    */
   private async getConfigurationFile<T>(fileName: string): Promise<T> {
-    const files = await FileSystemFactory.getInstance().findFiles(new vscode.RelativePattern(this._scriptRoot.getDownstairsRootUri(), `**/${fileName}`));
+    const files = await FileSystem.getInstance().findFiles(new vscode.RelativePattern(this._scriptRoot.getDownstairsRootUri(), `**/${fileName}`));
     if (!files || files.length !== 1) {
       throw new Error(`Could not find ${fileName} file, found: ${files ? files.length : 'none'}`);
     }
@@ -347,16 +348,38 @@ export class RemoteScriptFile {
     return this.getConfigurationFile<MetaDataJsonFileContent>('metadata.json');
   }
   
+  /**
+   * Gets the file name from the downstairs URI.
+   * @returns The file name as a string.
+   */
   public getFileName(): string {
     return path.parse(this.toDownstairsUri().fsPath).base;
   }
 
+  /**
+   * Checks if the script file is in the declarations folder.
+   * @returns True if the script file is in the declarations folder, false otherwise.
+   */
   public isInDeclarations(): boolean {
     return this.parser.type === "declarations";
   }
+
+  /**
+   * Checks if the script file is in the draft folder.
+   * @returns True if the script file is in the draft folder, false otherwise.
+   */
   public isInDraft(): boolean {
     return this.parser.type === "draft";
   }
+
+  /**
+   * Checks if the script file is in a valid state.
+   * @returns True if the script file is in a valid state, false otherwise.
+   */
+  public async isCopacetic(): Promise<boolean> {
+    return await this.exists();
+  }
+
 }
 
 

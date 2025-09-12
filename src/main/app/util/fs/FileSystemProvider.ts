@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
  * Interface defining the file system operations we need.
  * This allows us to create both real and mock implementations.
  */
-export interface IFileSystemProvider {
+export interface FileSystemProvider {
   readFile(uri: vscode.Uri): Promise<Uint8Array>;
   writeFile(uri: vscode.Uri, content: Uint8Array): Promise<void>;
   stat(uri: vscode.Uri): Promise<vscode.FileStat>;
@@ -14,7 +14,7 @@ export interface IFileSystemProvider {
 /**
  * Real implementation that delegates to VS Code's file system API.
  */
-export class VSCodeFileSystemProvider implements IFileSystemProvider {
+export class VSCodeFileSystem implements FileSystemProvider {
   async readFile(uri: vscode.Uri): Promise<Uint8Array> {
     return vscode.workspace.fs.readFile(uri);
   }
@@ -35,7 +35,7 @@ export class VSCodeFileSystemProvider implements IFileSystemProvider {
 /**
  * Mock implementation for testing purposes.
  */
-export class MockFileSystemProvider implements IFileSystemProvider {
+export class MockFileSystem implements FileSystemProvider {
   private files = new Map<string, Uint8Array>();
   private stats = new Map<string, vscode.FileStat>();
   

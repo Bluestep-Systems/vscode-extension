@@ -3,21 +3,21 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { RemoteScriptFile } from '../main/app/util/script/RemoteScriptFile';
 import { RemoteScriptRoot } from '../main/app/util/script/RemoteScriptRoot';
-import { FileSystemFactory } from '../main/app/util/fs/FileSystemFactory';
-import { MockFileSystemProvider } from '../main/app/util/fs/FileSystemProvider';
+import { FileSystem } from '../main/app/util/fs/FileSystemFactory';
+import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
 
 suite('RemoteScriptFile Tests', () => {
-    let mockFileSystemProvider: MockFileSystemProvider;
+    let mockFileSystemProvider: MockFileSystem;
     let remoteScriptFile: RemoteScriptFile;
 
     suiteSetup(() => {
         // Enable test mode with mock file system
-        mockFileSystemProvider = FileSystemFactory.enableTestMode();
+        mockFileSystemProvider = FileSystem.enableTestMode();
     });
 
     suiteTeardown(() => {
         // Restore production mode
-        FileSystemFactory.enableProductionMode();
+        FileSystem.enableProductionMode();
     });
 
     setup(() => {

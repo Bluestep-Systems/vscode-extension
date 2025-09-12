@@ -1,32 +1,32 @@
-import { IFileSystemProvider, VSCodeFileSystemProvider, MockFileSystemProvider } from './FileSystemProvider';
+import { FileSystemProvider, VSCodeFileSystem, MockFileSystem } from './FileSystemProvider';
 
 /**
  * Namespace for managing the file system provider.
  * This allows us to switch between real and mock implementations for testing.
  */
-export namespace FileSystemFactory {
-  let instance: IFileSystemProvider = new VSCodeFileSystemProvider();
+export namespace FileSystem {
+  let instance: FileSystemProvider = new VSCodeFileSystem();
   let isTestMode = false;
 
   /**
    * Get the current file system provider instance.
    */
-  export function getInstance(): IFileSystemProvider {
+  export function getInstance(): FileSystemProvider {
     return instance;
   }
 
   /**
    * Set a custom file system provider (mainly for testing).
    */
-  export function setProvider(provider: IFileSystemProvider): void {
+  export function setProvider(provider: FileSystemProvider): void {
     instance = provider;
   }
 
   /**
    * Switch to mock mode for testing.
    */
-  export function enableTestMode(): MockFileSystemProvider {
-    const mockProvider = new MockFileSystemProvider();
+  export function enableTestMode(): MockFileSystem {
+    const mockProvider = new MockFileSystem();
     instance = mockProvider;
     isTestMode = true;
     return mockProvider;
@@ -36,7 +36,7 @@ export namespace FileSystemFactory {
    * Switch back to real VS Code file system.
    */
   export function enableProductionMode(): void {
-    instance = new VSCodeFileSystemProvider();
+    instance = new VSCodeFileSystem();
     isTestMode = false;
   }
 
