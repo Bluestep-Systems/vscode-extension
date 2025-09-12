@@ -2,21 +2,29 @@ import { XMLParser } from 'fast-xml-parser';
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
-import { Util } from "../";
 import { Alert } from "../ui/Alert";
 import { parseUpstairsUrl } from "./URLParser";
 
 type GetScriptArg = { url: URL; curLayer?: PrimitiveNestedObject; webDavId: string; }
-type GetScriptRet = { structure: PrimitiveNestedObject; rawFilePaths: { upstairsPath: string; downstairsPath: string; trailing?: string }[] } | undefined;
-
+type GetScriptRet = { upstairsPath: string; downstairsPath: string; trailing?: string }[] | null;
+type RawFilesObj = { upstairsPath: string; downstairsPath: string; trailing?: string }[];
 /**
  * Fetches the script from the specified URL.
  * @returns The structure and raw file paths of the fetched script, or undefined if not found.
  */
-export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg): Promise<GetScriptRet> {
+export async function getScript({ url, webDavId }: GetScriptArg): Promise<GetScriptRet> {
   try {
     url.pathname = `/files/${webDavId}/`;
     App.logger.info("Fetching script from URL:", url.href);
+    return await getSubScript(url);
+  } catch (e) {
+    console.trace(e);
+    throw e;
+  }
+}
+
+async function getSubScript(url: URL, repository: RawFilesObj = []): Promise<RawFilesObj | null> {
+  try {
     const response = await SM.fetch(url, {
       //TODO review these
       "headers": {
@@ -29,15 +37,12 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
       "method": "PROPFIND"
     });
     if (!response.ok) {
-      Alert.error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
-      return;
+      Alert.error(`Failed to fetch sub-script at ${url.href}: ${response.status} ${response.statusText}`);
+      return null;
     }
-    App.logger.info("Response Status:", response.status);
     const parser = new XMLParser();
     const responseObj: XMLResponse = parser.parse(await response.text());
-    //TODO remove magic strings
-    const rawFiles = responseObj["D:multistatus"]["D:response"]
-      //TODO this only goes 4 layers deep
+    const firstLayer: RawFilesObj = responseObj["D:multistatus"]["D:response"]
       .filter(terminal => {
         // TODO examine this for fragility
         let { trailing } = parseUpstairsUrl(terminal["D:href"]);
@@ -57,25 +62,40 @@ export async function getScript({ url, webDavId, curLayer = {} }: GetScriptArg):
       })
       .map(terminal => {
         const { webDavId, trailing } = parseUpstairsUrl(terminal["D:href"]);
-
         const newPath = `${webDavId}/${trailing}`;
-        const path = newPath.split("/");
-        if (newPath.at(-1)! === "") {
-          path.pop();
-          Util.PutObjVal(curLayer, path, {}, "string");
-        } else {
-          const fileName = path.pop() as string;
-          Util.PutObjVal(curLayer, path, { [`${fileName}`]: fileName }, "string");
-        }
         return { upstairsPath: terminal["D:href"], downstairsPath: newPath, trailing };
       });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch layer at ${url.href}: ${response.status} ${response.statusText}`);
+    
+    for (const rawFile of firstLayer) {
+      if (repository.find(rf => rf.upstairsPath === rawFile.upstairsPath)) {
+        // Prevent duplicates
+        continue;
+      }
+      if (rawFile.trailing?.endsWith('/')) {
+        // This is a directory; recurse into it
+        const subUrl = new URL(rawFile.upstairsPath);
+        
+        if (subUrl.toString() === url.toString()) {
+          repository.push(rawFile);
+          continue;
+        }
+        const subLayer = await getSubScript(subUrl, repository);
+        if (subLayer) {
+          for (const subFile of subLayer) {
+            if (repository.find(rf => rf.upstairsPath === subFile.upstairsPath)) {
+              // Prevent duplicates
+              continue;
+            }
+            repository.push(subFile);
+          }
+        }
+      } else {
+        repository.push(rawFile);
+      }
     }
-    return { structure: curLayer, rawFilePaths: rawFiles };
+    return repository;
   } catch (e) {
     console.trace(e);
     throw e;
   }
 }
-

@@ -36,7 +36,7 @@ export class RemoteScriptFile {
    * Regex for standard etags (SHA-512 hashes).
    */
   private static EtagPattern = /^"[a-f0-9]{128}"$/;
-  
+
   /**
    * Regex for weak etags (SHA-512 hashes).
    */
@@ -220,14 +220,14 @@ export class RemoteScriptFile {
       }
     } else if (RemoteScriptFile.WeakEtagPattern.test(etagHeader || "")) {
       // weak etags are prefixed with W/ and we ignore the weakness for our purposes
-      console.log("weak etagHeader:", etagHeader);
+      App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
       const etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
       const hash = await this.getHash();
       if (hash !== etag) {
         throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
       }
     } else if (RemoteScriptFile.ComplexEtagPattern.test(etagHeader || "")) {
-      console.log("complex etagHeader:", etagHeader);
+      App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
       // complex etags are from the illusory document files and we skip the integrity check on them
     } else {
       throw new Error(`Could not parse upstairs etag; \`${etagHeader}\`,\n cannot verify integrity`);

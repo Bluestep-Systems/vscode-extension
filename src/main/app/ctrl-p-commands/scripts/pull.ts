@@ -20,12 +20,12 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     }
     const { url, webDavId } = urlObj;
     const fetchedScriptObject = await getScript({ url, webDavId });
-    if (fetchedScriptObject === undefined) {
+    if (fetchedScriptObject === null) {
       return;
     }
-    const rawFilePaths = fetchedScriptObject.rawFilePaths;
+    const rawFilePaths = fetchedScriptObject;
     const ultimateUris: vscode.Uri[] = [];
-    
+    console.log("rawFilePaths", rawFilePaths);
     // Create tasks for progress helper
     const pullTasks = rawFilePaths.map(path => ({
       execute: async () => {

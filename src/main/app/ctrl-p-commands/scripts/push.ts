@@ -188,7 +188,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   if (!getScriptRet) {
     throw new Error("Failed to get script for cleanup");
   }
-  const rawFilePaths = getScriptRet.rawFilePaths;
+  const rawFilePaths = getScriptRet;
 
   const flattenedDownstairs = await flattenDirectory(downstairsRootFolderUri);
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
