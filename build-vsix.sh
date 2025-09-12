@@ -67,6 +67,14 @@ fi
 # Get the current version from package.json
 VERSION=$(node -p "require('./package.json').version")
 
+# Run tests to ensure code quality before building
+echo "🧪 Running tests to ensure code quality..."
+if ! npm run test; then
+  echo "❌ Tests failed! Build aborted."
+  exit 1
+fi
+echo "✅ All tests passed!"
+
 npm run package-extension
 
 #this can probably be done inside the package-extension.js directly instead of us doing it here
