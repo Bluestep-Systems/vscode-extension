@@ -42,7 +42,12 @@ async function getSubScript(url: URL, repository: RawFilesObj = []): Promise<Raw
     }
     const parser = new XMLParser();
     const responseObj: XMLResponse = parser.parse(await response.text());
-    const firstLayer: RawFilesObj = responseObj["D:multistatus"]["D:response"]
+    const dResponses = responseObj["D:multistatus"]["D:response"];
+    if (!dResponses.filter) {
+      //this happens when we call for a folder and there are no files in it, so we just short-circuit.
+      return repository;
+    }
+    const firstLayer: RawFilesObj = dResponses
       .filter(terminal => {
         // TODO examine this for fragility
         let { trailing } = parseUpstairsUrl(terminal["D:href"]);
@@ -95,6 +100,7 @@ async function getSubScript(url: URL, repository: RawFilesObj = []): Promise<Raw
     }
     return repository;
   } catch (e) {
+    console.error("error getting url", url.toString());
     console.trace(e);
     throw e;
   }

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { RemoteScriptRoot } from './RemoteScriptRoot';
 
 
 /**
@@ -7,15 +8,16 @@ import * as path from 'path';
  */
 export class DownstairsUriParser {
 
+  public rawUri:vscode.Uri;
   /**
    * Regex to match and extract components from a downstairs URI.
    */
-  private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)[\/\\](\d+)[\/\\](draft|declarations|\.b6p_metadata\.json)(?:[\/\\](.*))?$/;
+  private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)[\/\\](\d+)[\/\\](draft|declarations|\.b6p_metadata\.json|\.gitignore)?(?:[\/\\](.*))?$/;
 
   /**
    * The type of the downstairs file: "draft", "declarations", or "metadata" (for .b6p_metadata.json files)
    */
-  public readonly type: "draft" | "declarations" | "metadata";
+  public readonly type: "draft" | "declarations" | "metadata" | "root";
 
   /**
    * the "rest" of the path after the type folder (draft, declarations, or .b6p_metadata.json)
@@ -41,19 +43,29 @@ export class DownstairsUriParser {
 
   constructor(downstairsUri: vscode.Uri) {
     const cleanPath = downstairsUri.fsPath;
-
+    this.rawUri = downstairsUri;
     const match = cleanPath.match(DownstairsUriParser.URI_DISAMBIGUATION_REGEX);
 
     if (!match) {
-      throw new Error("The provided URI does not conform to expected structure: " + downstairsUri.toString() + ", expected /^(.*?)[/\\\\](\\d+)[/\\\\](draft|declarations|\\.b6p_metadata\\.json)(?:[/\\\\](.*))?$/");
+      throw new Error("The provided URI does not conform to expected structure: " + downstairsUri.toString() + ", expected /^(.*?)[/\\\\](\\d+)[/\\\\](draft|declarations|\\.b6p_metadata\\.json||\\.gitignore)(?:[/\\\\](.*))?$/");
     }
 
     this.prependingPath = match[1]; // Extract the path before the WebDAV ID
     this.webDavId = match[2]; // Extract the WebDAV ID
-    const typeStr = match[3] as "draft" | "declarations" | ".b6p_metadata.json"; // Extract the type string
+    const typeStr = match[3] as "draft" | "declarations" | ".b6p_metadata.json" | ".gitignore" || undefined; // Extract the type string
     this.rest = match[4] || ""; // Extract the relative path after the type
 
-    this.type = typeStr === '.b6p_metadata.json' ? 'metadata' : typeStr;
+    if (typeStr === undefined) {
+      this.type = "root";
+    } else if (typeStr === "draft" || typeStr === "declarations") {
+      this.type = typeStr;
+    } else if (typeStr === RemoteScriptRoot.METADATA_FILE || typeStr === RemoteScriptRoot.GITIGNORE_FILE) {
+      // both of these are considered "metadata" files
+      this.type = "metadata";
+    } else {
+      throw new Error("Unrecognized type in downstairs URI: " + typeStr);
+    }
+    
   }
 
   /**

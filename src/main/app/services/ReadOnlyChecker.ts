@@ -1,7 +1,8 @@
+import * as vscode from 'vscode';
 import { App } from "../App";
 import { getActiveEditorUri } from "../util/data/getActiveEditorUri";
 import { RemoteScriptFile } from "../util/script/RemoteScriptFile";
-import * as vscode from 'vscode';
+import { RemoteScriptRoot } from "../util/script/RemoteScriptRoot";
 
 export default async function () {
   try {
@@ -34,7 +35,7 @@ export default async function () {
  */
 async function determine(sf: RemoteScriptFile) {
   const curFileName = sf.getFileName();
-  const specialFileNames = ['metadata'];
+  const specialFileNames = [RemoteScriptRoot.METADATA_FILE];
   if (specialFileNames.includes(curFileName)) {
     return true;
   }

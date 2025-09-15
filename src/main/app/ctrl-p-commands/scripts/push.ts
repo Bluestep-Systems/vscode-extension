@@ -8,10 +8,10 @@ import { flattenDirectory } from '../../util/data/flattenDirectory';
 import { getScript } from '../../util/data/getScript';
 import { IdUtility } from '../../util/data/IdUtility';
 import { parseUpstairsUrl } from '../../util/data/URLParser';
+import { FileSystem } from '../../util/fs/FileSystemFactory';
 import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { Alert } from '../../util/ui/Alert';
 import { ProgressHelper } from '../../util/ui/ProgressHelper';
-import { FileSystem } from '../../util/fs/FileSystemFactory';
 const fs = FileSystem.getInstance;
 /**
  * Pushes a script to a WebDAV location.
@@ -109,33 +109,9 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   const downstairsUri = vscode.Uri.file(localFile);
   const scriptFile = new RemoteScriptFile({ downstairsUri });
 
-  if (await scriptFile.isExternalModel()) {
-    App.logger.info(`File is an external model; skipping: ${localFile}`);
-    return;
-  }
-
-  if (await scriptFile.isInInfoOrObjects()) {
-    App.logger.info(`File is in Info or Objects; skipping: ${localFile}`);
-    return;
-  }
-  if (scriptFile.isInDeclarations()) {
-    App.logger.info(`File is in Declarations; skipping: ${localFile}`);
-    return;
-  }
-
-  //TODO remove this after getfilename "metadata" change is done
-  if (scriptFile.getFileName() === "metadata") {
-    App.logger.info(`File is metadata; skipping: ${localFile}`);
-    return;
-  }
-  //TODO fix this up after the getfilename "metadata" change is done
-  if (localFile.endsWith(".b6p_metadata.json")) {
-    App.logger.info(`File is .b6p_metadata.json; skipping: ${localFile}`);
-    return;
-  }
-
-  if (await scriptFile.integrityMatches({ upstairsOverride: upstairsUrl })) {
-    App.logger.info(`File integrity matches; skipping: ${localFile}`);
+  const reason = await scriptFile.getReasonToNotPush({ upstairsOverride: upstairsUrl });
+  if (reason) {
+    App.logger.info(`${reason}; skipping file:`, localFile);
     return;
   }
 
@@ -226,6 +202,12 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     const curPath = vscode.Uri.joinPath(downstairsRootFolderUri, rawFilePath.trailing || path.sep);
     const downstairsPath = flattenedDownstairs.find(dp => dp.fsPath === curPath.fsPath);
     if (!downstairsPath) {
+      // we don't want to delete stuff that is in gitignore
+      const sf = new RemoteScriptFile({ downstairsUri: vscode.Uri.file(rawFilePath.downstairsPath) });
+      if (await sf.isInGitIgnore()) {
+        App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
+        continue;
+      }
       // If there's no matching downstairs path, we need to delete the upstairs path
       await SM.fetch(rawFilePath.upstairsPath, {
         method: "DELETE"

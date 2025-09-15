@@ -7,6 +7,7 @@ import { readFileText } from '../data/readFile';
 import * as path from 'path';
 import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
 import { FileSystem } from '../fs/FileSystemFactory';
+import { GlobMatcher } from '../data/GlobMatcher';
 const fs = FileSystem.getInstance;
 
 /**
@@ -57,13 +58,20 @@ export class RemoteScriptFile {
    * @returns Returns the URL for the proper upstairs file.
    */
   public toUpstairsURL(): URL {
-    if (this.parser.type === "metadata") {
-      console.trace();
-      throw new Error("Cannot determine the type of this file");
-    }
+
     const upstairsBaseUrl = this.getScriptRoot().toBaseUpstairsUrl();
     const newUrl = new URL(upstairsBaseUrl);
-    newUrl.pathname = upstairsBaseUrl.pathname + this.parser.type + "/" + this.parser.rest;
+    if (this.parser.type === "metadata") {
+      const fileName = this.getFileName();
+      if (fileName === RemoteScriptRoot.METADATA_FILE) {
+        throw new Error(`cannot convert ${RemoteScriptRoot.METADATA_FILE} file to upstairs URL`);
+      }
+      newUrl.pathname = upstairsBaseUrl.pathname + fileName;
+      
+    } else {
+      newUrl.pathname = upstairsBaseUrl.pathname + this.parser.type + "/" + this.parser.rest;
+    }
+    
     return newUrl;
   }
 
@@ -72,7 +80,7 @@ export class RemoteScriptFile {
    * @returns The local file system {@link vscode.Uri} for this script file.
    */
   public toDownstairsUri() {
-    return vscode.Uri.joinPath(this.getScriptRoot().getDownstairsRootUri(), this.parser.type, this.parser.rest);
+    return this.parser.rawUri;
   }
 
   /**
@@ -95,14 +103,31 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Determines if the local file should be pushed to upstairs; we have the
-   * definition being "if the integrity does not match"
+   * Determines a reason to not push this file upstairs
    * 
-   * @returns `true` if the local file should be pushed, `false` otherwise.
    * @param ops.upstairsOverride overrides the {@link URL} to check against
    */
-  public async shouldPush(ops?: { upstairsOverride?: URL }): Promise<boolean> {
-    return !(await this.integrityMatches(ops));
+  public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string> {
+
+    if (this.getFileName() === RemoteScriptRoot.METADATA_FILE) {
+      return "File is a metadata file";
+    }
+    if (this.isInDeclarations()) {
+      return "File is in declarations";
+    }
+    if (await this.isExternalModel()) {
+      return "File is an external model";
+    }
+    if (await this.isInGitIgnore()) {
+      return "File is ignored by .gitignore";
+    }
+    if (await this.isInInfoOrObjects()) {
+      return "File is in info or objects";
+    }
+    if (await this.integrityMatches(ops)) {
+      return "File integrity matches";
+    }
+    return "";
   }
 
   /**
@@ -208,11 +233,26 @@ export class RemoteScriptFile {
     return await response.text();
   }
 
+  private async deleteFromMetadata() {
+    await this.getScriptRoot().modifyMetaData((md) => {
+      const index = md.pushPullRecords.findIndex(record => record.downstairsPath === this.toDownstairsUri().fsPath);
+      if (index !== -1) {
+        md.pushPullRecords.splice(index, 1);
+      }
+    });
+  }
+
   /**
    * Downloads the file from the upstairs location. If the download is successful, it writes the content to the local file system.
    * @returns 
    */
   public async download(): Promise<Response> {
+    const ignore = await this.isInGitIgnore();
+    if (ignore) {
+      App.logger.info(`not downloading \`${this.getFileName()}\` because in .gitignore`);
+      await this.deleteFromMetadata();
+      return new Response("", { status: 418 });
+    }
     const lookupUri = this.toUpstairsURL();
     App.logger.info("downloading from:" + lookupUri);
     const response = await SM.fetch(lookupUri, {
@@ -420,17 +460,17 @@ export class RemoteScriptFile {
 
   /**
    * Gets the configuration file for the script.
-   * @returns The configuration file content as a Promise.
+   * @returns The configuration file content.
    */
   public async getConfigFile(): Promise<ConfigJsonContent> {
     return this.getConfigurationFile<ConfigJsonContent>('config.json');
   }
 
   /**
-   * determines if the file is an external model
+   * Determines if the file is an external model.
    * 
-   * external models are defined in the config.json file, and are not to be pushed or pulled
-   * @returns 
+   * External models are defined in the config.json file, and are not to be pushed or pulled
+   * @returns `true` if the file is an external model, `false` otherwise.
    */
   public async isExternalModel(): Promise<boolean> {
     const config = await this.getConfigFile();
@@ -458,7 +498,7 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the declarations folder.
-   * @returns True if the script file is in the declarations folder, false otherwise.
+   * @returns `true` if the script file is in the declarations folder, `false` otherwise.
    */
   public isInDeclarations(): boolean {
     return this.parser.type === "declarations";
@@ -466,7 +506,7 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the info folder.
-   * @returns True if the script file is in the info folder, false otherwise.
+   * @returns `true` if the script file is in the info folder, `false` otherwise.
    */
   public async isInInfo(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolder();
@@ -475,7 +515,7 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the objects folder.
-   * @returns True if the script file is in the objects folder, false otherwise.
+   * @returns `true` if the script file is in the objects folder, `false` otherwise.
    */
   public async isInObjects(): Promise<boolean> {
     const objectsFolder = await this.getScriptRoot().getObjectsFolder();
@@ -484,7 +524,7 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the info or objects folder.
-   * @returns True if the script file is in the info or objects folder, false otherwise.
+   * @returns `true` if the script file is in the info or objects folder, `false` otherwise.
    */
   public async isInInfoOrObjects(): Promise<boolean> {
     return await this.isInInfo() || await this.isInObjects();
@@ -492,12 +532,16 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the draft folder.
-   * @returns True if the script file is in the draft folder, false otherwise.
+   * @returns `true` if the script file is in the draft folder, `false` otherwise.
    */
   public isInDraft(): boolean {
     return this.parser.type === "draft";
   }
 
+  /**
+   * Determines if the script file is in the info folder
+   * @returns `true` if the script file is in the info folder, `false` otherwise.
+   */
   public async isInInfoFolder(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolder();
     return infoFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
@@ -505,10 +549,21 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in a valid state.
-   * @returns True if the script file is in a valid state, false otherwise.
+   * @returns `true` if the script file is in a valid state, `false` otherwise.
    */
   public async isCopacetic(): Promise<boolean> {
     return await this.exists();
+  }
+
+  /**
+   * Determines if the file is listed in the .gitignore file
+   * @returns `true` if the file is listed in .gitignore, `false` otherwise.
+   */
+  public async isInGitIgnore(): Promise<boolean> {
+    const scriptRoot = this.getScriptRoot();
+    const gitIgnorePatterns = await scriptRoot.getGitIgnore();
+    const globMatcher = new GlobMatcher(scriptRoot.getDownstairsRootUri(), gitIgnorePatterns);
+    return globMatcher.matches(this.toDownstairsUri());
   }
 
 }

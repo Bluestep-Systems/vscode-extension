@@ -13,6 +13,7 @@ export const App = new class extends ContextNode {
   #_context: vscode.ExtensionContext | null = null;
   #_settings: PublicPersistanceMap<SavableObject> | null = null;
   #_outputChannel: vscode.LogOutputChannel | null = null;
+  #debugMode: boolean = false;
   parent: ContextNode | null = null;
   placeHolder() {
     return this;
@@ -39,6 +40,9 @@ export const App = new class extends ContextNode {
       })],
       ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
         App.clearPersistance();
+      })],
+      ['bsjs-push-pull.toggleDebug', vscode.commands.registerCommand('bsjs-push-pull.toggleDebug', async () => {
+        App.toggleDebugMode();
       })]
     ]);
     constructor() { }
@@ -120,16 +124,19 @@ export const App = new class extends ContextNode {
   public clearPersistance() {
     this.settings.clear();
     SM.clearPersistance();
-    Alert.info("Cleared all settings and sessions", { modal: false});
+    Alert.info("Cleared all settings and sessions", { modal: false });
     App.logger.info("Cleared all settings and sessions");
   }
 
-  /**
-   * //TODO enable debug logging throughout the app
-   * depending on a setting; or delete this entirely if unneccessary
-   * @returns 
-   */
   public isDebugMode() {
-    return false;
+    return this.#debugMode;
+  }
+
+  public toggleDebugMode() {
+    this.#debugMode = !this.#debugMode;
+    vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
+    
+    Alert.info(`Debug mode ${this.#debugMode ? "enabled" : "disabled"}`, { modal: false });
+    this.logger.info(`Debug mode ${this.#debugMode ? "enabled" : "disabled"}`);
   }
 }();

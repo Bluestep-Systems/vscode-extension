@@ -7,6 +7,7 @@ import { parseUpstairsUrl } from "../../util/data/URLParser";
 import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { Alert } from '../../util/ui/Alert';
 import { ProgressHelper } from '../../util/ui/ProgressHelper';
+import { RemoteScriptRoot } from '../../util/script/RemoteScriptRoot';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -41,7 +42,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     });
 
     const flattenedDirectory = await flattenDirectory(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
-    cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
+    await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
     Alert.info('Pull complete!');
   } catch (e) {
@@ -49,36 +50,34 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     throw e;
   }
 }
+
 /**
  * Cleans up unused paths by deleting them from the filesystem.
  * @param existingPaths 
  * @param validPaths 
  */
-function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPaths: vscode.Uri[]) {
+async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPaths: vscode.Uri[]) {
   // find all existing paths that are not in the valid paths list
-  const toDelete = existingPaths.filter(ep => {
+  const toDelete: vscode.Uri[] = [];
+  for (const ep of existingPaths) {
     //ignore special files
-    if (isASpecialFile(ep)) {
-      return false;
+    if (await new RemoteScriptFile({ downstairsUri: ep }).isInGitIgnore()) {
+      console.log("Skipping gitignored file:", ep.fsPath);
+      continue;
     }
-    // otherwise we only want to find paths that are not on the newest list
-    return !validPaths.find(vp => vp.fsPath === ep.fsPath);
-  });
+    if ([RemoteScriptRoot.METADATA_FILE, RemoteScriptRoot.GITIGNORE_FILE].some(special => ep.fsPath.endsWith(special))) {
+      console.log("Skipping special file:", ep.fsPath);
+      continue;
+    }
+    if (!validPaths.find(vp => vp.fsPath === ep.fsPath)) {
+      toDelete.push(ep);
+    }
+  }
   // delete all unused paths
   for (const del of toDelete) {
     App.logger.warn("Deleting unused path:" +  del.fsPath);
     vscode.workspace.fs.delete(del, { recursive: true, useTrash: false });
   }
-}
-/**
- * determines if a file is a "special" file that should not be deleted during cleanup.
- * @param path 
- * @returns 
- */
-function isASpecialFile(path: vscode.Uri) {
-  //TODO consider making this configurable
-  const specialFiles = ['.git', '.gitignore', '.b6p_metadata.json'];
-  return specialFiles.some(sf => path.fsPath.endsWith(sf));
 }
 
 /**

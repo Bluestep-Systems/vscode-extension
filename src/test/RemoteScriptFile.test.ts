@@ -107,7 +107,7 @@ suite('RemoteScriptFile Tests', () => {
       
       assert.throws(() => {
         scriptFile.toUpstairsURL();
-      }, /Cannot determine the type of this file/);
+      }, /Error: cannot convert .b6p_metadata.json file to upstairs URL/);
     });
   });
 
