@@ -302,7 +302,7 @@ export class RemoteScriptRoot {
    * @returns A new ScriptRoot instance.
    */
   static fromRootUri(rootUri: vscode.Uri) {
-    return new RemoteScriptRoot({ childUri: rootUri });
+    return new RemoteScriptRoot({ childUri: vscode.Uri.joinPath(rootUri,"/") });
   }
 
   /**
