@@ -8,6 +8,7 @@ import { DownstairsUriParser } from './DownstairsUrIParser';
 import { RemoteScriptFile } from './RemoteScriptFile';
 import { FileSystem } from '../fs/FileSystemFactory';
 const fs = FileSystem.getInstance;
+
 /**
  * object representing the root of an individual script on the filesystem.
  *

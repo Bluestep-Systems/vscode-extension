@@ -8,10 +8,11 @@ import * as path from 'path';
 import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
 import { FileSystem } from '../fs/FileSystemFactory';
 const fs = FileSystem.getInstance;
+
 /**
  * A class representing metadata extracted from a file path.
- * 
- * Specifically, we use a local URI from any file within a formula's draft folder
+ *
+ * Specifically, we use a local {@link vscode.Uri} from any file within a formula's draft folder
  * to extract the WebDAV ID and domain associated with that formula.
  */
 export class RemoteScriptFile {
@@ -26,7 +27,6 @@ export class RemoteScriptFile {
    */
   private _scriptRoot: RemoteScriptRoot;
 
-
   /**
    * Regex specifically for myassn document key patterns:
    */
@@ -38,12 +38,12 @@ export class RemoteScriptFile {
   private static EtagPattern = /^"[a-f0-9]{128}"$/;
 
   /**
-   * Regex for weak etags (SHA-512 hashes).
+   * Regex for "weak" etags (SHA-512 hashes).
    */
   private static WeakEtagPattern = /^W\/"[a-f0-9]{128}"$/;
 
   /**
-   * Creates a ScriptFile instance.
+   * Creates a {@link RemoteScriptFile} instance in addition to its associated {@link RemoteScriptRoot} object.
    * 
    * @param param0 The downstairs URI (local file system path).
    */
@@ -68,17 +68,16 @@ export class RemoteScriptFile {
   }
 
   /**
-   * gets the downstairs (local) URI for this file
-   * @returns 
+   * Gets the downstairs (local) {@link vscode.Uri} for this file
+   * @returns The local file system {@link vscode.Uri} for this script file.
    */
   public toDownstairsUri() {
     return vscode.Uri.joinPath(this.getScriptRoot().getDownstairsRootUri(), this.parser.type, this.parser.rest);
   }
 
   /**
-   * determines if the local file has been modified since last push
-   * 
-   * @returns 
+   * Produces the last modified {@link Date} of the upstairs object
+   * @returns The last modified {@link Date} of the upstairs object
    */
   public async getUpstairsLastModified(): Promise<Date> {
 
@@ -96,10 +95,11 @@ export class RemoteScriptFile {
   }
 
   /**
-   * determines if the local file should be pushed to upstairs;
+   * Determines if the local file should be pushed to upstairs; we have the
+   * definition being "if the integrity does not match"
    * 
-   * we have the definition being "if the integrity does not match"
-   * @returns 
+   * @returns `true` if the local file should be pushed, `false` otherwise.
+   * @param ops.upstairsOverride overrides the {@link URL} to check against
    */
   public async shouldPush(ops?: { upstairsOverride?: URL }): Promise<boolean> {
     return !(await this.integrityMatches(ops));
@@ -107,6 +107,8 @@ export class RemoteScriptFile {
 
   /**
    * Gets the lowercased SHA-512 hash of the local file.
+   * 
+   * @returns The lowercased SHA-512 hash of the local file.
    */
   public async getHash(): Promise<string> {
     const bufferSource = await fs().readFile(this.toDownstairsUri());
@@ -120,20 +122,23 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the local file's integrity matches the upstairs file.
+   * 
+   * @param ops.upstairsOverride overrides the {@link URL} to check against.
    * @returns True if the integrity matches, false otherwise.
    */
   public async integrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
-    const hashHex = await this.getHash();
-    const matches = hashHex === await this.getUpstairsHash(ops);
-    App.isDebugMode() && console.log("matches:", matches, "local:", hashHex, "upstairs:", await this.getUpstairsHash(ops));
+    const localHash = await this.getHash();
+    const upstairsHash = await this.getUpstairsHash(ops);
+    const matches = localHash === upstairsHash;
+    App.isDebugMode() && console.log("matches:", matches, "local:", localHash, "upstairs:", upstairsHash);
     return matches;
   }
 
   /**
-   * gets the hash of the upstairs file, or null if it doesn't exist
+   * Gets the hash of the upstairs file, or `null` if it doesn't exist
    * @param ops.required determines if we should throw an error if it is not found upstairs
    * @param ops.upstairsOverride gives an override URL of whom to check -- otherwise we assume the script cooresponding with this object
-   * @returns 
+   * @returns The hash of the upstairs file, or `null` if it doesn't exist
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
     const response = await SM.fetch(ops?.upstairsOverride || this.toUpstairsURL(), {
@@ -198,7 +203,7 @@ export class RemoteScriptFile {
       }
     });
     if (response.status >= 400) {
-      throw new Error(`Error fetching upstairs file: ${response.status} ${response.statusText}`);
+      throw new Error(`Error fetching upstairs file. Status: ${response.status}.\n ${response.statusText}`);
     }
     return await response.text();
   }
@@ -311,24 +316,36 @@ export class RemoteScriptFile {
   }
 
   /**
-   * get the script root object
+   * get the {@link RemoteScriptRoot} object for this file.
    */
   public getScriptRoot() {
     return this._scriptRoot;
   }
 
   /**
-   * Gets the last pulled time for the script file.
-   * @returns The last pulled time as a string, or null if not found.
+   * Gets the last pulled time for the script file as a string in UTC format, or `null` if not found
+   * in the metadata object.
    */
-  public async getLastPulledTime(): Promise<string | null> {
+  public async getLastPulledTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
     return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPulled || null;
   }
 
   /**
-   * Gets the last pushed time for the script file.
-   * @returns The last pushed time as a string, or null if not found.
+   * Gets the last pulled time for the script file as a {@link Date}, or `null` if not found in the
+   * metadata object
+   */
+  public async getLastPulledTime(): Promise<Date | null> {
+    const lastPulledStr = await this.getLastPulledTimeStr();
+    if (!lastPulledStr) {
+      return null;
+    }
+    return new Date(lastPulledStr);
+  }
+
+  /**
+   * Gets the last pushed time for the script file in UTC format, or `null` if not found
+   * in the metadata object
    */
   public async getLastPushedTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
@@ -336,8 +353,8 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Gets the last pushed time for the script file.
-   * @returns The last pushed time as a Date object, or null if not found.
+   * Gets the last pushed time for the script file as a {@link Date}, or `null` if not
+   * found in the metadata object
    */
   public async getLastPushedTime(): Promise<Date | null> {
     const lastPushedStr = await this.getLastPushedTimeStr();
@@ -348,17 +365,30 @@ export class RemoteScriptFile {
   }
 
   /**
-   * overwrites the script root for this file
-   * 
-   * be mindful, because it becomes easy to create inconsistencies
-   * @param root 
-   * @returns 
+   * Overwrites the script root for this file
+   *
+   * Be mindful, because it becomes easy to create inconsistencies since the underlying file may not even exist.
+   * @param root The new script root.
+   * @returns The updated script file.
    */
-  withScriptRoot(root: RemoteScriptRoot) {
+  withScriptRoot(root: RemoteScriptRoot): RemoteScriptFile {
     this._scriptRoot = root;
+    //TODO determine if this if-check is even neccessary
     if (this.parser.type === "metadata") {
       throw new Error("Cannot overwrite script root of a metadata file");
     }
+    return this;
+  }
+
+  /**
+   * Overwrites the parser for the script file.
+   *
+   * Be mindful, because it becomes easy to create inconsistencies since the underlying file may not even exist.
+   * @param parser The parser to set.
+   * @returns The updated script file.
+   */
+  withParser(parser: DownstairsUriParser): RemoteScriptFile {
+    this.parser = parser;
     return this;
   }
 
