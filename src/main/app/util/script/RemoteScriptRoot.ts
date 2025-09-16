@@ -321,7 +321,6 @@ export class RemoteScriptRoot {
     return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folderUri, name));
   }
 
-  
   /**
    * Gets the contents of the info folder.
    */

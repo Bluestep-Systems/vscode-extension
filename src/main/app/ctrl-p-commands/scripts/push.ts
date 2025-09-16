@@ -26,7 +26,7 @@ export default async function (overrideFormulaUri?: string, sourceOps?: SourceOp
       Alert.error('No source path provided');
       return;
     }
-    App.logger.info(Util.printLine({ ret: true }) as string, "Active Editor URI:", sourceEditorUri.toString());
+    App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
     const targetFormulaUri = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
     if (targetFormulaUri === undefined) {
       Alert.error('No target formula URI provided');
@@ -109,11 +109,7 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   const downstairsUri = vscode.Uri.file(localFile);
   const scriptFile = new RemoteScriptFile({ downstairsUri });
 
-  const reason = await scriptFile.getReasonToNotPush({ upstairsOverride: upstairsUrl });
-  if (reason) {
-    App.logger.info(`${reason}; skipping file:`, localFile);
-    return;
-  }
+
 
   const desto = localFile
     .split(upstairsUrl.host + "/" + webDavId)[1];
@@ -121,6 +117,11 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
     throw new Error('Failed to determine destination path for file: ' + localFile);
   }
   upstairsUrl.pathname = `/files/${webDavId}${desto}`;
+  const reason = await scriptFile.getReasonToNotPush({ upstairsOverride: upstairsUrl });
+  if (reason) {
+    App.logger.info(`${reason}; skipping file:`, localFile);
+    return;
+  }
   App.logger.info("Destination:", upstairsUrl.toString());
 
   

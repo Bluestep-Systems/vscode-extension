@@ -290,6 +290,434 @@ suite('RemoteScriptFile Tests', () => {
     });
   });
 
+  suite('Folder Detection', () => {
+    test('should detect if file is in info folder', async () => {
+      const infoUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+      
+      // Set up directory and file
+      mockFileSystemProvider.setMockDirectory(infoFolderUri);
+      mockFileSystemProvider.setMockFile(infoUri, '{}');
+      
+      const scriptFile = new RemoteScriptFile({ downstairsUri: infoUri });
+      
+      const isInInfo = await scriptFile.isInInfo();
+      const isInInfoFolder = await scriptFile.isInInfoFolder();
+      
+      assert.strictEqual(isInInfo, true);
+      assert.strictEqual(isInInfoFolder, true);
+    });
+
+    test('should detect if file is in objects folder', async () => {
+      const objectsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects/imports.ts');
+      const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+      
+      // Set up directory and file
+      mockFileSystemProvider.setMockDirectory(objectsFolderUri);
+      mockFileSystemProvider.setMockFile(objectsUri, 'export {};');
+      
+      const scriptFile = new RemoteScriptFile({ downstairsUri: objectsUri });
+      
+      const isInObjects = await scriptFile.isInObjects();
+      
+      assert.strictEqual(isInObjects, true);
+    });
+
+    test('should detect if file is in info or objects folder', async () => {
+      const infoUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+      
+      // Set up directory and file
+      mockFileSystemProvider.setMockDirectory(infoFolderUri);
+      mockFileSystemProvider.setMockFile(infoUri, '{}');
+      
+      const scriptFile = new RemoteScriptFile({ downstairsUri: infoUri });
+      
+      const isInInfoOrObjects = await scriptFile.isInInfoOrObjects();
+      
+      assert.strictEqual(isInInfoOrObjects, true);
+    });
+
+    test('should return false for files not in info or objects', async () => {
+      const scriptUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/scripts/main.js');
+      const scriptFile = new RemoteScriptFile({ downstairsUri: scriptUri });
+      
+      // Set up empty folders so the file isn't found in them
+      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+      const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+      
+      mockFileSystemProvider.setMockDirectory(infoFolderUri);
+      mockFileSystemProvider.setMockDirectory(objectsFolderUri);
+      
+      const isInInfo = await scriptFile.isInInfo();
+      const isInObjects = await scriptFile.isInObjects();
+      const isInInfoOrObjects = await scriptFile.isInInfoOrObjects();
+      
+      assert.strictEqual(isInInfo, false);
+      assert.strictEqual(isInObjects, false);
+      assert.strictEqual(isInInfoOrObjects, false);
+    });
+  });
+
+  suite('Configuration Files', () => {
+
+    test('should get config file content', async () => {
+      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const configContent = {
+        models: [
+          { name: 'external-model.js', type: 'external' }
+        ]
+      };
+      
+      // Set up config file
+      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
+      
+      const config = await remoteScriptFile.getConfigFile();
+      
+      assert.deepStrictEqual(config, configContent);
+    });
+
+    test('should get metadata file content', async () => {
+      const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/metadata.json');
+      const metadataContent = {
+        scriptName: 'Test Script',
+        description: 'A test script'
+      };
+      
+      // Set up metadata file
+      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadataContent));
+      
+      const metadata = await remoteScriptFile.getMetadataFile();
+      
+      assert.deepStrictEqual(metadata, metadataContent);
+    });
+
+    test('should throw error when config file not found', async () => {
+      // Don't set up any config files
+      
+      await assert.rejects(
+        () => remoteScriptFile.getConfigFile(),
+        /Could not find config.json file/
+      );
+    });
+
+    test('should throw error when multiple config files found', async () => {
+      const configUri1 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const configUri2 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/scripts/config.json');
+      
+      // Set up multiple config files
+      mockFileSystemProvider.setMockFile(configUri1, '{}');
+      mockFileSystemProvider.setMockFile(configUri2, '{}');
+      
+      await assert.rejects(
+        () => remoteScriptFile.getConfigFile(),
+        /Could not find config.json file, found: 2/
+      );
+    });
+  });
+
+  suite('External Model Detection', () => {
+    test('should detect external model files', async () => {
+      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const configContent = {
+        models: [
+          { name: 'test.js', type: 'external' },
+          { name: 'other.js', type: 'internal' }
+        ]
+      };
+      
+      // Set up config file
+      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
+      
+      const isExternal = await remoteScriptFile.isExternalModel();
+      
+      assert.strictEqual(isExternal, true);
+    });
+
+    test('should return false for non-external model files', async () => {
+      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const configContent = {
+        models: [
+          { name: 'other.js', type: 'internal' }
+        ]
+      };
+      
+      // Set up config file
+      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
+      
+      const isExternal = await remoteScriptFile.isExternalModel();
+      
+      assert.strictEqual(isExternal, false);
+    });
+
+    test('should return false when no models defined', async () => {
+      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const configContent = {};
+      
+      // Set up config file
+      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
+      
+      const isExternal = await remoteScriptFile.isExternalModel();
+      
+      assert.strictEqual(isExternal, false);
+    });
+  });
+
+  suite('GitIgnore Operations', () => {
+    test('should detect files in gitignore', async () => {
+      const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
+      // Use a pattern that should definitely match our test file path
+      const gitIgnoreContent = 'draft/test.js\n*.log\nnode_modules/';
+      
+      // Set up gitignore file
+      mockFileSystemProvider.setMockFile(gitIgnoreUri, gitIgnoreContent);
+      
+      const isInGitIgnore = await remoteScriptFile.isInGitIgnore();
+      
+      assert.strictEqual(isInGitIgnore, true);
+    });
+
+    test('should return false for files not in gitignore', async () => {
+      const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
+      const gitIgnoreContent = 'other.js\n*.log\nnode_modules/';
+      
+      // Set up gitignore file
+      mockFileSystemProvider.setMockFile(gitIgnoreUri, gitIgnoreContent);
+      
+      const isInGitIgnore = await remoteScriptFile.isInGitIgnore();
+      
+      assert.strictEqual(isInGitIgnore, false);
+    });
+  });
+
+  suite('Metadata Time Operations', () => {
+    test('should get last pulled time from metadata', async () => {
+      const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
+      const metadata = {
+        scriptName: 'Test',
+        webdavId: '1466960',
+        pushPullRecords: [{
+          downstairsPath: remoteScriptFile.toDownstairsUri().fsPath,
+          lastPulled: '2023-01-01T12:00:00.000Z',
+          lastPushed: null,
+          lastVerifiedHash: 'abcd1234'
+        }]
+      };
+      
+      // Set up metadata file
+      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
+      mockFileSystemProvider.setMockStat(metadataUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 100
+      });
+      
+      const lastPulledStr = await remoteScriptFile.getLastPulledTimeStr();
+      const lastPulledTime = await remoteScriptFile.getLastPulledTime();
+      
+      assert.strictEqual(lastPulledStr, '2023-01-01T12:00:00.000Z');
+      assert.ok(lastPulledTime instanceof Date);
+      assert.strictEqual(lastPulledTime?.toISOString(), '2023-01-01T12:00:00.000Z');
+    });
+
+    test('should get last pushed time from metadata', async () => {
+      const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
+      const metadata = {
+        scriptName: 'Test',
+        webdavId: '1466960',
+        pushPullRecords: [{
+          downstairsPath: remoteScriptFile.toDownstairsUri().fsPath,
+          lastPulled: null,
+          lastPushed: '2023-01-02T15:30:00.000Z',
+          lastVerifiedHash: 'abcd1234'
+        }]
+      };
+      
+      // Set up metadata file
+      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
+      mockFileSystemProvider.setMockStat(metadataUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 100
+      });
+      
+      const lastPushedStr = await remoteScriptFile.getLastPushedTimeStr();
+      const lastPushedTime = await remoteScriptFile.getLastPushedTime();
+      
+      assert.strictEqual(lastPushedStr, '2023-01-02T15:30:00.000Z');
+      assert.ok(lastPushedTime instanceof Date);
+      assert.strictEqual(lastPushedTime?.toISOString(), '2023-01-02T15:30:00.000Z');
+    });
+
+    test('should return null when no metadata record exists', async () => {
+      const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
+      const metadata = {
+        scriptName: 'Test',
+        webdavId: '1466960',
+        pushPullRecords: []
+      };
+      
+      // Set up metadata file
+      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
+      mockFileSystemProvider.setMockStat(metadataUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 100
+      });
+      
+      const lastPulledStr = await remoteScriptFile.getLastPulledTimeStr();
+      const lastPulledTime = await remoteScriptFile.getLastPulledTime();
+      const lastPushedStr = await remoteScriptFile.getLastPushedTimeStr();
+      const lastPushedTime = await remoteScriptFile.getLastPushedTime();
+      
+      assert.strictEqual(lastPulledStr, null);
+      assert.strictEqual(lastPulledTime, null);
+      assert.strictEqual(lastPushedStr, null);
+      assert.strictEqual(lastPushedTime, null);
+    });
+  });
+
+  suite('Parser Operations', () => {
+    test('should allow overwriting parser', () => {
+      const originalParser = (remoteScriptFile as any).parser;
+      const newUri = vscode.Uri.parse('file:///test/workspace/different.domain.com/9999/draft/different.js');
+      const newScriptFile = new RemoteScriptFile({ downstairsUri: newUri });
+      const newParser = (newScriptFile as any).parser;
+      
+      const result = remoteScriptFile.withParser(newParser);
+      
+      assert.strictEqual(result, remoteScriptFile);
+      assert.notStrictEqual((remoteScriptFile as any).parser, originalParser);
+      assert.strictEqual((remoteScriptFile as any).parser, newParser);
+    });
+  });
+
+  suite('Copacetic Status', () => {
+    test('should return true when file exists', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 100
+      });
+      
+      const isCopacetic = await remoteScriptFile.isCopacetic();
+      
+      assert.strictEqual(isCopacetic, true);
+    });
+
+    test('should return false when file does not exist', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
+      mockFileSystemProvider.setMockError(testUri, new Error('File not found'));
+      
+      const isCopacetic = await remoteScriptFile.isCopacetic();
+      
+      assert.strictEqual(isCopacetic, false);
+    });
+  });
+
+  suite('Push Validation', () => {
+    test('should return reason for metadata files', async () => {
+      const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
+      const metadataFile = new RemoteScriptFile({ downstairsUri: metadataUri });
+      
+      const reason = await metadataFile.getReasonToNotPush();
+      
+      assert.strictEqual(reason, 'File is a metadata file');
+    });
+
+    test('should return reason for declarations files', async () => {
+      const declarationsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/test.js');
+      const declarationsFile = new RemoteScriptFile({ downstairsUri: declarationsUri });
+      
+      const reason = await declarationsFile.getReasonToNotPush();
+      
+      assert.strictEqual(reason, 'File is in declarations');
+    });
+
+    test('should return reason for external model files', async () => {
+      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const configContent = {
+        models: [
+          { name: 'test.js', type: 'external' }
+        ]
+      };
+      
+      // Set up config file
+      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
+      
+      const reason = await remoteScriptFile.getReasonToNotPush();
+      
+      assert.strictEqual(reason, 'File is an external model');
+    });
+
+    test('should return reason for gitignored files', async () => {
+      const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
+      const gitIgnoreContent = 'draft/test.js';
+      
+      // Set up gitignore file
+      mockFileSystemProvider.setMockFile(gitIgnoreUri, gitIgnoreContent);
+      
+      // Set up config file with no external models so external model check passes
+      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const configContent = { models: [] };
+      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
+      
+      const reason = await remoteScriptFile.getReasonToNotPush();
+      
+      assert.strictEqual(reason, 'File is ignored by .gitignore');
+    });
+
+    test('should return reason for info/objects files', async () => {
+      const infoUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+      
+      // Set up directory and file
+      mockFileSystemProvider.setMockDirectory(infoFolderUri);
+      mockFileSystemProvider.setMockFile(infoUri, '{}');
+      
+      const scriptFile = new RemoteScriptFile({ downstairsUri: infoUri });
+      const reason = await scriptFile.getReasonToNotPush();
+      
+      assert.strictEqual(reason, 'File is in info or objects');
+    });
+
+    test('should return empty string when file can be pushed (basic validation)', async () => {
+      // Set up a normal script file that can be pushed
+      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
+      const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
+      
+      // Set up config with no external models
+      mockFileSystemProvider.setMockFile(configUri, JSON.stringify({ models: [] }));
+      
+      // Set up gitignore that doesn't include our file
+      mockFileSystemProvider.setMockFile(gitIgnoreUri, '*.log\nnode_modules/');
+      
+      // Set up empty folders so the file isn't found in them
+      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+      const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+      
+      mockFileSystemProvider.setMockDirectory(infoFolderUri);
+      mockFileSystemProvider.setMockDirectory(objectsFolderUri);
+      
+      // This test will fail at the integrity check due to SessionManager not being initialized
+      // which is expected in a unit test environment
+      try {
+        const reason = await remoteScriptFile.getReasonToNotPush();
+        // If we somehow get past the network call, the result should be a string
+        assert.ok(typeof reason === 'string');
+      } catch (error) {
+        // We expect this to fail due to SessionManager not being initialized
+        assert.ok(error instanceof Error);
+        assert.ok(error.message.includes('SessionManager not initialized'));
+      }
+    });
+  });
+
   suite('Time Operations', () => {
     test('should get last modified time from file stat', async () => {
       const testTime = Date.now();

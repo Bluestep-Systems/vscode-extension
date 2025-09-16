@@ -90,10 +90,7 @@ export class RemoteScriptFile {
   public async getUpstairsLastModified(): Promise<Date> {
 
     const response = await SM.fetch(this.toUpstairsURL(), {
-      method: "HEAD",
-      headers: {
-        "Accept": "*/*",
-      }
+      method: "HEAD"
     });
     const lastModifiedHeaderValue = response.headers.get("Last-Modified");
     if (!lastModifiedHeaderValue) {
@@ -167,11 +164,7 @@ export class RemoteScriptFile {
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
     const response = await SM.fetch(ops?.upstairsOverride || this.toUpstairsURL(), {
-      method: "GET",
-      //TODO determine if we can simply omit these headers
-      headers: {
-        "Accept": "*/*",
-      }
+      method: "HEAD"
     });
     const etagHeader = response.headers.get("etag");
 

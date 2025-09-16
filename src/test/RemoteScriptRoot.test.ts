@@ -308,9 +308,243 @@ suite('RemoteScriptRoot Tests', () => {
         });
     });
 
+    suite('Folder Operations', () => {
+        test('should get info folder contents', async () => {
+            const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+            
+            // Set up directory
+            mockFileSystem.setMockDirectory(infoFolderUri);
+            
+            // Set up individual files in the directory
+            const metadataFile = vscode.Uri.joinPath(infoFolderUri, 'metadata.json');
+            const permissionsFile = vscode.Uri.joinPath(infoFolderUri, 'permissions.json');
+            const configFile = vscode.Uri.joinPath(infoFolderUri, 'config.json');
+            
+            mockFileSystem.setMockFile(metadataFile, '{}');
+            mockFileSystem.setMockFile(permissionsFile, '{}');
+            mockFileSystem.setMockFile(configFile, '{}');
+            
+            const infoContents = await remoteScriptRoot.getInfoFolder();
+            
+            assert.strictEqual(infoContents.length, 3);
+            assert.ok(infoContents.some(uri => uri.fsPath.endsWith('metadata.json')));
+            assert.ok(infoContents.some(uri => uri.fsPath.endsWith('permissions.json')));
+            assert.ok(infoContents.some(uri => uri.fsPath.endsWith('config.json')));
+        });
+
+        test('should get scripts folder contents', async () => {
+            const scriptsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/scripts');
+            
+            // Set up directory
+            mockFileSystem.setMockDirectory(scriptsFolderUri);
+            
+            // Set up individual files in the directory
+            const mainFile = vscode.Uri.joinPath(scriptsFolderUri, 'main.js');
+            const helperFile = vscode.Uri.joinPath(scriptsFolderUri, 'helper.js');
+            
+            mockFileSystem.setMockFile(mainFile, 'console.log("main");');
+            mockFileSystem.setMockFile(helperFile, 'console.log("helper");');
+            
+            const scriptsContents = await remoteScriptRoot.getScriptsFolder();
+            
+            assert.strictEqual(scriptsContents.length, 2);
+            assert.ok(scriptsContents.some(uri => uri.fsPath.endsWith('main.js')));
+            assert.ok(scriptsContents.some(uri => uri.fsPath.endsWith('helper.js')));
+        });
+
+        test('should get objects folder contents', async () => {
+            const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+            
+            // Set up directory
+            mockFileSystem.setMockDirectory(objectsFolderUri);
+            
+            // Set up individual file in the directory
+            const importsFile = vscode.Uri.joinPath(objectsFolderUri, 'imports.ts');
+            mockFileSystem.setMockFile(importsFile, 'export {};');
+            
+            const objectsContents = await remoteScriptRoot.getObjectsFolder();
+            
+            assert.strictEqual(objectsContents.length, 1);
+            assert.ok(objectsContents[0].fsPath.endsWith('imports.ts'));
+        });
+    });
+
+    suite('Copacetic Status', () => {
+        test('should return true for copacetic script structure', async () => {
+            // Set up proper folder structure
+            const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+            const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+            
+            // Set up directories
+            mockFileSystem.setMockDirectory(infoFolderUri);
+            mockFileSystem.setMockDirectory(objectsFolderUri);
+            
+            // Set up info folder files
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'metadata.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'permissions.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'config.json'), '{}');
+            
+            // Set up objects folder file
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'imports.ts'), 'export {};');
+            
+            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            
+            assert.strictEqual(isCopacetic, true);
+        });
+
+        test('should return false when info folder has wrong number of files', async () => {
+            const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+            const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+            
+            // Set up directories
+            mockFileSystem.setMockDirectory(infoFolderUri);
+            mockFileSystem.setMockDirectory(objectsFolderUri);
+            
+            // Wrong number of files in info folder (only 2 instead of 3)
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'metadata.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'permissions.json'), '{}');
+            
+            // Set up objects folder file
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'imports.ts'), 'export {};');
+            
+            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            
+            assert.strictEqual(isCopacetic, false);
+        });
+
+        test('should return false when info folder is missing expected files', async () => {
+            const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+            const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+            
+            // Set up directories
+            mockFileSystem.setMockDirectory(infoFolderUri);
+            mockFileSystem.setMockDirectory(objectsFolderUri);
+            
+            // Missing config.json
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'metadata.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'permissions.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'wrong.json'), '{}');
+            
+            // Set up objects folder file
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'imports.ts'), 'export {};');
+            
+            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            
+            assert.strictEqual(isCopacetic, false);
+        });
+
+        test('should return false when objects folder has wrong number of files', async () => {
+            const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+            const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+            
+            // Set up directories
+            mockFileSystem.setMockDirectory(infoFolderUri);
+            mockFileSystem.setMockDirectory(objectsFolderUri);
+            
+            // Set up info folder files
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'metadata.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'permissions.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'config.json'), '{}');
+            
+            // Wrong number of files in objects folder (2 instead of 1)
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'imports.ts'), 'export {};');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'extra.ts'), 'export {};');
+            
+            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            
+            assert.strictEqual(isCopacetic, false);
+        });
+
+        test('should return false when objects folder does not contain imports.ts', async () => {
+            const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
+            const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
+            
+            // Set up directories
+            mockFileSystem.setMockDirectory(infoFolderUri);
+            mockFileSystem.setMockDirectory(objectsFolderUri);
+            
+            // Set up info folder files
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'metadata.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'permissions.json'), '{}');
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(infoFolderUri, 'config.json'), '{}');
+            
+            // Wrong file in objects folder
+            mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'wrong.ts'), 'export {};');
+            
+            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            
+            assert.strictEqual(isCopacetic, false);
+        });
+    });
+
+    suite('GitIgnore Operations', () => {
+        test('should read existing gitignore file', async () => {
+            const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
+            const gitIgnoreContent = "node_modules/\n*.log\n.env";
+            
+            mockFileSystem.setMockFile(gitIgnoreUri, gitIgnoreContent);
+            
+            const gitIgnoreContents = await remoteScriptRoot.getGitIgnore();
+            
+            assert.strictEqual(gitIgnoreContents.length, 3);
+            assert.ok(gitIgnoreContents.includes('node_modules/'));
+            assert.ok(gitIgnoreContents.includes('*.log'));
+            assert.ok(gitIgnoreContents.includes('.env'));
+        });
+
+        test('should create default gitignore when file does not exist', async () => {
+            const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
+            
+            // Remove the mock file to simulate non-existence
+            mockFileSystem.setMockError(gitIgnoreUri, new Error('File not found'));
+            
+            const gitIgnoreContents = await remoteScriptRoot.getGitIgnore();
+            
+            assert.strictEqual(gitIgnoreContents.length, 1);
+            assert.ok(gitIgnoreContents.includes('**/.DS_Store'));
+        });
+
+        test('should modify gitignore with callback', async () => {
+            const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
+            const initialContent = "node_modules/\n*.log";
+            
+            mockFileSystem.setMockFile(gitIgnoreUri, initialContent);
+            
+            const modifiedGitIgnore = await remoteScriptRoot.modifyGitIgnore((contents) => {
+                contents.push('.env');
+                contents.push('dist/');
+            });
+            
+            assert.strictEqual(modifiedGitIgnore.length, 4);
+            assert.ok(modifiedGitIgnore.includes('node_modules/'));
+            assert.ok(modifiedGitIgnore.includes('*.log'));
+            assert.ok(modifiedGitIgnore.includes('.env'));
+            assert.ok(modifiedGitIgnore.includes('dist/'));
+        });
+
+        test('should handle empty lines and whitespace in gitignore', async () => {
+            const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
+            const gitIgnoreContent = "node_modules/\n\n   \n*.log\n  \n.env\n";
+            
+            mockFileSystem.setMockFile(gitIgnoreUri, gitIgnoreContent);
+            
+            const gitIgnoreContents = await remoteScriptRoot.getGitIgnore();
+            
+            // Should filter out empty lines and whitespace-only lines
+            assert.strictEqual(gitIgnoreContents.length, 3);
+            assert.ok(gitIgnoreContents.includes('node_modules/'));
+            assert.ok(gitIgnoreContents.includes('*.log'));
+            assert.ok(gitIgnoreContents.includes('.env'));
+        });
+    });
+
     suite('Constants', () => {
         test('should have correct metadata file constant', () => {
             assert.strictEqual(RemoteScriptRoot.METADATA_FILE, '.b6p_metadata.json');
+        });
+
+        test('should have correct gitignore file constant', () => {
+            assert.strictEqual(RemoteScriptRoot.GITIGNORE_FILE, '.gitignore');
         });
     });
 

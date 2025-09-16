@@ -159,14 +159,30 @@ export class MockFileSystem implements FileSystemProvider {
     // Simple mock implementation - in real tests you'd set up specific files to be "found"
     const results: vscode.Uri[] = [];
     
-    // Convert the pattern to a simple string match for mocking
-    const includeStr = include.toString();
+    // Handle RelativePattern objects
+    let baseUri: vscode.Uri;
+    let pattern: string;
+    
+    if (include instanceof vscode.RelativePattern) {
+      baseUri = include.baseUri;
+      pattern = include.pattern;
+    } else {
+      // For string patterns, assume workspace root
+      baseUri = vscode.Uri.file('');
+      pattern = include.toString();
+    }
+    
+    // For patterns like "**/config.json", we want to find any file ending with the target filename
+    const targetFile = pattern.replace('**/', '');
     
     for (const [uriStr] of this.files) {
       const uri = vscode.Uri.parse(uriStr);
       
-      // Simple pattern matching - you could make this more sophisticated
-      if (uriStr.includes(includeStr.replace('**/', '').replace('*', ''))) {
+      // Check if the file is under the base URI and matches the pattern
+      const isUnderBase = baseUri.path === '' || uri.path.startsWith(baseUri.path);
+      const matchesPattern = uri.path.endsWith('/' + targetFile) || uri.path.endsWith(targetFile);
+      
+      if (isUnderBase && matchesPattern) {
         results.push(uri);
         
         if (maxResults && results.length >= maxResults) {
