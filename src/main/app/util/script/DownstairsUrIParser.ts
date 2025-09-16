@@ -88,4 +88,12 @@ export class DownstairsUriParser {
       this.type === other.type &&
       this.rest === other.rest;
   }
+
+  /**
+   * Checks if the current parser is for a declarations or draft file.
+   * @returns `true` if the parser is for a declarations or draft file, `false` otherwise.
+   */
+  public isDeclarationsOrDraft(): boolean {
+    return this.type === "declarations" || this.type === "draft";
+  }
 }

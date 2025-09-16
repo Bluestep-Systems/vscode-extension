@@ -61,17 +61,20 @@ export class RemoteScriptFile {
 
     const upstairsBaseUrl = this.getScriptRoot().toBaseUpstairsUrl();
     const newUrl = new URL(upstairsBaseUrl);
-    if (this.parser.type === "metadata") {
+    if (this.parser.type === "root") {
+      return newUrl;
+    } else if (this.parser.type === "metadata") {
       const fileName = this.getFileName();
       if (fileName === RemoteScriptRoot.METADATA_FILE) {
-        throw new Error(`cannot convert ${RemoteScriptRoot.METADATA_FILE} file to upstairs URL`);
+        throw new Error(`should never try to convert ${RemoteScriptRoot.METADATA_FILE} file to upstairs URL. Review logic on how you got here.`);
       }
       newUrl.pathname = upstairsBaseUrl.pathname + fileName;
-      
-    } else {
+    } else if (this.parser.isDeclarationsOrDraft()) {
       newUrl.pathname = upstairsBaseUrl.pathname + this.parser.type + "/" + this.parser.rest;
+    } else {
+      throw new Error(`unexpected type: \`${this.parser.type}\`, cannot convert to upstairs URL`);
     }
-    
+
     return newUrl;
   }
 
@@ -559,6 +562,9 @@ export class RemoteScriptFile {
     return globMatcher.matches(this.toDownstairsUri());
   }
 
+  public getRest(): string {
+    return this.toUpstairsURL().pathname;
+  }
 }
 
 

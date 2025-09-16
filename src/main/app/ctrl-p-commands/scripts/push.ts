@@ -106,20 +106,19 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   App.logger.info("Preparing to send file:", localFile);
   App.logger.info("To target formula URI:", upstairsRootUrlString);
   const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
+  const upstairsOverride = new URL(upstairsUrl);
   const downstairsUri = vscode.Uri.file(localFile);
   const scriptFile = new RemoteScriptFile({ downstairsUri });
-
-
 
   const desto = localFile
     .split(upstairsUrl.host + "/" + webDavId)[1];
   if (typeof desto === 'undefined') {
     throw new Error('Failed to determine destination path for file: ' + localFile);
   }
-  upstairsUrl.pathname = `/files/${webDavId}${desto}`;
-  const reason = await scriptFile.getReasonToNotPush({ upstairsOverride: upstairsUrl });
+  upstairsOverride.pathname = `/files/${webDavId}${desto}`;
+  const reason = await scriptFile.getReasonToNotPush({ upstairsOverride });
   if (reason) {
-    App.logger.info(`${reason}; skipping file:`, localFile);
+    App.logger.info(`${reason}; not pushing file:`, localFile);
     return;
   }
   App.logger.info("Destination:", upstairsUrl.toString());
