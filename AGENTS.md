@@ -1,4 +1,4 @@
-# AI Agent Documentation Maintenance Guidelines
+# AI Agent Guidelines
 
 ## Overview
 
