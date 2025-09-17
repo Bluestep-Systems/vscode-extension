@@ -3,17 +3,206 @@ import * as vscode from 'vscode';
 /**
  * Interface defining the file system operations we need.
  * This allows us to create both real and mock implementations.
+ * 
+ * This interface mirrors the VS Code file system API to provide a consistent
+ * abstraction layer for file operations that can be easily mocked for testing.
  */
 export interface FileSystemProvider {
+  /**
+   * Read the entire contents of a file as bytes.
+   * 
+   * @param uri The URI of the file to read
+   * @returns A promise that resolves to the file contents as a Uint8Array
+   * @throws Error if the file does not exist or cannot be read
+   * 
+   * @example
+   * ```typescript
+   * const content = await fs.readFile(vscode.Uri.file('/path/to/file.txt'));
+   * const text = Buffer.from(content).toString('utf8');
+   * ```
+   */
   readFile(uri: vscode.Uri): Promise<Uint8Array>;
+
+  /**
+   * Write data to a file, replacing its entire contents.
+   * 
+   * @param uri The URI of the file to write to
+   * @param content The data to write as a Uint8Array
+   * @returns A promise that resolves when the write operation completes
+   * @throws Error if the file cannot be written (e.g., permission denied)
+   * 
+   * @example
+   * ```typescript
+   * const content = Buffer.from('Hello, world!', 'utf8');
+   * await fs.writeFile(vscode.Uri.file('/path/to/file.txt'), content);
+   * ```
+   */
   writeFile(uri: vscode.Uri, content: Uint8Array): Promise<void>;
+
+  /**
+   * Retrieve metadata about a file or directory.
+   * 
+   * @param uri The URI of the file or directory to stat
+   * @returns A promise that resolves to file metadata including type, size, and timestamps
+   * @throws Error if the file/directory does not exist
+   * 
+   * @example
+   * ```typescript
+   * const stat = await fs.stat(vscode.Uri.file('/path/to/file.txt'));
+   * console.log(`File size: ${stat.size} bytes`);
+   * console.log(`Modified: ${new Date(stat.mtime)}`);
+   * ```
+   */
   stat(uri: vscode.Uri): Promise<vscode.FileStat>;
+
+  /**
+   * Search for files in the workspace using glob patterns.
+   * 
+   * @param include A glob pattern that defines the files to search for
+   * @param exclude Optional glob pattern that defines files and folders to exclude
+   * @param maxResults Optional upper bound for the result count
+   * @param token Optional cancellation token to cancel the search
+   * @returns A promise that resolves to an array of matching file URIs
+   * 
+   * @example
+   * ```typescript
+   * // Find all TypeScript files
+   * const tsFiles = await fs.findFiles('**\/*.ts');
+   * 
+   * // Find all JSON files except in node_modules
+   * const jsonFiles = await fs.findFiles('**\/*.json', '**\/node_modules\/**');
+   * 
+   * // Find at most 10 JavaScript files
+   * const jsFiles = await fs.findFiles('**\/*.js', null, 10);
+   * ```
+   */
   findFiles(include: vscode.GlobPattern, exclude?: vscode.GlobPattern | null, maxResults?: number, token?: vscode.CancellationToken): Promise<vscode.Uri[]>;
+
+  /**
+   * Retrieve all entries of a directory.
+   * 
+   * @param uri The URI of the directory to read
+   * @returns A promise that resolves to an array of [name, type] tuples for each entry
+   * @throws Error if the directory does not exist or cannot be read
+   * 
+   * @example
+   * ```typescript
+   * const entries = await fs.readDirectory(vscode.Uri.file('/path/to/dir'));
+   * for (const [name, type] of entries) {
+   *   if (type === vscode.FileType.File) {
+   *     console.log(`File: ${name}`);
+   *   } else if (type === vscode.FileType.Directory) {
+   *     console.log(`Directory: ${name}`);
+   *   }
+   * }
+   * ```
+   */
   readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]>;
+
+  /**
+   * Delete a file or directory.
+   * 
+   * @param uri The URI of the file or directory to delete
+   * @param options Optional deletion options
+   * @param options.recursive If true, recursively delete directory contents (default: true)
+   * @param options.useTrash If true, move to trash instead of permanent deletion (default: false)
+   * @returns A promise that resolves when the deletion completes
+   * @throws Error if the file/directory does not exist or cannot be deleted
+   * 
+   * @example
+   * ```typescript
+   * // Delete a file
+   * await fs.delete(vscode.Uri.file('/path/to/file.txt'));
+   * 
+   * // Delete a directory and all its contents
+   * await fs.delete(vscode.Uri.file('/path/to/dir'), { recursive: true });
+   * 
+   * // Move to trash instead of permanent deletion
+   * await fs.delete(vscode.Uri.file('/path/to/file.txt'), { useTrash: true });
+   * ```
+   */
   delete(uri: vscode.Uri, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void>;
+
+  /**
+   * Create a directory.
+   * 
+   * @param uri The URI of the directory to create
+   * @returns A promise that resolves when the directory is created
+   * @throws Error if the directory already exists or cannot be created
+   * 
+   * @example
+   * ```typescript
+   * await fs.createDirectory(vscode.Uri.file('/path/to/new/dir'));
+   * ```
+   */
   createDirectory(uri: vscode.Uri): Promise<void>;
+
+  /**
+   * Rename or move a file or directory.
+   * 
+   * @param source The current URI of the file or directory
+   * @param target The new URI for the file or directory
+   * @param options Optional rename options
+   * @param options.overwrite If true, overwrite the target if it exists (default: false)
+   * @returns A promise that resolves when the rename/move completes
+   * @throws Error if source doesn't exist, target exists and overwrite is false, or operation fails
+   * 
+   * @example
+   * ```typescript
+   * // Rename a file
+   * await fs.rename(
+   *   vscode.Uri.file('/path/to/oldname.txt'),
+   *   vscode.Uri.file('/path/to/newname.txt')
+   * );
+   * 
+   * // Move a file to a different directory
+   * await fs.rename(
+   *   vscode.Uri.file('/path/to/file.txt'),
+   *   vscode.Uri.file('/different/path/file.txt')
+   * );
+   * 
+   * // Rename with overwrite
+   * await fs.rename(source, target, { overwrite: true });
+   * ```
+   */
   rename(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void>;
+
+  /**
+   * Copy a file or directory.
+   * 
+   * @param source The URI of the file or directory to copy
+   * @param target The URI where the copy should be created
+   * @param options Optional copy options
+   * @param options.overwrite If true, overwrite the target if it exists (default: false)
+   * @returns A promise that resolves when the copy operation completes
+   * @throws Error if source doesn't exist, target exists and overwrite is false, or operation fails
+   * 
+   * @example
+   * ```typescript
+   * // Copy a file
+   * await fs.copy(
+   *   vscode.Uri.file('/path/to/source.txt'),
+   *   vscode.Uri.file('/path/to/copy.txt')
+   * );
+   * 
+   * // Copy with overwrite
+   * await fs.copy(source, target, { overwrite: true });
+   * ```
+   */
   copy(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void>;
+
+  /**
+   * Check if a file system scheme supports write operations.
+   * 
+   * @param scheme The URI scheme to check (e.g., 'file', 'https', 'vscode-vfs')
+   * @returns true if writable, false if read-only, undefined if unknown
+   * 
+   * @example
+   * ```typescript
+   * const isWritable = fs.isWritableFileSystem('file'); // true
+   * const isHttpWritable = fs.isWritableFileSystem('https'); // false or undefined
+   * ```
+   */
   isWritableFileSystem(scheme: string): boolean | undefined;
 }
 
@@ -69,6 +258,16 @@ export class MockFileSystem implements FileSystemProvider {
 
   /**
    * Set up a mock file with specific content for testing.
+   * This is the primary method for preparing test data.
+   * 
+   * @param uri The URI where the mock file should be created
+   * @param content The content as either a string or Uint8Array
+   * 
+   * @example
+   * ```typescript
+   * mockFs.setMockFile(vscode.Uri.file('/test/file.txt'), 'Hello, world!');
+   * mockFs.setMockFile(vscode.Uri.file('/test/data.bin'), new Uint8Array([1, 2, 3]));
+   * ```
    */
   setMockFile(uri: vscode.Uri, content: string | Uint8Array): void {
     const buffer = typeof content === 'string' ? Buffer.from(content) : content;
@@ -85,6 +284,20 @@ export class MockFileSystem implements FileSystemProvider {
 
   /**
    * Set up mock file stat for testing.
+   * Use this to customize file metadata without setting content.
+   * 
+   * @param uri The URI of the file to set metadata for
+   * @param stat The file stat object with type, timestamps, and size
+   * 
+   * @example
+   * ```typescript
+   * mockFs.setMockStat(vscode.Uri.file('/test/file.txt'), {
+   *   type: vscode.FileType.File,
+   *   ctime: Date.now(),
+   *   mtime: Date.now(),
+   *   size: 1024
+   * });
+   * ```
    */
   setMockStat(uri: vscode.Uri, stat: vscode.FileStat): void {
     this.stats.set(uri.toString(), stat);
@@ -92,6 +305,16 @@ export class MockFileSystem implements FileSystemProvider {
 
   /**
    * Set up a mock directory for testing.
+   * Creates a directory entry that can be listed and used as a parent for files.
+   * 
+   * @param uri The URI of the directory to create
+   * 
+   * @example
+   * ```typescript
+   * mockFs.setMockDirectory(vscode.Uri.file('/test/dir'));
+   * // Now you can add files under this directory
+   * mockFs.setMockFile(vscode.Uri.file('/test/dir/file.txt'), 'content');
+   * ```
    */
   setMockDirectory(uri: vscode.Uri): void {
     this.stats.set(uri.toString(), {
@@ -104,6 +327,19 @@ export class MockFileSystem implements FileSystemProvider {
 
   /**
    * Configure a file to throw an error when accessed.
+   * Useful for testing error handling scenarios.
+   * 
+   * @param uri The URI of the file that should throw an error
+   * @param error The error to throw when the file is accessed
+   * 
+   * @example
+   * ```typescript
+   * mockFs.setMockError(
+   *   vscode.Uri.file('/test/broken.txt'),
+   *   new Error('Permission denied')
+   * );
+   * // Now any operation on this file will throw the error
+   * ```
    */
   setMockError(uri: vscode.Uri, error: Error): void {
     this.files.set(uri.toString(), error as any);
@@ -112,6 +348,17 @@ export class MockFileSystem implements FileSystemProvider {
 
   /**
    * Clear all mock data.
+   * Resets the mock file system to an empty state.
+   * 
+   * @example
+   * ```typescript
+   * // Set up some test files
+   * mockFs.setMockFile(vscode.Uri.file('/test1.txt'), 'content1');
+   * mockFs.setMockFile(vscode.Uri.file('/test2.txt'), 'content2');
+   * 
+   * // Clear everything for the next test
+   * mockFs.clearMocks();
+   * ```
    */
   clearMocks(): void {
     this.files.clear();
@@ -120,6 +367,18 @@ export class MockFileSystem implements FileSystemProvider {
 
   /**
    * Get all mock file URIs for testing purposes.
+   * Useful for debugging or verifying what files are in the mock file system.
+   * 
+   * @returns Array of URI strings for all mock files
+   * 
+   * @example
+   * ```typescript
+   * mockFs.setMockFile(vscode.Uri.file('/test1.txt'), 'content1');
+   * mockFs.setMockFile(vscode.Uri.file('/test2.txt'), 'content2');
+   * 
+   * const files = mockFs.getMockFiles();
+   * console.log(files); // ['file:///test1.txt', 'file:///test2.txt']
+   * ```
    */
   getMockFiles(): string[] {
     return Array.from(this.files.keys());
@@ -127,6 +386,18 @@ export class MockFileSystem implements FileSystemProvider {
 
   /**
    * Check if a mock file exists.
+   * Useful for test assertions and setup verification.
+   * 
+   * @param uri The URI to check for existence
+   * @returns true if the mock file exists, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * mockFs.setMockFile(vscode.Uri.file('/test.txt'), 'content');
+   * 
+   * assert.strictEqual(mockFs.hasMockFile(vscode.Uri.file('/test.txt')), true);
+   * assert.strictEqual(mockFs.hasMockFile(vscode.Uri.file('/missing.txt')), false);
+   * ```
    */
   hasMockFile(uri: vscode.Uri): boolean {
     return this.files.has(uri.toString());
@@ -134,6 +405,21 @@ export class MockFileSystem implements FileSystemProvider {
 
   /**
    * Get mock file content as string for testing.
+   * Convenient method to retrieve file content for assertions.
+   * 
+   * @param uri The URI of the file to get content from
+   * @returns The file content as a string, or undefined if file doesn't exist or is an error
+   * 
+   * @example
+   * ```typescript
+   * mockFs.setMockFile(vscode.Uri.file('/test.txt'), 'Hello, world!');
+   * 
+   * const content = mockFs.getMockFileContent(vscode.Uri.file('/test.txt'));
+   * assert.strictEqual(content, 'Hello, world!');
+   * 
+   * const missing = mockFs.getMockFileContent(vscode.Uri.file('/missing.txt'));
+   * assert.strictEqual(missing, undefined);
+   * ```
    */
   getMockFileContent(uri: vscode.Uri): string | undefined {
     const content = this.files.get(uri.toString());

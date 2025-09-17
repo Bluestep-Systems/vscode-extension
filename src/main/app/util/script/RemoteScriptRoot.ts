@@ -10,9 +10,10 @@ import { FileSystem } from '../fs/FileSystemFactory';
 const fs = FileSystem.getInstance;
 
 /**
- * object representing the root of an individual script on the filesystem.
+ * Object representing the root of an individual script on the filesystem.
  *
- * this originally was the webdavid root file.
+ * This originally was the webdavid root file.
+ * @lastreviewed null
  */
 export class RemoteScriptRoot {
   private static ScriptContentFolders = ["info", "scripts", "objects"] as const;
@@ -22,12 +23,13 @@ export class RemoteScriptRoot {
   readonly downstairsRootOrgPath: path.ParsedPath;
 
   /**
-   * we create the script root utilizing any of the children in said script
+   * Creates a script root utilizing any of the children in said script.
    * 
    * The objective here is to use literally any file within the script's downstairs
    * folder to extrapolate the root of the script.
    * 
-   * @param childUri any file within the downstairs root folder.
+   * @param childUri Any file within the downstairs root folder
+   * @lastreviewed 2025-09-15
    */
   constructor({ childUri }: { childUri: vscode.Uri; }) {
     const parser = new DownstairsUriParser(childUri);
@@ -39,8 +41,8 @@ export class RemoteScriptRoot {
   }
 
   /**
-   * Gets where the metadata file *should* be located
-   * @returns The URI for the metadata file.
+   * Gets where the metadata file *should* be located.
+   * @lastreviewed 2025-09-15
    */
   private getMetadataFileUri() {
     const downstairsRoot = this.getDownstairsRootUri();
@@ -48,8 +50,8 @@ export class RemoteScriptRoot {
   }
 
   /**
-   *  Gets where the .gitignore file *should* be located
-   * @returns The URI for the .gitignore file.
+   * Gets where the .gitignore file *should* be located.
+   * @lastreviewed 2025-09-15
    */
   private getGitIgnoreFileUri() {
     const downstairsRoot = this.getDownstairsRootUri();
@@ -58,9 +60,11 @@ export class RemoteScriptRoot {
 
   /**
    * Touches a file by updating its last pulled or pushed timestamp.
-   * @param file The file to touch.
-   * @param touchType The type of touch to perform.
-   * @returns 
+   * Updates the metadata to track when the file was last synchronized and its hash.
+   * 
+   * @param file The file to touch
+   * @param touchType The type of touch to perform - either "lastPulled" or "lastPushed"
+   * @lastreviewed 2025-09-15
    */
   async touchFile(file: RemoteScriptFile, touchType: "lastPulled" | "lastPushed"): Promise<void> {
     const lastHash = await file.getHash();
@@ -91,9 +95,14 @@ export class RemoteScriptRoot {
 
   /**
    * Modifies the metadata for the script root.
-   * it will also save any changes you make to the object passed to the callBack function.
-   * @param callBack 
-   * @returns 
+   * It will also save any changes you make to the object passed to the callback function.
+   * Creates a new metadata file with default values if it doesn't exist or is malformed.
+   * Includes retry logic for file system operations.
+   * 
+   * @param callBack Optional callback function to modify the metadata object
+   * @returns The current or modified metadata object
+   * @throws {Error} When file system operations fail after retries or for unexpected errors
+   * @lastreviewed 2025-09-15
    */
   public async modifyMetaData(callBack?: ((meta: ScriptMetaData) => void)): Promise<ScriptMetaData> {
     const metadataFileUri = this.getMetadataFileUri();
@@ -185,17 +194,20 @@ export class RemoteScriptRoot {
   }
 
   /**
-  * Gets the metadata for the script root.
-  * @returns The metadata for the script root.
-  */
+   * Gets the metadata for the script root.
+   * @lastreviewed 2025-09-15
+   */
   public async getMetaData(): Promise<ScriptMetaData> {
     return await this.modifyMetaData();
   }
 
   /**
    * Modifies the .gitignore file, and creates a default if it does not exist.
-   * @param callBack A callback function to modify the current contents.
-   * @returns The modified contents of the .gitignore file.
+   * Default .gitignore includes common patterns like .DS_Store files.
+   * 
+   * @param callBack Optional callback function to modify the current contents
+   * @returns The modified contents of the .gitignore file as an array of strings
+   * @lastreviewed 2025-09-15
    */
   public async modifyGitIgnore(callBack?: (currentContents: string[]) => void): Promise<string[]> {
     const gitIgnoreUri = this.getGitIgnoreFileUri();
@@ -234,16 +246,16 @@ export class RemoteScriptRoot {
   }
 
   /**
-   * Gets the contents of the .gitignore file for this script root as an array of strings
-   * @returns The contents of the .gitignore file.
+   * Gets the contents of the .gitignore file for this script root as an array of strings.
+   * @lastreviewed 2025-09-15
    */
   public async getGitIgnore(): Promise<string[]> {
     return await this.modifyGitIgnore();
   }
 
   /**
-   * Gets the URI for the downstairs root folder.
-   * @returns The URI for the downstairs root folder.
+   * Gets the {@link vscode.Uri} for the downstairs root folder.
+   * @lastreviewed 2025-09-15
    */
   public getDownstairsRootUri() {
     return vscode.Uri.file(this.downstairsRootPath.dir + path.sep + this.downstairsRootPath.base);
@@ -252,8 +264,8 @@ export class RemoteScriptRoot {
   /**
    * Gets the URI for the downstairs organization folder.
    *
-   * //TODO this will be replaced when we update the org file to use a metadata file
-   * @returns The URI for the downstairs organization folder.
+   * @todo This will be replaced when we update the org file to use a metadata file
+   * @lastreviewed null
    */
   public getOrgUri() {
     return vscode.Uri.file(this.downstairsRootOrgPath.dir + path.sep + this.downstairsRootOrgPath.base);
@@ -264,6 +276,7 @@ export class RemoteScriptRoot {
    *
    * Eventually when this structure is refactored to use a metadata file, this will
    * not be so trivial.
+   * @lastreviewed 2025-09-15
    */
   get webDavId() {
     return this.downstairsRootPath.base;
@@ -274,6 +287,7 @@ export class RemoteScriptRoot {
    *
    * Eventually when this structure is refactored to use a metadata file, so this will
    * not be so trivial.
+   * @lastreviewed 2025-09-15
    */
   public get origin() {
     return this.downstairsRootOrgPath.base;
@@ -282,7 +296,7 @@ export class RemoteScriptRoot {
 
   /**
    * Returns a base URL string suitable for pull and push operations.
-   * @returns A base URL string suitable for pull and push operations.
+   * @lastreviewed 2025-09-15
    */
   public toBaseUpstairsString() {
     return `https://${this.origin}/files/${this.webDavId}/`;
@@ -290,7 +304,7 @@ export class RemoteScriptRoot {
 
   /**
    * Returns a base {@link URL} suitable for pull and push operations.
-   * @returns A base {@link URL} suitable for pull and push operations.
+   * @lastreviewed 2025-09-15
    */
   public toBaseUpstairsUrl(): URL {
     return new URL(this.toBaseUpstairsString());
@@ -298,8 +312,8 @@ export class RemoteScriptRoot {
 
   /**
    * Creates a ScriptRoot from a root {@link vscode.Uri}.
-   * @param rootUri The root {@link vscode.Uri} to create the ScriptRoot from.
-   * @returns A new ScriptRoot instance.
+   * @param rootUri The root {@link vscode.Uri} to create the ScriptRoot from
+   * @lastreviewed 2025-09-15
    */
   static fromRootUri(rootUri: vscode.Uri) {
     return new RemoteScriptRoot({ childUri: vscode.Uri.joinPath(rootUri,"/") });
@@ -307,6 +321,8 @@ export class RemoteScriptRoot {
 
   /**
    * Generic helper to get a folder {@link vscode.Uri} under the downstairs root.
+   * @param folderName The name of the folder to get the URI for
+   * @lastreviewed 2025-09-15
    */
   private getFolderUri(folderName: typeof RemoteScriptRoot.ScriptContentFolders[number]) {
     return vscode.Uri.joinPath(this.getDownstairsRootUri(), "draft", folderName);
@@ -314,6 +330,9 @@ export class RemoteScriptRoot {
 
   /**
    * Generic helper to get the contents of a folder.
+   * @param folderName The name of the folder to read contents from
+   * @returns Array of URIs for files and folders within the specified folder
+   * @lastreviewed 2025-09-15
    */
   private async getFolderContents(folderName: typeof RemoteScriptRoot.ScriptContentFolders[number]): Promise<vscode.Uri[]> {
     const folderUri = this.getFolderUri(folderName);
@@ -323,6 +342,7 @@ export class RemoteScriptRoot {
 
   /**
    * Gets the contents of the info folder.
+   * @lastreviewed 2025-09-15
    */
   public async getInfoFolder() {
     return this.getFolderContents("info");
@@ -330,6 +350,7 @@ export class RemoteScriptRoot {
   
   /**
    * Gets the contents of the scripts folder.
+   * @lastreviewed 2025-09-15
    */
   public async getScriptsFolder() {
     return this.getFolderContents("scripts");
@@ -337,13 +358,17 @@ export class RemoteScriptRoot {
   
   /**
    * Gets the contents of the objects folder.
+   * @lastreviewed 2025-09-15
    */
   public async getObjectsFolder() {
     return this.getFolderContents("objects");
   }
 
   /**
-   * determines if this script root is for a file that is in good condition
+   * Determines if this script root is for a file that is in good condition.
+   * Validates that the info folder contains exactly 3 required files (metadata.json, permissions.json, config.json)
+   * and that the objects folder contains exactly one file (imports.ts).
+   * @lastreviewed 2025-09-15
    */
   public async isCopacetic(): Promise<boolean> {
     const infoContent = await this.getInfoFolder();
@@ -372,8 +397,10 @@ export class RemoteScriptRoot {
 
   /**
    * Checks if this ScriptRoot is morally equivalent to another ScriptRoot.
-   * @param b The other ScriptRoot to compare against.
-   * @returns True if the ScriptRoots are equal, false otherwise.
+   * Compares origin, WebDAV ID, downstairs root path, and upstairs URL.
+   * 
+   * @param b The other ScriptRoot to compare against
+   * @lastreviewed 2025-09-15
    */
   equals(b: RemoteScriptRoot) {
     return (

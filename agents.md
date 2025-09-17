@@ -87,4 +87,25 @@ When making significant changes:
 - **Include migration notes** when changing existing patterns or APIs
 - **Maintain the user perspective** in README.md vs developer perspective in copilot-instructions.md
 
+## Documentation Review Requirement
+
+**All AI-generated or AI-modified JSDoc documentation MUST include `@lastreviewed null` flag:**
+
+When AI agents create or modify JSDoc documentation, they must append `@lastreviewed null` to every method's documentation block. This serves as a placeholder indicating that human review is required. A human reviewer will replace `null` with the actual review date (e.g., `@lastreviewed 2025-09-16`) after verifying the documentation accuracy.
+
+**Example:**
+```typescript
+/**
+ * Processes user input and validates the data.
+ * @param input The user input to process
+ * @returns Processed and validated data
+ * @lastreviewed null
+ */
+function processInput(input: string): ProcessedData {
+  // implementation
+}
+```
+
+This ensures all AI-generated documentation receives proper human oversight before being considered complete and accurate.
+
 This ensures the codebase remains approachable for both users and developers, and that AI agents can effectively contribute to the project with proper context.

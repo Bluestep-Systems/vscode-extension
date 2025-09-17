@@ -15,6 +15,7 @@ const fs = FileSystem.getInstance;
  *
  * Specifically, we use a local {@link vscode.Uri} from any file within a formula's draft folder
  * to extract the WebDAV ID and domain associated with that formula.
+ * @lastreviewed 2025-09-15
  */
 export class RemoteScriptFile {
 
@@ -46,7 +47,9 @@ export class RemoteScriptFile {
   /**
    * Creates a {@link RemoteScriptFile} instance in addition to its associated {@link RemoteScriptRoot} object.
    * 
-   * @param param0 The downstairs URI (local file system path).
+   * @param param0 Object containing the downstairs URI (local file system path)
+   * @param param0.downstairsUri The local file system URI for this script file
+   * @lastreviewed 2025-09-15
    */
   constructor({ downstairsUri }: { downstairsUri: vscode.Uri }) {
     this.parser = new DownstairsUriParser(downstairsUri);
@@ -54,8 +57,9 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Returns the URL for the proper upstairs file.
-   * @returns Returns the URL for the proper upstairs file.
+   * Returns the {@link URL} for the proper upstairs file.
+   * Constructs the appropriate WebDAV {@link URL} based on the file type (root, metadata, declarations, or draft).
+   * @lastreviewed 2025-09-15
    */
   public toUpstairsURL(): URL {
 
@@ -80,7 +84,7 @@ export class RemoteScriptFile {
 
   /**
    * Gets the downstairs (local) {@link vscode.Uri} for this file
-   * @returns The local file system {@link vscode.Uri} for this script file.
+   * @lastreviewed 2025-09-15
    */
   public toDownstairsUri() {
     return this.parser.rawUri;
@@ -88,7 +92,7 @@ export class RemoteScriptFile {
 
   /**
    * Produces the last modified {@link Date} of the upstairs object
-   * @returns The last modified {@link Date} of the upstairs object
+   * @lastreviewed 2025-09-15
    */
   public async getUpstairsLastModified(): Promise<Date> {
 
@@ -103,9 +107,13 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Determines a reason to not push this file upstairs
+   * Determines a reason to not push this file upstairs.
+   * Checks various conditions including metadata files, declarations, external models, 
+   * .gitignore patterns, info/objects folders, and integrity matching.
    * 
-   * @param ops.upstairsOverride overrides the {@link URL} to check against
+   * @param ops.upstairsOverride Optional override URL to check against instead of the default upstairs URL
+   * @returns Empty string if the file can be pushed, otherwise a descriptive reason why not
+   * @lastreviewed 2025-09-15
    */
   public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string> {
 
@@ -132,8 +140,7 @@ export class RemoteScriptFile {
 
   /**
    * Gets the lowercased SHA-512 hash of the local file.
-   * 
-   * @returns The lowercased SHA-512 hash of the local file.
+   * @lastreviewed 2025-09-15
    */
   public async getHash(): Promise<string> {
     const bufferSource = await fs().readFile(this.toDownstairsUri());
@@ -147,9 +154,10 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the local file's integrity matches the upstairs file.
+   * Compares SHA-512 hashes between local and remote versions.
    * 
-   * @param ops.upstairsOverride overrides the {@link URL} to check against.
-   * @returns True if the integrity matches, false otherwise.
+   * @param ops.upstairsOverride Optional override {@link URL} to check against instead of the default upstairs {@link URL}
+   * @lastreviewed 2025-09-15
    */
   public async integrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
     const localHash = await this.getHash();
@@ -160,10 +168,14 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Gets the hash of the upstairs file, or `null` if it doesn't exist
-   * @param ops.required determines if we should throw an error if it is not found upstairs
-   * @param ops.upstairsOverride gives an override URL of whom to check -- otherwise we assume the script cooresponding with this object
-   * @returns The hash of the upstairs file, or `null` if it doesn't exist
+   * Gets the hash of the upstairs file, or `null` if it doesn't exist.
+   * Extracts SHA-512 hash from the ETag header, handling both standard and weak ETags.
+   * Complex ETags (from memory documents) are not supported and return null.
+   * 
+   * @param ops.required If true, throws an error when upstairs hash cannot be determined
+   * @param ops.upstairsOverride Optional override URL to check instead of the default upstairs URL
+   * @returns The SHA-512 hash string in lowercase, or `null` if file doesn't exist or has complex ETag
+   * @lastreviewed 2025-09-15
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
     const response = await SM.fetch(ops?.upstairsOverride || this.toUpstairsURL(), {
@@ -194,8 +206,8 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Gets the content of the local file.
-   * @returns The content of the local file.
+   * Gets the content of the local file as UTF-8 text.
+   * @lastreviewed 2025-09-15
    */
   public async getDownstairsContent(): Promise<string> {
     const downstairsUri = this.toDownstairsUri();
@@ -213,8 +225,9 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Gets the content of the upstairs file.
-   * @returns The content of the upstairs file.
+   * Gets the content of the upstairs file as text.
+   * @throws {Error} When the upstairs file returns a 400+ status code
+   * @lastreviewed 2025-09-15
    */
   public async getUpstairsContent(): Promise<string> {
     const response = await SM.fetch(this.toUpstairsURL(), {
@@ -229,6 +242,10 @@ export class RemoteScriptFile {
     return await response.text();
   }
 
+  /**
+   * Removes this file's record from the metadata push/pull tracking.
+   * @lastreviewed 2025-09-15
+   */
   private async deleteFromMetadata() {
     await this.getScriptRoot().modifyMetaData((md) => {
       const index = md.pushPullRecords.findIndex(record => record.downstairsPath === this.toDownstairsUri().fsPath);
@@ -239,8 +256,13 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Downloads the file from the upstairs location. If the download is successful, it writes the content to the local file system.
-   * @returns 
+   * Downloads the file from the upstairs location and writes it to the local file system.
+   * Performs integrity verification using ETag headers and updates the lastPulled timestamp.
+   * Skips download if the file is in .gitignore and removes it from metadata instead.
+   * 
+   * @returns Response object with status 418 if file is in .gitignore, otherwise the actual HTTP response
+   * @throws {Error} When the download fails, integrity verification fails, or ETag parsing fails
+   * @lastreviewed 2025-09-15
    */
   public async download(): Promise<Response> {
     const ignore = await this.isInGitIgnore();
@@ -294,16 +316,18 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Writes the content to the local file.
-   * @param buffer The content to write.
+   * Writes binary content to the local file.
+   * @param buffer The binary content to write to the file
+   * @lastreviewed 2025-09-15
    */
   public async writeContent(buffer: ArrayBuffer) {
     await fs().writeFile(this.toDownstairsUri(), Buffer.from(buffer));
   }
 
   /**
-   * determines if the file exists, and cooresponds to an actual file or not
-   * @returns 
+   * Determines if the file exists and corresponds to an actual file (not a directory).
+   * Metadata files are considered to always exist.
+   * @lastreviewed 2025-09-15
    */
   public async exists(): Promise<boolean> {
     try {
@@ -321,16 +345,16 @@ export class RemoteScriptFile {
   }
 
   /**
-   * inverse of {@link exists}, for readability
-   * @returns 
+   * Inverse of {@link exists}, for readability.
+   * @lastreviewed 2025-09-15
    */
   public async fileDoesNotExist(): Promise<boolean> {
     return !(await this.exists());
   }
 
   /**
-   * produces the file stat, or null if it doesn't exist
-   * @returns 
+   * Produces the file stat, or `null` if it doesn't exist.
+   * @lastreviewed 2025-09-15
    */
   public async fileStat(): Promise<vscode.FileStat | null> {
     try {
@@ -341,7 +365,9 @@ export class RemoteScriptFile {
   }
 
   /**
-   * the last modified time of the local file
+   * The last modified time of the local file.
+   * @throws {Error} When the file does not exist
+   * @lastreviewed 2025-09-15
    */
   public async lastModifiedTime(): Promise<Date> {
     const stat = await this.fileStat();
@@ -352,7 +378,8 @@ export class RemoteScriptFile {
   }
 
   /**
-   * get the {@link RemoteScriptRoot} object for this file.
+   * Get the {@link RemoteScriptRoot} object for this file.
+   * @lastreviewed 2025-09-15
    */
   public getScriptRoot() {
     return this._scriptRoot;
@@ -361,6 +388,7 @@ export class RemoteScriptFile {
   /**
    * Gets the last pulled time for the script file as a string in UTC format, or `null` if not found
    * in the metadata object.
+   * @lastreviewed 2025-09-15
    */
   public async getLastPulledTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
@@ -369,7 +397,8 @@ export class RemoteScriptFile {
 
   /**
    * Gets the last pulled time for the script file as a {@link Date}, or `null` if not found in the
-   * metadata object
+   * metadata object.
+   * @lastreviewed 2025-09-15
    */
   public async getLastPulledTime(): Promise<Date | null> {
     const lastPulledStr = await this.getLastPulledTimeStr();
@@ -381,7 +410,8 @@ export class RemoteScriptFile {
 
   /**
    * Gets the last pushed time for the script file in UTC format, or `null` if not found
-   * in the metadata object
+   * in the metadata object.
+   * @lastreviewed 2025-09-15
    */
   public async getLastPushedTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
@@ -390,7 +420,8 @@ export class RemoteScriptFile {
 
   /**
    * Gets the last pushed time for the script file as a {@link Date}, or `null` if not
-   * found in the metadata object
+   * found in the metadata object.
+   * @lastreviewed 2025-09-15
    */
   public async getLastPushedTime(): Promise<Date | null> {
     const lastPushedStr = await this.getLastPushedTimeStr();
@@ -401,11 +432,13 @@ export class RemoteScriptFile {
   }
 
   /**
-   * Overwrites the script root for this file
+   * Overwrites the script root for this file.
    *
    * Be mindful, because it becomes easy to create inconsistencies since the underlying file may not even exist.
-   * @param root The new script root.
-   * @returns The updated script file.
+   * @param root The new script root
+   * @returns The updated script file
+   * @throws {Error} When attempting to overwrite script root of a metadata file
+   * @lastreviewed 2025-09-15
    */
   withScriptRoot(root: RemoteScriptRoot): RemoteScriptFile {
     this._scriptRoot = root;
@@ -420,8 +453,9 @@ export class RemoteScriptFile {
    * Overwrites the parser for the script file.
    *
    * Be mindful, because it becomes easy to create inconsistencies since the underlying file may not even exist.
-   * @param parser The parser to set.
-   * @returns The updated script file.
+   * @param parser The parser to set
+   * @returns The updated script file
+   * @lastreviewed 2025-09-15
    */
   withParser(parser: DownstairsUriParser): RemoteScriptFile {
     this.parser = parser;
@@ -430,8 +464,8 @@ export class RemoteScriptFile {
 
   /**
    * Compares this script file to another for equality.
-   * @param other The other script file to compare against.
-   * @returns True if the script files are equal, false otherwise.
+   * @param other The other script file to compare against
+   * @lastreviewed 2025-09-15
    */
   public equals(other: RemoteScriptFile): boolean {
     return this._scriptRoot.equals(other._scriptRoot) &&
@@ -442,6 +476,8 @@ export class RemoteScriptFile {
    * Generic method to find and parse a JSON configuration file.
    * @param fileName The name of the file to search for
    * @returns The parsed JSON content
+   * @throws {Error} When the file is not found or multiple files are found
+   * @lastreviewed 2025-09-15
    */
   private async getConfigurationFile<T>(fileName: string): Promise<T> {
     const files = await fs().findFiles(new vscode.RelativePattern(this._scriptRoot.getDownstairsRootUri(), `**/${fileName}`));
@@ -456,7 +492,7 @@ export class RemoteScriptFile {
 
   /**
    * Gets the configuration file for the script.
-   * @returns The configuration file content.
+   * @lastreviewed 2025-09-15
    */
   public async getConfigFile(): Promise<ConfigJsonContent> {
     return this.getConfigurationFile<ConfigJsonContent>('config.json');
@@ -465,8 +501,8 @@ export class RemoteScriptFile {
   /**
    * Determines if the file is an external model.
    * 
-   * External models are defined in the config.json file, and are not to be pushed or pulled
-   * @returns `true` if the file is an external model, `false` otherwise.
+   * External models are defined in the config.json file, and are not to be pushed or pulled.
+   * @lastreviewed 2025-09-15
    */
   public async isExternalModel(): Promise<boolean> {
     const config = await this.getConfigFile();
@@ -478,7 +514,7 @@ export class RemoteScriptFile {
 
   /**
    * Gets the metadata file for the script.
-   * @returns The metadata file content as a Promise.
+   * @lastreviewed 2025-09-15
    */
   public async getMetadataFile(): Promise<MetaDataJsonFileContent> {
     return this.getConfigurationFile<MetaDataJsonFileContent>('metadata.json');
@@ -486,7 +522,7 @@ export class RemoteScriptFile {
 
   /**
    * Gets the file name from the downstairs URI.
-   * @returns The file name as a string.
+   * @lastreviewed 2025-09-15
    */
   public getFileName(): string {
     return path.parse(this.toDownstairsUri().fsPath).base;
@@ -494,7 +530,7 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the declarations folder.
-   * @returns `true` if the script file is in the declarations folder, `false` otherwise.
+   * @lastreviewed 2025-09-15
    */
   public isInDeclarations(): boolean {
     return this.parser.type === "declarations";
@@ -502,7 +538,7 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the info folder.
-   * @returns `true` if the script file is in the info folder, `false` otherwise.
+   * @lastreviewed 2025-09-15
    */
   public async isInInfo(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolder();
@@ -511,7 +547,7 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the objects folder.
-   * @returns `true` if the script file is in the objects folder, `false` otherwise.
+   * @lastreviewed 2025-09-15
    */
   public async isInObjects(): Promise<boolean> {
     const objectsFolder = await this.getScriptRoot().getObjectsFolder();
@@ -520,7 +556,7 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the info or objects folder.
-   * @returns `true` if the script file is in the info or objects folder, `false` otherwise.
+   * @lastreviewed 2025-09-15
    */
   public async isInInfoOrObjects(): Promise<boolean> {
     return await this.isInInfo() || await this.isInObjects();
@@ -528,15 +564,15 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in the draft folder.
-   * @returns `true` if the script file is in the draft folder, `false` otherwise.
+   * @lastreviewed 2025-09-15
    */
   public isInDraft(): boolean {
     return this.parser.type === "draft";
   }
 
   /**
-   * Determines if the script file is in the info folder
-   * @returns `true` if the script file is in the info folder, `false` otherwise.
+   * Determines if the script file is in the info folder.
+   * @lastreviewed 2025-09-15
    */
   public async isInInfoFolder(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolder();
@@ -545,15 +581,16 @@ export class RemoteScriptFile {
 
   /**
    * Checks if the script file is in a valid state.
-   * @returns `true` if the script file is in a valid state, `false` otherwise.
+   * Currently only checks if the file exists.
+   * @lastreviewed 2025-09-15
    */
   public async isCopacetic(): Promise<boolean> {
     return await this.exists();
   }
 
   /**
-   * Determines if the file is listed in the .gitignore file
-   * @returns `true` if the file is listed in .gitignore, `false` otherwise.
+   * Determines if the file is listed in the .gitignore file.
+   * @lastreviewed 2025-09-15
    */
   public async isInGitIgnore(): Promise<boolean> {
     const scriptRoot = this.getScriptRoot();
@@ -562,6 +599,10 @@ export class RemoteScriptFile {
     return globMatcher.matches(this.toDownstairsUri());
   }
 
+  /**
+   * Gets the URL pathname for the upstairs file.
+   * @lastreviewed 2025-09-15
+   */
   public getRest(): string {
     return this.toUpstairsURL().pathname;
   }
