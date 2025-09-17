@@ -2,7 +2,7 @@
   "name": "bsjs-push-pull",
   "displayName": "B6P - BlueStep JavaScript Push/Pull",
   "description": "Sync JavaScript files with BlueStep systems via WebDAV",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "publisher": "bluestep-systems",
   "repository": {
     "type": "git",
@@ -77,8 +77,16 @@
         "title": "B6P: Report State"
       },
       {
-        "command": "bsjs-push-pull.clear",
-        "title": "B6P: Clear State"
+        "command": "bsjs-push-pull.clearSettings",
+        "title": "B6P: Revert to Default Settings"
+      },
+      {
+        "command": "bsjs-push-pull.clearSessions",
+        "title": "B6P: Clear Sessions"
+      },
+      {
+        "command": "bsjs-push-pull.clearAll",
+        "title": "B6P: Clear All Persistance"
       },
       {
         "command": "bsjs-push-pull.runTask",
@@ -154,6 +162,10 @@
       },
       {
         "view": "b6pMenuView",
+        "contents": "[Clear Sessions](command:bsjs-push-pull.clearSessions)"
+      },
+      {
+        "view": "b6pMenuView",
         "contents": "[Toggle Debug Mode](command:bsjs-push-pull.toggleDebug)"
       },
       {
@@ -184,11 +196,6 @@
       {
         "view": "b6pMenuView",
         "contents": "[Toggle Test Task](command:bsjs-push-pull.testTask)",
-        "when": "bsjs-push-pull.isDebugMode"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Clear Sessions](command:bsjs-push-pull.clear)",
         "when": "bsjs-push-pull.isDebugMode"
       }
     ]

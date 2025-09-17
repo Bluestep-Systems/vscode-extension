@@ -6,6 +6,7 @@ import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
 import { Alert } from './util/ui/Alert';
+import { Auth } from './authentication';
 
 
 
@@ -35,11 +36,22 @@ export const App = new class extends ContextNode {
       ['bsjs-push-pull.quickDeploy', vscode.commands.registerCommand('bsjs-push-pull.quickDeploy', ctrlPCommands.quickDeploy)],
       ['bsjs-push-pull.testTask', vscode.commands.registerCommand('bsjs-push-pull.testTask', ctrlPCommands.testTask)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
-        console.log("STATE", App.settings.toJSON());
-        App.logger.info("STATE", App.settings.toJSON());
+        //Alert.info("Settings: " + App.settings.toJSON(), { modal: false });
+        Alert.info("NOT IMPLEMENTED YET", { modal: false });
       })],
-      ['bsjs-push-pull.clear', vscode.commands.registerCommand('bsjs-push-pull.clear', async () => {
+      ['bsjs-push-pull.clearSettings', vscode.commands.registerCommand('bsjs-push-pull.clearSettings', async () => {
+        Alert.info("Reverting to default settings", { modal: false });
         App.clearPersistance();
+      })],
+      ['bsjs-push-pull.clearSessions', vscode.commands.registerCommand('bsjs-push-pull.clearSessions', async () => {
+        Alert.info("Clearing all Sessions", { modal: false });
+        SM.clearPersistance();
+      })],
+      ['bsjs-push-pull.clearAll', vscode.commands.registerCommand('bsjs-push-pull.clearAll', async () => {
+        Alert.info("Clearing Sessions, Auth Managers, and Settings", { modal: false });
+        App.clearPersistance(true);
+        SM.clearPersistance();
+        Auth.clearManagers();
       })],
       ['bsjs-push-pull.toggleDebug', vscode.commands.registerCommand('bsjs-push-pull.toggleDebug', async () => {
         App.toggleDebugMode();
@@ -123,10 +135,11 @@ export const App = new class extends ContextNode {
     return this;
   }
 
-  public clearPersistance() {
-    //this.settings.clear();
-    SM.clearPersistance();
-    Alert.info("Cleared all settings and sessions", { modal: false });
+  public clearPersistance(alreadyAlerted: boolean = false) {
+    this.settings.clear();
+    !alreadyAlerted && Alert.info("Cleared all Settings", { modal: false });
+    this.#debugMode = false;
+    vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
   }
 
   public isDebugMode() {
@@ -138,6 +151,6 @@ export const App = new class extends ContextNode {
     vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
     
     Alert.info(`Debug mode ${this.#debugMode ? "enabled" : "disabled"}`, { modal: false });
-    App.settings.set('debugMode', this.#debugMode);
+    this.settings.set('debugMode', this.#debugMode);
   }
 }();
