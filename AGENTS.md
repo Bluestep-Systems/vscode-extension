@@ -2,7 +2,7 @@
 
 ## Overview
 
-When making changes to this VS Code extension codebase, AI agents MUST update relevant documentation to maintain consistency and accuracy. This ensures the project remains maintainable and new contributors can quickly understand the system.
+When making changes to this VS Code extension codebase, AI agents MUST obey the guidelines delineated below.
 
 ## Required Documentation Updates
 
