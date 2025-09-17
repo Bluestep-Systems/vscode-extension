@@ -12,6 +12,7 @@ import { FileSystem } from '../../util/fs/FileSystemFactory';
 import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
 import { Alert } from '../../util/ui/Alert';
 import { ProgressHelper } from '../../util/ui/ProgressHelper';
+import { DownstairsUriParser } from '../../util/script/DownstairsUrIParser';
 const fs = FileSystem.getInstance;
 /**
  * Pushes a script to a WebDAV location.
@@ -203,12 +204,17 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     const downstairsPath = flattenedDownstairs.find(dp => dp.fsPath === curPath.fsPath);
     if (!downstairsPath) {
       // we don't want to delete stuff that is in gitignore
-      const sf = new RemoteScriptFile({ downstairsUri: vscode.Uri.file(rawFilePath.downstairsPath) });
+      const dsurlp = new DownstairsUriParser(downstairsRootFolderUri);
+      const sf = new RemoteScriptFile({ downstairsUri: vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath) });
+      if (!(await sf.isCopacetic())) {
+        throw new Error("File is not copacetic: " + sf.toDownstairsUri().toString());        
+      }
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
       }
       // If there's no matching downstairs path, we need to delete the upstairs path
+      App.logger.info(`No matching downstairs path found for upstairs path: ${rawFilePath.upstairsPath}. Deleting upstairs path.`);
       await SM.fetch(rawFilePath.upstairsPath, {
         method: "DELETE"
       });

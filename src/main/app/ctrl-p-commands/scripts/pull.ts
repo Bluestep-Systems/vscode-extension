@@ -62,11 +62,9 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
   for (const ep of existingPaths) {
     //ignore special files
     if (await new RemoteScriptFile({ downstairsUri: ep }).isInGitIgnore()) {
-      console.log("Skipping gitignored file:", ep.fsPath);
       continue;
     }
     if ([RemoteScriptRoot.METADATA_FILE, RemoteScriptRoot.GITIGNORE_FILE].some(special => ep.fsPath.endsWith(special))) {
-      console.log("Skipping special file:", ep.fsPath);
       continue;
     }
     if (!validPaths.find(vp => vp.fsPath === ep.fsPath)) {

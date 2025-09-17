@@ -217,7 +217,8 @@ export class RemoteScriptRoot {
       try {
         await fs().stat(gitIgnoreUri);
       } catch (e) {
-        throw new FileDoesNotExistError("Gitignore file does not exist");
+        console.trace("downstairs root path:", this.downstairsRootPath);
+        throw new FileDoesNotExistError("Gitignore file does not exist at: `" + gitIgnoreUri.fsPath + "`");
       }
       const fileContents = await fs().readFile(gitIgnoreUri);
       const fileString = Buffer.from(fileContents).toString('utf-8');
@@ -258,6 +259,7 @@ export class RemoteScriptRoot {
    * @lastreviewed 2025-09-15
    */
   public getDownstairsRootUri() {
+    
     return vscode.Uri.file(this.downstairsRootPath.dir + path.sep + this.downstairsRootPath.base);
   }
 

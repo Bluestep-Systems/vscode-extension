@@ -96,4 +96,11 @@ export class DownstairsUriParser {
   public isDeclarationsOrDraft(): boolean {
     return this.type === "declarations" || this.type === "draft";
   }
+
+  /**
+   * Returns the {@link vscode.Uri} wrapper for the prepending path.
+   */
+  public prependingPathUri(): vscode.Uri {
+    return vscode.Uri.file(this.prependingPath);
+  }
 }

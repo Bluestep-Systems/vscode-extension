@@ -246,6 +246,107 @@ suite('DownstairsUriParser Tests', () => {
     });
   });
 
+  suite('prependingPathUri Method', () => {
+    
+    test('should return correct URI for basic prepending path', () => {
+      const uri = vscode.Uri.file('/workspace/12345/draft');
+      const parser = new DownstairsUriParser(uri);
+      
+      const prependingUri = parser.prependingPathUri();
+      assert.strictEqual(prependingUri.fsPath, '/workspace');
+      assert.strictEqual(prependingUri.scheme, 'file');
+    });
+
+    test('should return correct URI for nested prepending path', () => {
+      const uri = vscode.Uri.file('/very/deep/nested/workspace/folder/67890/declarations/file.d.ts');
+      const parser = new DownstairsUriParser(uri);
+      
+      const prependingUri = parser.prependingPathUri();
+      assert.strictEqual(prependingUri.fsPath, '/very/deep/nested/workspace/folder');
+      assert.strictEqual(prependingUri.scheme, 'file');
+    });
+
+    test('should return correct URI for empty prepending path', () => {
+      const uri = vscode.Uri.file('/77777/draft');
+      const parser = new DownstairsUriParser(uri);
+      
+      const prependingUri = parser.prependingPathUri();
+      // Note: When prepending path is empty, vscode.Uri.file('') normalizes to '/'
+      // This is expected VS Code behavior for root paths
+      assert.strictEqual(prependingUri.fsPath, '/');
+      assert.strictEqual(prependingUri.scheme, 'file');
+      assert.strictEqual(parser.prependingPath, ''); // The raw property should still be empty
+    });
+
+    test('should be consistent with prependingPath property', () => {
+      const uri = vscode.Uri.file('/some/complex/path/structure/88888/draft/nested/file.js');
+      const parser = new DownstairsUriParser(uri);
+      
+      const prependingUri = parser.prependingPathUri();
+      assert.strictEqual(prependingUri.fsPath, parser.prependingPath);
+    });
+
+    test('should work with Windows-style paths', () => {
+      const uri = vscode.Uri.file('C:\\workspace\\projects\\12345\\declarations\\types.d.ts');
+      const parser = new DownstairsUriParser(uri);
+      
+      const prependingUri = parser.prependingPathUri();
+      // Note: vscode.Uri.file() normalizes Windows paths
+      assert.strictEqual(prependingUri.scheme, 'file');
+      // The exact path format may vary by platform, but should be consistent with prependingPath
+      assert.strictEqual(prependingUri.fsPath, parser.prependingPath);
+    });
+
+    test('should return valid URI that can be used for file operations', () => {
+      const uri = vscode.Uri.file('/workspace/projects/99999/draft/script.js');
+      const parser = new DownstairsUriParser(uri);
+      
+      const prependingUri = parser.prependingPathUri();
+      
+      // Should be able to create new URIs relative to this one
+      const childUri = vscode.Uri.joinPath(prependingUri, 'subfolder', 'file.txt');
+      assert.strictEqual(childUri.scheme, 'file');
+      assert.strictEqual(childUri.fsPath.includes('workspace/projects'), true);
+    });
+
+    test('should handle metadata files correctly', () => {
+      const uri = vscode.Uri.file('/workspace/11111/.b6p_metadata.json');
+      const parser = new DownstairsUriParser(uri);
+      
+      const prependingUri = parser.prependingPathUri();
+      assert.strictEqual(prependingUri.fsPath, '/workspace');
+      assert.strictEqual(prependingUri.scheme, 'file');
+    });
+
+    test('should handle gitignore files correctly', () => {
+      const uri = vscode.Uri.file('/workspace/22222/.gitignore');
+      const parser = new DownstairsUriParser(uri);
+      
+      const prependingUri = parser.prependingPathUri();
+      assert.strictEqual(prependingUri.fsPath, '/workspace');
+      assert.strictEqual(prependingUri.scheme, 'file');
+    });
+
+    test('should be consistent across different types from same root', () => {
+      const draftUri = vscode.Uri.file('/workspace/12345/draft/file.js');
+      const declarationsUri = vscode.Uri.file('/workspace/12345/declarations/types.d.ts');
+      const metadataUri = vscode.Uri.file('/workspace/12345/.b6p_metadata.json');
+      
+      const draftParser = new DownstairsUriParser(draftUri);
+      const declarationsParser = new DownstairsUriParser(declarationsUri);
+      const metadataParser = new DownstairsUriParser(metadataUri);
+      
+      const draftPrependingUri = draftParser.prependingPathUri();
+      const declarationsPrependingUri = declarationsParser.prependingPathUri();
+      const metadataPrependingUri = metadataParser.prependingPathUri();
+      
+      assert.strictEqual(draftPrependingUri.fsPath, declarationsPrependingUri.fsPath);
+      assert.strictEqual(draftPrependingUri.fsPath, metadataPrependingUri.fsPath);
+      assert.strictEqual(draftPrependingUri.toString(), declarationsPrependingUri.toString());
+      assert.strictEqual(draftPrependingUri.toString(), metadataPrependingUri.toString());
+    });
+  });
+
   suite('Integration with RemoteScriptRoot Constants', () => {
     
     test('should correctly identify metadata files using RemoteScriptRoot constants', () => {

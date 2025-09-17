@@ -290,7 +290,7 @@ export class RemoteScriptFile {
     await this.writeContent(buffer);
     const etagHeader = response.headers.get("etag");
 
-
+    //TODO merge this with the other etag parsing code elsewhere in this class
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
     if (RemoteScriptFile.EtagPattern.test(etagHeader || "")) {
       const etag = JSON.parse(etagHeader?.toLowerCase() || "null");
