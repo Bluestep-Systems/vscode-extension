@@ -2,7 +2,7 @@
   "name": "bsjs-push-pull",
   "displayName": "B6P - BlueStep JavaScript Push/Pull",
   "description": "Sync JavaScript files with BlueStep systems via WebDAV",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "publisher": "bluestep-systems",
   "repository": {
     "type": "git",
@@ -184,6 +184,11 @@
       {
         "view": "b6pMenuView",
         "contents": "[Toggle Test Task](command:bsjs-push-pull.testTask)",
+        "when": "bsjs-push-pull.isDebugMode"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Clear Sessions](command:bsjs-push-pull.clear)",
         "when": "bsjs-push-pull.isDebugMode"
       }
     ]

@@ -266,14 +266,13 @@ export const SESSION_MANAGER = new class extends ContextNode {
     } else {
       App.logger.info("performing login to:" + url.origin);
       //TODO perform this login on a more dedicated endpoint (graphql?)
-      const response = await globalThis.fetch(url.origin + "/shared/home.jsp", {
+      const authLoginBodyValue = await this.authManager.authLoginBodyValue();
+      App.isDebugMode() && App.logger.info("login body:" + authLoginBodyValue);
+      const response = await globalThis.fetch(url.origin + "/lookup/test", {
         method: "POST",
         headers: {
-          //TODO try removing this
           "Authorization": `${await this.authManager.authHeaderValue()}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: `${await this.authManager.authLoginBodyValue()}`
+        }
       });
       App.logger.info("login status:" + response.status);
       if (response.status >= 400) {
@@ -281,7 +280,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       }
       await this.processResponse(response);
       return await this.fetch(url, options);
-      
+
     }
   }
 

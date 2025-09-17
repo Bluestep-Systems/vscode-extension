@@ -116,16 +116,17 @@ export const App = new class extends ContextNode {
         // console.log('No active editor.');
       }
     }, this, this.context.subscriptions);
+    this.#debugMode = this.settings.get('debugMode') as boolean ?? false;
+    vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
     readOnlyCheck(); // run it once on startup
     SM.init(this);
     return this;
   }
 
   public clearPersistance() {
-    this.settings.clear();
+    //this.settings.clear();
     SM.clearPersistance();
     Alert.info("Cleared all settings and sessions", { modal: false });
-    App.logger.info("Cleared all settings and sessions");
   }
 
   public isDebugMode() {
@@ -137,6 +138,6 @@ export const App = new class extends ContextNode {
     vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
     
     Alert.info(`Debug mode ${this.#debugMode ? "enabled" : "disabled"}`, { modal: false });
-    this.logger.info(`Debug mode ${this.#debugMode ? "enabled" : "disabled"}`);
+    App.settings.set('debugMode', this.#debugMode);
   }
 }();
