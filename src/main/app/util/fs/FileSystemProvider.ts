@@ -10,8 +10,11 @@ export interface FileSystemProvider {
   stat(uri: vscode.Uri): Promise<vscode.FileStat>;
   findFiles(include: vscode.GlobPattern, exclude?: vscode.GlobPattern | null, maxResults?: number, token?: vscode.CancellationToken): Promise<vscode.Uri[]>;
   readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]>;
-  delete(uri: vscode.Uri): Promise<void>; 
-
+  delete(uri: vscode.Uri, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void>;
+  createDirectory(uri: vscode.Uri): Promise<void>;
+  rename(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void>;
+  copy(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void>;
+  isWritableFileSystem(scheme: string): boolean | undefined;
 }
 
 /**
@@ -36,8 +39,20 @@ export class VSCodeFileSystem implements FileSystemProvider {
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
     return vscode.workspace.fs.readDirectory(uri);
   }
-  async delete(uri: vscode.Uri): Promise<void> {
-    return vscode.workspace.fs.delete(uri, { recursive: true, useTrash: false });
+  async delete(uri: vscode.Uri, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
+    return vscode.workspace.fs.delete(uri, { recursive: options?.recursive ?? true, useTrash: options?.useTrash ?? false });
+  }
+  async createDirectory(uri: vscode.Uri): Promise<void> {
+    return vscode.workspace.fs.createDirectory(uri);
+  }
+  async rename(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void> {
+    return vscode.workspace.fs.rename(source, target, { overwrite: options?.overwrite ?? false });
+  }
+  async copy(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void> {
+    return vscode.workspace.fs.copy(source, target, { overwrite: options?.overwrite ?? false });
+  }
+  isWritableFileSystem(scheme: string): boolean | undefined {
+    return vscode.workspace.fs.isWritableFileSystem(scheme);
   }
 }
 
@@ -101,6 +116,40 @@ export class MockFileSystem implements FileSystemProvider {
   clearMocks(): void {
     this.files.clear();
     this.stats.clear();
+  }
+
+  /**
+   * Get all mock file URIs for testing purposes.
+   */
+  getMockFiles(): string[] {
+    return Array.from(this.files.keys());
+  }
+
+  /**
+   * Check if a mock file exists.
+   */
+  hasMockFile(uri: vscode.Uri): boolean {
+    return this.files.has(uri.toString());
+  }
+
+  /**
+   * Get mock file content as string for testing.
+   */
+  getMockFileContent(uri: vscode.Uri): string | undefined {
+    const content = this.files.get(uri.toString());
+    if (content && !(content instanceof Error)) {
+      return Buffer.from(content).toString();
+    }
+    return undefined;
+  }
+
+  /**
+   * Set up multiple mock files at once for testing.
+   */
+  setMockFiles(files: Record<string, string>): void {
+    Object.entries(files).forEach(([path, content]) => {
+      this.setMockFile(vscode.Uri.file(path), content);
+    });
   }
 
   async readFile(uri: vscode.Uri): Promise<Uint8Array> {
@@ -218,13 +267,109 @@ export class MockFileSystem implements FileSystemProvider {
     return entries;
   }
   
-  async delete(uri: vscode.Uri): Promise<void> {
+  async delete(uri: vscode.Uri, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
     const key = uri.toString();
+    
+    // In a more sophisticated mock, we could handle recursive deletion of directories
+    // and simulate trash behavior, but for now we'll just acknowledge the options exist
+    const recursive = options?.recursive ?? true;
+    // useTrash option is acknowledged but not implemented in this mock
+    
     if (this.files.has(key)) {
       this.files.delete(key);
       this.stats.delete(key);
+      
+      // If recursive, we could delete all files under this path
+      if (recursive) {
+        const pathToDelete = uri.path;
+        const keysToDelete: string[] = [];
+        
+        for (const [fileKey] of this.files) {
+          const fileUri = vscode.Uri.parse(fileKey);
+          if (fileUri.path.startsWith(pathToDelete + '/')) {
+            keysToDelete.push(fileKey);
+          }
+        }
+        
+        keysToDelete.forEach(keyToDelete => {
+          this.files.delete(keyToDelete);
+          this.stats.delete(keyToDelete);
+        });
+      }
     } else {
       throw new Error(`File not found: ${uri.toString()}`);
     }
+  }
+
+  async createDirectory(uri: vscode.Uri): Promise<void> {
+    this.setMockDirectory(uri);
+  }
+
+  async rename(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void> {
+    const sourceKey = source.toString();
+    const targetKey = target.toString();
+    
+    // Check if source exists
+    const sourceContent = this.files.get(sourceKey);
+    const sourceStat = this.stats.get(sourceKey);
+    
+    if (!sourceContent || !sourceStat) {
+      throw new Error(`Source file not found: ${source.toString()}`);
+    }
+    
+    // Check if target exists and overwrite is not allowed
+    if (!options?.overwrite && (this.files.has(targetKey) || this.stats.has(targetKey))) {
+      throw new Error(`Target file already exists: ${target.toString()}`);
+    }
+    
+    // Move the file
+    if (!(sourceContent instanceof Error) && !(sourceStat instanceof Error)) {
+      this.files.set(targetKey, sourceContent);
+      this.stats.set(targetKey, sourceStat);
+    }
+    
+    // Remove from source
+    this.files.delete(sourceKey);
+    this.stats.delete(sourceKey);
+  }
+
+  async copy(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void> {
+    const sourceKey = source.toString();
+    const targetKey = target.toString();
+    
+    // Check if source exists
+    const sourceContent = this.files.get(sourceKey);
+    const sourceStat = this.stats.get(sourceKey);
+    
+    if (!sourceContent || !sourceStat) {
+      throw new Error(`Source file not found: ${source.toString()}`);
+    }
+    
+    // Check if target exists and overwrite is not allowed
+    if (!options?.overwrite && (this.files.has(targetKey) || this.stats.has(targetKey))) {
+      throw new Error(`Target file already exists: ${target.toString()}`);
+    }
+    
+    // Copy the file
+    if (!(sourceContent instanceof Error) && !(sourceStat instanceof Error)) {
+      // Create a copy of the content
+      const contentCopy = new Uint8Array(sourceContent);
+      this.files.set(targetKey, contentCopy);
+      
+      // Create a copy of the stat with updated times
+      this.stats.set(targetKey, {
+        ...sourceStat,
+        ctime: Date.now(),
+        mtime: Date.now()
+      });
+    }
+  }
+
+  isWritableFileSystem(scheme: string): boolean | undefined {
+    // Mock implementation - return true for file scheme, undefined for others
+    if (scheme === 'file') {
+      return true;
+    }
+    return undefined;
   }
 }
