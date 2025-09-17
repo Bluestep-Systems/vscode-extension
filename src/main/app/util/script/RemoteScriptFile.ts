@@ -117,6 +117,9 @@ export class RemoteScriptFile {
    */
   public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string> {
 
+    if (this.parser.type === "root") {
+      return "File is the root folder";
+    }
     if (this.getFileName() === RemoteScriptRoot.METADATA_FILE) {
       return "File is a metadata file";
     }
