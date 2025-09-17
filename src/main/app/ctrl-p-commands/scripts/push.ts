@@ -126,7 +126,7 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   
   //TODO investigate if this can be done via streaming
   const fileContents = await fs().readFile(downstairsUri);
-  const resp = await SM.fetch(upstairsUrl, {
+  const resp = await SM.fetch(upstairsOverride, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
