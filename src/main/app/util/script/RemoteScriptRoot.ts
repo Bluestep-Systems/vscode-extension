@@ -16,7 +16,7 @@ const fs = FileSystem.getInstance;
  * @lastreviewed null
  */
 export class RemoteScriptRoot {
-  private static ScriptContentFolders = ["info", "scripts", "objects"] as const;
+  private static readonly ScriptContentFolders = ["info", "scripts", "objects"] as const;
   public static readonly METADATA_FILE = ".b6p_metadata.json";
   public static readonly GITIGNORE_FILE = ".gitignore";
   readonly downstairsRootPath: path.ParsedPath;
