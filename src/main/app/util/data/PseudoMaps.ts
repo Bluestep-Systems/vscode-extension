@@ -93,7 +93,7 @@ export class PseudoMap<V> {
  * @lastreviewed null
  */
 export class TypedMap<T extends Record<string, SavableObject>> extends PseudoMap<Partial<T>[keyof T]> {
-  
+
   protected obj: Partial<T> = {};
 
   /**
@@ -151,12 +151,9 @@ export class TypedMap<T extends Record<string, SavableObject>> extends PseudoMap
    */
   public forEach(callback: <K extends keyof T>(value: T[K], key: K & string, map: this) => void): void {
     for (const key in this.obj) {
-      if (this.obj.hasOwnProperty(key)) {
-        const typedKey = key as keyof T & string;
-        const value = this.obj[typedKey];
-        if (value !== undefined) {
-          callback(value, typedKey, this);
-        }
+      const value = this.obj[key];
+      if (value !== undefined) {
+        callback(value, key, this);
       }
     }
   }
@@ -340,7 +337,7 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
    * @param key The key used for persisting the map.
    * @param context The context in which to persist the map.
    */
-  
+
   constructor(key: PrivateKeys, context: vscode.ExtensionContext) {
     super(key, context);
     this.context.secrets.get(this.key).then(jsonString => {
@@ -358,7 +355,7 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
     }
   }
 
-  get(key: string): T | undefined  {
+  get(key: string): T | undefined {
     this.requiresInit();
     return super.get(key);
   }
@@ -448,7 +445,7 @@ export class PrivatePersistanceMap<T extends SavableObject> extends PersistableM
   isInitialized(): boolean {
     return this.initialized;
   }
-  
+
 }
 
 /**
@@ -460,7 +457,7 @@ export enum PrivateKeys {
    * key for the data we persist for the basic auth map
    */
   BASIC_AUTH = 'b6p:basic_auth',
-  
+
   /**
    * key for the data we persist for the existing sessions
    */
