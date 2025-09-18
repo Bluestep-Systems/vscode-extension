@@ -1,20 +1,22 @@
 import * as vscode from "vscode";
-import type { SavableObject } from "../../../../../types";
+import type { SavableObject, Settings } from "../../../../../types";
+import { App } from "../../App";
+
 
 /**
  * A simple class that mimics the behavior of a Map, but uses a plain object underneath.
  */
-export class PseudoMap<T> {
+export class PseudoMap<V> {
   /**
    * The internal object storing key-value pairs.
    */
-  protected obj: Record<string, T> = {};
+  protected obj: Record<string, V> = {} as Record<string, V>;
 
   /**
    * Creates an instance of PseudoMap.
    * @param initialData Optional initial data to populate the map.
    */
-  constructor(initialData?: Record<string, T>) {
+  constructor(initialData?: Record<string, V>) {
     if (initialData) {
       this.obj = initialData;
     }
@@ -25,7 +27,7 @@ export class PseudoMap<T> {
    * @param key The key to look up.
    * @returns The value associated with the key, or undefined if not found.
    */
-  get(key: string): T | undefined  {
+  get(key: string): V | undefined {
     return this.obj[key];
   }
 
@@ -44,7 +46,7 @@ export class PseudoMap<T> {
    * @param value The value to associate with the key.
    * @returns The PseudoMap instance.
    */
-  set(key: string, value: T): this {
+  set(key: string, value: V): this {
     this.obj[key] = value;
     return this;
   }
@@ -53,7 +55,7 @@ export class PseudoMap<T> {
    * Executes a provided function once for each key-value pair in the map.
    * @param callback The function to execute for each entry.
    */
-  forEach(callback: (value: T, key: string, map: this) => void): void {
+  forEach(callback: (value: V, key: string, map: this) => void): void {
     for (const key in this.obj) {
       callback(this.obj[key], key, this);
     }
@@ -73,7 +75,7 @@ export class PseudoMap<T> {
    * Clears all entries in the map.
    */
   clear(): void {
-    this.obj = {};
+    this.obj = {} as Record<string, V>;
   }
 
   /**
@@ -85,6 +87,159 @@ export class PseudoMap<T> {
   }
 
 };
+
+/**
+ * A typed map that ensures type safety for object property access.
+ * @lastreviewed null
+ */
+export class TypedMap<T extends Record<string, SavableObject>> extends PseudoMap<Partial<T>[keyof T]> {
+  
+  protected obj: Partial<T> = {};
+
+  /**
+   * Sets a value for the specified key with type safety.
+   * @param key The key to set
+   * @param value The value to set
+   * @lastreviewed null
+   */
+  public set<K extends keyof T>(key: K, value: T[K]): this {
+    this.obj[key] = value;
+    return this;
+  }
+
+  /**
+   * Gets a value for the specified key with type safety.
+   * @param key The key to get
+   * @param defaultValue The default value if key doesn't exist
+   * @returns The value or default value
+   * @lastreviewed null
+   */
+  public get<K extends keyof T>(key: K, defaultValue: T[K]): T[K];
+  public get<K extends keyof T>(key: K): T[K] | undefined;
+  public get<K extends keyof T>(key: K, defaultValue?: T[K]): T[K] | undefined {
+    const value = this.obj[key];
+    return value !== undefined ? value : defaultValue;
+  }
+
+  /**
+   * Checks if the map has the specified key.
+   * @param key The key to check
+   * @returns True if the key exists
+   * @lastreviewed null
+   */
+  public has<K extends keyof T>(key: K): boolean {
+    return key in this.obj;
+  }
+
+  /**
+   * Deletes the specified key from the map.
+   * @param key The key to delete
+   * @returns True if the key was deleted
+   * @lastreviewed null
+   */
+  public delete<K extends keyof T>(key: K): this {
+    if (key in this.obj) {
+      delete this.obj[key];
+    }
+    return this;
+  }
+
+  /**
+   * Iterates over all key-value pairs in the map.
+   * @param callback Function to call for each key-value pair
+   * @lastreviewed null
+   */
+  public forEach(callback: <K extends keyof T>(value: T[K], key: K & string, map: this) => void): void {
+    for (const key in this.obj) {
+      if (this.obj.hasOwnProperty(key)) {
+        const typedKey = key as keyof T & string;
+        const value = this.obj[typedKey];
+        if (value !== undefined) {
+          callback(value, typedKey, this);
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns an array of all keys in the map.
+   * @returns Array of keys
+   * @lastreviewed null
+   */
+  public keys(): (keyof T & string)[] {
+    return Object.keys(this.obj) as (keyof T & string)[];
+  }
+
+  /**
+   * Returns an array of all values in the map.
+   * @returns Array of values
+   * @lastreviewed null
+   */
+  public values(): T[keyof T][] {
+    return Object.values(this.obj).filter(v => v !== undefined) as T[keyof T][];
+  }
+
+  /**
+   * Returns an array of all key-value pairs.
+   * @returns Array of [key, value] tuples
+   * @lastreviewed null
+   */
+  public entries(): [keyof T & string, T[keyof T]][] {
+    return this.keys().map(key => [key, this.obj[key]!]);
+  }
+
+  /**
+   * Returns the number of key-value pairs in the map.
+   * @returns The size of the map
+   * @lastreviewed null
+   */
+  public get size(): number {
+    return this.keys().length;
+  }
+
+  /**
+   * Removes all key-value pairs from the map.
+   * @lastreviewed null
+   */
+  public clear(): void {
+    this.obj = {};
+  }
+}
+
+export class SettingsMap extends TypedMap<Settings> {
+  private static working: boolean = false;
+  constructor(initialData?: Required<Settings>) {
+    super(initialData);
+  }
+
+  /**
+   * This will automatically store the settings when changed.
+   * 
+   * Storage is of changes is very specifically left as async, and will not be awaited.
+   * 
+   * This may be a problem if you make multiple changes in quick succession; and is very specifically
+   * left as a potential bug to indicate that you need to rethink your settings logic.
+   * @param key 
+   * @param value 
+   * @returns 
+   */
+  set<K extends keyof Settings>(key: K, value: Settings[K]): this {
+    if (SettingsMap.working) {
+      App.logger.warn("map is in the middle of changes! This is likely a bug.");
+      throw new Error("SettingsMap is already working");
+    }
+    vscode.workspace.getConfiguration().get<Settings>(key as string);
+    SettingsMap.working = true;
+    super.set(key, value);
+    this.store();
+    return this;
+  }
+  private async store() {
+    await vscode.workspace.getConfiguration().update(App.appKey, this.obj, vscode.ConfigurationTarget.Global);
+    App.logger.info(`Settings updated: ${this.toJSON()}`);
+    SettingsMap.working = false;
+  }
+}
 
 /**
  * A persistable version of a pseudomap. Exending classes mus implement an initializer
@@ -307,9 +462,15 @@ export enum PrivateKeys {
   BASIC_AUTH = 'b6p:basic_auth',
   
   /**
-   * key for the data we persist for the existing sessions map
+   * key for the data we persist for the existing sessions
    */
-  SESSIONS = 'b6p:sessions'
+  SESSIONS = 'b6p:sessions',
+
+  /**
+   * key for the data we persist for the github keys map
+   */
+
+  GITHUB_KEYS = 'b6p:github_keys'
 
 }
 

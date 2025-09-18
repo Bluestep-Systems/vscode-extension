@@ -1,24 +1,24 @@
 import * as vscode from 'vscode';
-import type { ReadOnlyMap, SavableObject } from '../../../types';
+import { Settings, type ReadOnlyMap } from '../../../types';
+import { Auth } from './authentication';
 import { SESSION_MANAGER as SM } from './b6p_session/SessionManager';
 import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
-import { PublicKeys, PublicPersistanceMap } from './util/data/PseudoMaps';
+import { UPDATE_MANAGER as UM } from './services/UpdateChecker';
+import { SettingsMap } from './util/data/PseudoMaps';
 import { Alert } from './util/ui/Alert';
-import { Auth } from './authentication';
 
 
 
 export const App = new class extends ContextNode {
   #_context: vscode.ExtensionContext | null = null;
-  #_settings: PublicPersistanceMap<SavableObject> | null = null;
+  #_settings: SettingsMap | null = null;
   #_outputChannel: vscode.LogOutputChannel | null = null;
   #debugMode: boolean = false;
+  public readonly appKey = "bsjs-push-pull";
   parent: ContextNode | null = null;
-  placeHolder() {
-    return this;
-  }
+
   /**
    * a read-only map interceptor for command registrations
    */
@@ -41,16 +41,16 @@ export const App = new class extends ContextNode {
       })],
       ['bsjs-push-pull.clearSettings', vscode.commands.registerCommand('bsjs-push-pull.clearSettings', async () => {
         Alert.info("Reverting to default settings", { modal: false });
-        App.clearPersistance();
+        App.clearMap();
       })],
       ['bsjs-push-pull.clearSessions', vscode.commands.registerCommand('bsjs-push-pull.clearSessions', async () => {
         Alert.info("Clearing all Sessions", { modal: false });
-        SM.clearPersistance();
+        SM.clearMap();
       })],
       ['bsjs-push-pull.clearAll', vscode.commands.registerCommand('bsjs-push-pull.clearAll', async () => {
         Alert.info("Clearing Sessions, Auth Managers, and Settings", { modal: false });
-        App.clearPersistance(true);
-        SM.clearPersistance();
+        App.clearMap(true);
+        SM.clearMap();
         Auth.clearManagers();
       })],
       ['bsjs-push-pull.toggleDebug', vscode.commands.registerCommand('bsjs-push-pull.toggleDebug', async () => {
@@ -86,7 +86,7 @@ export const App = new class extends ContextNode {
     return this.#_context!;
   }
 
-  protected persistence() {
+  protected map() {
     return this.settings;
   }
 
@@ -119,7 +119,8 @@ export const App = new class extends ContextNode {
       log: true,
     });
     this.context.subscriptions.push(this.#_outputChannel);
-    this.#_settings = new PublicPersistanceMap(PublicKeys.SETTINGS, App.context);
+    this.#_settings = new SettingsMap(vscode.workspace.getConfiguration().get<Settings>(this.appKey));
+    console.log(this.settings.toJSON());
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor) {
         readOnlyCheck();
@@ -128,14 +129,18 @@ export const App = new class extends ContextNode {
         // console.log('No active editor.');
       }
     }, this, this.context.subscriptions);
-    this.#debugMode = this.settings.get('debugMode') as boolean ?? false;
+    this.#debugMode = this.settings.get('isDebugMode') as boolean ?? false;
     vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
     readOnlyCheck(); // run it once on startup
+
+    // Initialize dependancies
     SM.init(this);
+    UM.init(this);
+
     return this;
   }
 
-  public clearPersistance(alreadyAlerted: boolean = false) {
+  public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
     !alreadyAlerted && Alert.info("Cleared all Settings", { modal: false });
     this.#debugMode = false;
@@ -149,8 +154,7 @@ export const App = new class extends ContextNode {
   public toggleDebugMode() {
     this.#debugMode = !this.#debugMode;
     vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
-    
     Alert.info(`Debug mode ${this.#debugMode ? "enabled" : "disabled"}`, { modal: false });
-    this.settings.set('debugMode', this.#debugMode);
+    this.settings.set('isDebugMode', this.#debugMode);
   }
 }();

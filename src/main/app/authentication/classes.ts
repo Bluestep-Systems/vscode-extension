@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { BasicAuthParams, SavableObject } from "../../../../types";
 import { ContextNode } from "../context/ContextNode";
+import type { SESSION_MANAGER } from "../b6p_session/SessionManager";
 
 /**
    * Generic Auth class that can be extended for specific auth types.
@@ -110,6 +111,12 @@ export abstract class AuthManager<T extends AuthObject> extends ContextNode {
    * @param flag 
    */
   public abstract authLoginBodyValue(flag?: string): Promise<string>;
+
+  /**
+   * Initializes the auth manager from the SESSION_MANAGER context node.
+   * @param parent 
+   */
+  public abstract init(parent: typeof SESSION_MANAGER): this;
 }
 
 

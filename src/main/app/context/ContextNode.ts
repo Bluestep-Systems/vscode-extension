@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { PersistableMap } from "../util/data/PseudoMaps";
+import { PseudoMap } from "../util/data/PseudoMaps";
 import { SavableObject } from "../../../../types";
 
 /**
@@ -20,9 +20,9 @@ export abstract class ContextNode {
   abstract context: vscode.ExtensionContext;
 
   /**
-   * the persistable map that this context node manages.
+   * the map that this context node manages.
    */
-  protected abstract persistence(): PersistableMap<SavableObject>;
+  protected abstract map(): PseudoMap<SavableObject>;
   
   /**
    * Initialize the manager with the given context.
@@ -34,9 +34,9 @@ export abstract class ContextNode {
   abstract init(contextOrManager: vscode.ExtensionContext | ContextNode): this;
 
   /**
-   * clears the persistance of this context node and persists the removal
+   * clears the persistance of this context node.
    */
-  clearPersistance() {
-    this.persistence().clear();
+  clearMap() {
+    this.map().clear();
   }
 }

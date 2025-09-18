@@ -606,6 +606,20 @@ export class RemoteScriptFile {
   public getRest(): string {
     return this.toUpstairsURL().pathname;
   }
+
+  /**
+   * Deletes the script file from metadata and the local file system.
+   * @throws {Error} When the file does not exist
+   * @lastreviewed 2025-09-18
+   */
+  public async delete() {
+    if (await this.exists()) {
+      await fs().delete(this.toDownstairsUri(), { recursive: true, useTrash: false });
+      await this.deleteFromMetadata();
+    } else {
+      throw new Error("File does not exist, cannot delete");
+    }
+  }
 }
 
 

@@ -1,4 +1,4 @@
-import { ContextNode } from '../context/ContextNode';
+import { SESSION_MANAGER } from '../b6p_session/SessionManager';
 import { AuthManager, AuthObject } from './classes';
 import { BASIC_AUTH_MANAGER } from './managers/BasicAuthManager';
 
@@ -31,11 +31,11 @@ export namespace Auth {
    * initializes all auth managers with the given context node as its parent.
    * @param node 
    */
-  export function initManagers(node: ContextNode) {
+  export function initManagers(node: typeof SESSION_MANAGER) {
     MANAGERS.forEach(manager => manager.init(node));
   }
 
   export function clearManagers() {
-    MANAGERS.forEach(manager => manager.clearPersistance());
+    MANAGERS.forEach(manager => manager.clearMap());
   }
 }

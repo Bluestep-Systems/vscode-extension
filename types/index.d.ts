@@ -1,5 +1,5 @@
 /**
- * A pseudo-map interface that only allows read operations.
+ * A map-like interface that only allows read operations.
  */
 declare interface ReadOnlyMap<T> {
   get(key: string): T | undefined;
@@ -7,10 +7,19 @@ declare interface ReadOnlyMap<T> {
   forEach(callback: (value: T, key: string, map: this) => void): void;
 }
 
+/**
+ * A primitive value that can be serialized.
+ */
 export type PrimitiveSerializable = string | number | boolean | null;
 
 /**
  * A nested object where all values are primitives or other nested objects.
+ * 
+ * @example
+ * // Valid PrimitiveNestedObject examples:
+ * const example1: PrimitiveNestedObject = { k1: "value", k2: 42, k3: true };
+ * const example2: PrimitiveNestedObject = { nested: { k1: "value" }, k2: 100 };
+ * const example3: PrimitiveNestedObject = { k1: null, k2: { k3: false } };
  */
 export type PrimitiveNestedObject = {
   [key: string]: PrimitiveSerializable | PrimitiveNestedObject
@@ -20,6 +29,17 @@ export type PrimitiveNestedObject = {
  * A savable object can be a primitive, an array of primitives.
  *
  * By design, this should be an object such that it can be serialized to JSON and back without loss of information.
+ * 
+ * I.E. 
+ * ```typescript
+ * Util.deepEquals(JSON.parse(JSON.stringify(obj)), obj) === true
+ * ``` 
+ *
+ * @example
+ * // Valid SavableObject examples:
+ * const example2: SavableObject = 42;
+ * const example5: SavableObject = [1, "two", false, null];
+ * const example6: SavableObject = { k1: "v1", k2: 2, k3: [true, 5], k4: { nestedKey: "something" } };
  */
 export type SavableObject =
   | PrimitiveSerializable
@@ -35,7 +55,7 @@ export type XMLResponse = {
     "@encoding"?: string;
   };
   "D:multistatus": {
-    "D:response": {
+    "D:response": { //TODO this may not actually return an array every time. Needs more investigation
       "D:href": string;
       "D:propstat": {
         "D:status": string;
@@ -99,14 +119,14 @@ export type BasicAuthParams = {
 };
 
 /**
- * GQL response for script queries, either good or bad.
+ * GQL response for script queries, either "good" or "bad".
  */
 type ScriptGqlResp = ScriptGQLGoodResp | ScriptGQLBadResp;
 
 /**
- * how a GQL response looks when it is good
+ * how a GQL response looks when it is "good"
  * 
- * //TODO this is incomplete for every GQL query possible
+ * //TODO this is incomplete for every GQL query possible. This should be tied to specific queries
  */
 type ScriptGQLGoodResp = {
   "data": {
@@ -186,6 +206,8 @@ type ScriptMetaData = {
  * This is the content of a metadata.json found in every script folder.
  *
  * It is used to store various metadata about the script.
+ * 
+ * //TODO this is incomplete and is not correct for all Script types
  */
 export type MetaDataJsonFileContent = {
   /**
@@ -249,7 +271,7 @@ export type MetaDataJsonFileContent = {
   /**
    * //TODO
    */
-  allowedMethods: string[];
+  allowedMethods?: string[];
 }
 
 /**
@@ -262,18 +284,18 @@ type PropagationBehaviorTypes = "MANDATORY" | "NESTED" | "NEVER" | "NOT_SUPPORTE
  * 
  * see platform documentation for details
  */
-type SandboxSizes = 
-  "XXX_SMALL" 
-  | "XX_SMALL" 
-  | "X_SMALL" 
-  | "SMALL" 
-  | "MEDIUM_SMALL" 
-  | "MEDIUM" 
-  | "MEDIUM_LARGE" 
-  | "LARGE" 
-  | "X_LARGE" 
-  | "XX_LARGE" 
-  | "XXX_LARGE" 
+type SandboxSizes =
+  "XXX_SMALL"
+  | "XX_SMALL"
+  | "X_SMALL"
+  | "SMALL"
+  | "MEDIUM_SMALL"
+  | "MEDIUM"
+  | "MEDIUM_LARGE"
+  | "LARGE"
+  | "X_LARGE"
+  | "XX_LARGE"
+  | "XXX_LARGE"
   | "UNLIMITED";
 
 /**
@@ -314,10 +336,10 @@ type ConfigJsonContent = {
   expiresBy: string,
 
   /**
-   * Local external modules
+   * "Local external" modules
    */
   models?: {
-    name: string, 
+    name: string,
     url: string
   }[],
 
@@ -325,9 +347,54 @@ type ConfigJsonContent = {
    * //TODO
    */
   language: "mjs",
-  
+
   /**
    * //TODO
    */
   scriptlibrary: "private"
 };
+
+/**
+ * Information about a release of the B6P platform.
+ */
+export type ReleaseInfo = {
+  version: string;
+  downloadUrl: string;
+  releaseNotes: string;
+  publishedAt: string;
+}
+
+export type GithubRelease = {
+  tag_name: string;
+  body: string;
+  published_at: string;
+  draft: false;
+  prerelease: false;
+  assets: Array<{
+    name: string;
+    browser_download_url: string;
+  }>;
+}
+
+/**
+ * The settings used by the extension.
+ */
+export type Settings = {
+  /**
+   * Whether debug mode is enabled.
+   */
+  isDebugMode: boolean;
+  /**
+   * Settings related to update checks.
+   */
+  updateCheck: {
+    /**
+     * Whether update checks are enabled.
+     */
+    enabled: boolean;
+    /**
+     * Whether to show notifications about updates.
+     */
+    showNotifications: boolean;
+  }
+}

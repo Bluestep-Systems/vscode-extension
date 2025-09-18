@@ -48,7 +48,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * Returns the persistence map for the session data.
    * @returns The persistence map for the session data.
    */
-  protected persistence() {
+  protected map() {
     return this.sessions;
   }
 
@@ -60,14 +60,14 @@ export const SESSION_MANAGER = new class extends ContextNode {
   /**
    * The ancestor context node that is used to instantiate this manager
    */
-  #parent: ContextNode | null = null;
+  #parent: typeof App | null = null;
 
   /**
    * Initializes the session manager.
    * @param parent The ancestor context node that is used to instantiate this manager.
    * @returns The initialized session manager.
    */
-  init(parent: ContextNode) {
+  init(parent: typeof App) {
     this.#parent = parent;
     if (this.#sessions) {
       throw new Error("only one session manager may be initialized");

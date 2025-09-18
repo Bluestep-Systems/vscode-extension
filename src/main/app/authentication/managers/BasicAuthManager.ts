@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
+import { BasicAuthParams } from "../../../../../types";
+import { SESSION_MANAGER } from "../../b6p_session/SessionManager";
 import { ContextNode } from "../../context/ContextNode";
 import { PrivateKeys, PrivatePersistanceMap } from "../../util/data/PseudoMaps";
-import { AuthManager, BasicAuth, AuthError } from "../classes";
-import { BasicAuthParams } from "../../../../../types";
+import { AuthError, AuthManager, BasicAuth } from "../classes";
 
 /**
  * The singleton basic auth manager.
@@ -14,17 +15,15 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * the internal map of flags to basic auth params.
    */
   private _flagMap: PrivatePersistanceMap<BasicAuthParams> | null = null;
-  /**
-   * the persistable map that this context node manages.
-   */
-  protected persistence() {
+
+  protected map() {
     return this.flagMap;
   }
 
   private CUR_FLAG: string = this.DEFAULT_FLAG;
   #parent: ContextNode | null = null;
 
-  public init(parent: ContextNode) {
+  public init(parent: typeof SESSION_MANAGER) {
     this.#parent = parent;
     if (this._flagMap) {
       throw new Error("only one auth manager may be initialized");
@@ -57,7 +56,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
     return this._flagMap;
   }
 
-  public clearPersistance() {
+  public clearMap() {
     this.flagMap.clear();
   }
 
