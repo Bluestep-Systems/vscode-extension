@@ -17,9 +17,9 @@ export default async function () {
 
     if (await determine(sf)) {
       vscode.commands.executeCommand('workbench.action.files.setActiveEditorReadonlyInSession');
-      App.logger.info(`Set ${activeEditorUri.toString()} to read-only`);
+      App.isDebugMode() && App.logger.info(`Set ${activeEditorUri.toString()} to read-only`);
     } else {
-      App.logger.info(sf.getFileName() + " is not read-only");
+      App.isDebugMode() && App.logger.info(sf.getFileName() + " is not read-only");
     }
   } catch (e) {
     App.logger.error("Error checking read-only status:", e);

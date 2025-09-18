@@ -334,9 +334,6 @@ export class RemoteScriptFile {
    */
   public async exists(): Promise<boolean> {
     try {
-      if (this.parser.type === "metadata") {
-        return true;
-      }
       const stat = await fs().stat(this.toDownstairsUri());
       if (stat.type === vscode.FileType.Directory) {
         return false;
