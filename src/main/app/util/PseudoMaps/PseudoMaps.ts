@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import type { SavableObject, Settings } from "../../../../../../types";
-import { App } from "../../../App";
-import { Alert } from "../../ui/Alert";
-import { Util } from "../..";
+import type { SavableObject, Settings } from "../../../../../types";
+import { App } from "../../App";
+import { Alert } from "../ui/Alert";
+import { Util } from "..";
 
 
 /**

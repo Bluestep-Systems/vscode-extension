@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { UpdateInfo, GithubRelease, ClientInfo } from '../../../../types';
 import { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
-import { PublicKeys, TypedPersistable } from '../util/data/PseudoMaps';
+import { PublicKeys, TypedPersistable } from '../util/PseudoMaps';
 import { Alert } from '../util/ui/Alert';
 
 

@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import type { Settings, SavableObject } from "../../../../../../types";
-import { App } from "../../../App";
-import { Alert } from "../../ui/Alert";
-import { Util } from "../..";
+import type { Settings, SavableObject } from "../../../../../types";
+import { App } from "../../App";
+import { Alert } from "../ui/Alert";
+import { Util } from "..";
 import { TypedMap } from "./TypedMap";
 import { SoftPersistable } from "./Persistable";
 

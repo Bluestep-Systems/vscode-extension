@@ -6,7 +6,7 @@ import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { UPDATE_MANAGER as UM } from './services/UpdateChecker';
-import { SettingsWrapper } from './util/data/PseudoMaps';
+import { SettingsWrapper } from './util/PseudoMaps';
 import { Alert } from './util/ui/Alert';
 
 

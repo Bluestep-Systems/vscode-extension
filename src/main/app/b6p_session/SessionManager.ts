@@ -1,6 +1,6 @@
 import type { SessionData } from "../../../../types";
 import { Auth, AuthManager, AuthObject } from "../authentication";
-import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
+import { PrivateKeys, PrivatePersistanceMap } from "../util/PseudoMaps";
 import { ContextNode } from "../context/ContextNode";
 import { Alert } from "../util/ui/Alert";
 import { Util } from "../util";

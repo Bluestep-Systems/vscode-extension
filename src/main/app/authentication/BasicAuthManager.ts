@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { BasicAuthParams } from "../../../../types";
 import { SESSION_MANAGER } from "../b6p_session/SessionManager";
 import { ContextNode } from "../context/ContextNode";
-import { PrivateKeys, PrivatePersistanceMap } from "../util/data/PseudoMaps";
+import { PrivateKeys, PrivatePersistanceMap } from "../util/PseudoMaps";
 import { AuthError, AuthManager, BasicAuth } from "./classes";
 
 /**

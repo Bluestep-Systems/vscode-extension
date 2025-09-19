@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { SavableObject } from "../../../../../../types";
+import type { SavableObject } from "../../../../../types";
 import { PseudoMap } from "./PseudoMap";
 import { SoftPersistable } from "./Persistable";
 

@@ -26,7 +26,7 @@ export interface HardPersistable extends SoftPersistable {
    * @param value The value to associate with the key.
    * @returns A promise that resolves to the PersistableMap instance.
    */
-  setAsync(key: string, value: import("../../../../../../types").SavableObject): Thenable<this>;
+  setAsync(key: string, value: import("../../../../../types").SavableObject): Thenable<this>;
 
   /**
    * Deletes the entry associated with the given key asynchronously.

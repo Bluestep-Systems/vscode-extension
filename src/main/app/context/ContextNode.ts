@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { PseudoMap } from "../util/data/PseudoMaps";
+import { PseudoMap } from "../util/PseudoMaps";
 import { SavableObject } from "../../../../types";
 
 /**
