@@ -1,6 +1,6 @@
 import type { SessionData } from "../../../../types";
 import { Auth, AuthManager, AuthObject } from "../authentication";
-import { PrivateKeys, PrivatePersistanceMap } from "../util/PseudoMaps";
+import { PrivateKeys, PrivateGenericMap } from "../util/PseudoMaps";
 import { ContextNode } from "../context/ContextNode";
 import { Alert } from "../util/ui/Alert";
 import { Util } from "../util";
@@ -55,7 +55,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
   /**
    * The persistence map for the session data. Largely used as alias for the `persistence()` method.
    */
-  #sessions: PrivatePersistanceMap<SessionData> | null = null;
+  #sessions: PrivateGenericMap<SessionData> | null = null;
 
   /**
    * The ancestor context node that is used to instantiate this manager
@@ -72,7 +72,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     if (this.#sessions) {
       throw new Error("only one session manager may be initialized");
     }
-    this.#sessions = new PrivatePersistanceMap<SessionData>(PrivateKeys.SESSIONS, this.context);
+    this.#sessions = new PrivateGenericMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
     Auth.initManagers(this);
     this.#authManager = Auth.determineManager();

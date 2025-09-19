@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { BasicAuthParams } from "../../../../types";
 import { SESSION_MANAGER } from "../b6p_session/SessionManager";
 import { ContextNode } from "../context/ContextNode";
-import { PrivateKeys, PrivatePersistanceMap } from "../util/PseudoMaps";
+import { PrivateKeys, PrivateGenericMap } from "../util/PseudoMaps";
 import { AuthError, AuthManager, BasicAuth } from "./classes";
 
 /**
@@ -14,7 +14,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   /**
    * the internal map of flags to basic auth params.
    */
-  private _flagMap: PrivatePersistanceMap<BasicAuthParams> | null = null;
+  private _flagMap: PrivateGenericMap<BasicAuthParams> | null = null;
 
   protected map() {
     return this.flagMap;
@@ -28,7 +28,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
     if (this._flagMap) {
       throw new Error("only one auth manager may be initialized");
     }
-    this._flagMap = new PrivatePersistanceMap(PrivateKeys.BASIC_AUTH, this.context);
+    this._flagMap = new PrivateGenericMap(PrivateKeys.BASIC_AUTH, this.context);
     return this;
   }
 

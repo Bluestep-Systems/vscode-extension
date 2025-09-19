@@ -9,7 +9,7 @@ import { PrivateKeys } from "./PersistenceKeys";
  * Data loaded is not immediately available upon construction, so any crucial data
  * you'll need to wait until `isInitialized()` returns true.
  */
-export class PrivatePersistanceMap<T extends SavableObject> extends PersistablePseudoMap<T> implements Persistable {
+export class PrivateGenericMap<T extends SavableObject> extends PersistablePseudoMap<T> implements Persistable {
 
   protected initialized: boolean = false;
   
