@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { ContextNode } from '../context/ContextNode';
-import { PrivateKeys, PrivatePersistanceMap } from '../util/data/PseudoMaps';
-import { SavableObject, ReleaseInfo, GithubRelease } from '../../../../types';
+import { UpdateInfo, GithubRelease, ClientInfo } from '../../../../types';
 import { App } from '../App';
+import { ContextNode } from '../context/ContextNode';
+import {  TypedPersistable } from '../util/data/PseudoMaps';
 import { Alert } from '../util/ui/Alert';
 
 
@@ -13,18 +13,18 @@ import { Alert } from '../util/ui/Alert';
  * @lastreviewed null
  */
 export const UPDATE_MANAGER = new class extends ContextNode {
-  private readonly UPDATE_CHECK_KEY = 'bsjs-lastUpdateCheck';
+  private readonly LAST_CHECKED_KEY = 'lastChecked';
   private readonly UPDATE_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
   private readonly repoOwner: string = 'bluestep-systems';
   private readonly repoName: string = 'vscode-extension';
-  
+
   /**
    * The ancestor context node that is used to instantiate this manager
    */
   #parent: typeof App | null = null;
 
-  #tokenMap: PrivatePersistanceMap<SavableObject> | null = null;  
+  #state: TypedPersistable<ClientInfo> | null = null;
 
   /**
    * Initializes the update checker, and also starts automatic update checking.
@@ -35,7 +35,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   init(parent: typeof App): this {
     this.#parent = parent;
 
-    this.#tokenMap = new PrivatePersistanceMap<SavableObject>(PrivateKeys.GITHUB_KEYS, this.context);
+    this.#state = new TypedPersistable<ClientInfo>(App.appKey, { version: "1.0.0", lastChecked: 0, githubToken: null });
     // Start automatic update checking (async, don't block startup)
     setTimeout(async () => {
       try {
@@ -43,12 +43,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
         await this.checkForUpdatesIfNeeded();
       } catch (error) {
         App.isDebugMode() && Alert.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));
-        App.logger.error("B6P: Update check failed:");
+        !App.isDebugMode() && App.logger.error("B6P: Update check failed:");
       }
-    }, 5000); 
+    }, 5000);
     return this;
   }
 
+  // documented in parent
   public get parent(): typeof App {
     if (!this.#parent) {
       throw new Error("UpdateChecker not initialized");
@@ -56,6 +57,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     return this.#parent;
   }
 
+  // documented in parent
   public get context(): vscode.ExtensionContext {
     if (!this.#parent) {
       throw new Error("UpdateChecker not initialized");
@@ -63,30 +65,24 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     return this.#parent.context;
   }
 
-
-  protected map(): PrivatePersistanceMap<SavableObject> {
-    // Use the parent's settings for storing update check data
-    if (!this.parent) {
-      throw new Error("UpdateChecker not initialized");
-    }
-    return (this.parent as any).settings;
+  /**
+   * The Github information map for storing update check data
+   */
+  protected map(): TypedPersistable<ClientInfo> {
+    return this.getState();
   }
 
   /**
    * Gets the token map for storing GitHub tokens.
    */
-  private getTokenMap(): PrivatePersistanceMap<SavableObject> {
-    if (!this.#tokenMap) {
+  private getState(): TypedPersistable<ClientInfo> {
+    if (!this.#state) {
       throw new Error("UpdateChecker not initialized!");
     }
-    return this.#tokenMap;
+    return this.#state;
   }
 
-  //@ts-ignore
-  private getDefaultToken(): string | null {
-    const token = this.getTokenMap().get('githubToken') as string | undefined;
-    return token || null;
-  }
+
 
   /**
    * Get GitHub authentication headers if token is available
@@ -99,13 +95,11 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       'Accept': 'application/vnd.github.v3+json'
     };
 
-    // Check for GitHub token in VS Code settings
-    const config = vscode.workspace.getConfiguration('bsjs-push-pull');
-    const githubToken = config.get<string>('updateCheck.githubToken');
-
-    if (githubToken) {
-      headers['Authorization'] = `Bearer ${githubToken}`;
+    const githubToken = this.getState().get('githubToken');
+    if (!githubToken) {
+      throw new Error("No GitHub token available");
     }
+    headers['Authorization'] = `Bearer ${githubToken}`;
 
     return headers;
   }
@@ -116,14 +110,14 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   public async checkForUpdatesIfNeeded(): Promise<void> {
     try {
-      const config = vscode.workspace.getConfiguration(App.appKey);
-      const updateCheckEnabled = config.get<boolean>('updateCheck.enabled', true);
+      const updateCheck = App.settings.get('updateCheck');
+      const updateCheckEnabled = updateCheck.enabled;
 
       if (!updateCheckEnabled) {
         return;
       }
 
-      const lastCheck = (this.map().get(this.UPDATE_CHECK_KEY) as number) || 0;
+      const lastCheck = this.getState().get(this.LAST_CHECKED_KEY) || 0;
       const now = Date.now();
 
       if (now - lastCheck < this.UPDATE_INTERVAL) {
@@ -131,7 +125,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       }
 
       await this.checkForUpdates();
-      this.map().set(this.UPDATE_CHECK_KEY, now);
+      this.getState().set(this.LAST_CHECKED_KEY, now);
     } catch (error) {
       console.error('Error checking for updates:', error);
     }
@@ -142,7 +136,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @returns UpdateInfo if a newer version is available, null otherwise
    * @lastreviewed null
    */
-  public async checkForUpdates(): Promise<ReleaseInfo | null> {
+  public async checkForUpdates(): Promise<UpdateInfo | null> {
     try {
       const currentVersion = this.getCurrentVersion();
       const latestRelease = await this.getLatestRelease();
@@ -154,7 +148,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       const latestVersion = latestRelease.tag_name.replace(/^v/, ''); // Remove 'v' prefix if present
 
       if (this.isNewerVersion(latestVersion, currentVersion)) {
-        const updateInfo: ReleaseInfo = {
+        const updateInfo: UpdateInfo = {
           version: latestVersion,
           downloadUrl: this.getDownloadUrl(latestRelease),
           releaseNotes: latestRelease.body,
@@ -179,8 +173,8 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private getCurrentVersion(): string {
     // Get version from the extension's package.json via VS Code API
-    const extension = vscode.extensions.getExtension('bluestep-systems.bsjs-push-pull');
-    return extension?.packageJSON?.version || (() => { throw new Error('Failed to get current version'); })();
+    const extension = this.getState().get('version');
+    return extension || (() => { throw new Error('Failed to get current version'); })();
   }
 
   /**
@@ -191,7 +185,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   private async getLatestRelease(): Promise<GithubRelease | null> {
     try {
       const url = `https://api.github.com/repos/${this.repoOwner}/${this.repoName}/releases/latest`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: this.getGitHubHeaders(),
@@ -283,8 +277,8 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @param updateInfo Information about the available update
    * @lastreviewed null
    */
-  private async notifyUser(updateInfo: ReleaseInfo): Promise<void> {
-    const config = vscode.workspace.getConfiguration('bsjs-push-pull');
+  private async notifyUser(updateInfo: UpdateInfo): Promise<void> {
+    const config = vscode.workspace.getConfiguration(App.appKey);
     const showNotifications = config.get<boolean>('updateCheck.showNotifications', true);
 
     if (!showNotifications) {
@@ -292,18 +286,24 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     }
 
     const message = `B6P Extension v${updateInfo.version} is available. You have v${this.getCurrentVersion()}.`;
-    const actions = ['Download', 'View Release Notes', 'Remind Later', 'Disable Updates'];
+    const Actions = {
+      DOWNLOAD: "Download",
+      VIEW_NOTES: "View Release Notes",
+      REMIND_LATER: "Remind Later",
+      DISABLE: "Disable Updates"
+    };
+    const actions = Object.values(Actions);
 
     const selection = await vscode.window.showInformationMessage(message, ...actions);
 
     switch (selection) {
-      case 'Download':
+      case Actions.DOWNLOAD:
         await this.openDownloadUrl(updateInfo.downloadUrl);
         break;
-      case 'View Release Notes':
+      case Actions.VIEW_NOTES:
         await this.showReleaseNotes(updateInfo);
         break;
-      case 'Disable Updates':
+      case Actions.DISABLE:
         await this.disableUpdateChecking();
         break;
       // 'Remind Later' or no selection - do nothing
@@ -329,7 +329,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @param updateInfo Information about the update including release notes
    * @lastreviewed null
    */
-  private async showReleaseNotes(updateInfo: ReleaseInfo): Promise<void> {
+  private async showReleaseNotes(updateInfo: UpdateInfo): Promise<void> {
     const panel = vscode.window.createWebviewPanel(
       'b6pReleaseNotes',
       `B6P Release Notes v${updateInfo.version}`,
@@ -346,7 +346,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @returns HTML string for the webview
    * @lastreviewed null
    */
-  private getReleaseNotesHtml(updateInfo: ReleaseInfo): string {
+  private getReleaseNotesHtml(updateInfo: UpdateInfo): string {
     const releaseNotes = updateInfo.releaseNotes
       .replace(/\n/g, '<br>')
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -410,15 +410,15 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @lastreviewed null
    */
   private async disableUpdateChecking(): Promise<void> {
-    const config = vscode.workspace.getConfiguration('bsjs-push-pull');
-    await config.update('updateCheck.enabled', false, vscode.ConfigurationTarget.Global);
+    const curUpdateSettings = App.settings.get('updateCheck');
+    App.settings.set('updateCheck', { ...curUpdateSettings, ...{ enabled: false } });
 
     vscode.window.showInformationMessage(
       'Automatic update checking has been disabled. You can re-enable it in the extension settings.',
       'Open Settings'
     ).then(selection => {
       if (selection === 'Open Settings') {
-        vscode.commands.executeCommand('workbench.action.openSettings', 'bsjs-push-pull.updateCheck');
+        vscode.commands.executeCommand('workbench.action.openSettings', `${App.appKey}.updateCheck`);
       }
     });
   }
@@ -431,10 +431,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   public async getAllReleases(includePrerelease = false): Promise<GithubRelease[]> {
     try {
-      const response = await fetch(`https://api.github.com/repos/bluestep-systems/vscode-extension/releases`, {
+      const response = await fetch(`https://api.github.com/repos/${this.repoOwner}/${this.repoName}/releases`, {
         method: 'GET',
         headers: this.getGitHubHeaders(),
-        
       });
 
       if (!response.ok) {

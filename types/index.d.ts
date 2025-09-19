@@ -357,23 +357,92 @@ type ConfigJsonContent = {
 /**
  * Information about a release of the B6P platform.
  */
-export type ReleaseInfo = {
+export type UpdateInfo ={
   version: string;
   downloadUrl: string;
   releaseNotes: string;
   publishedAt: string;
 }
-
+export type ClientInfo = {
+  version: string;
+  lastChecked: number;
+  githubToken: string | null;
+}
 export type GithubRelease = {
+  url: string;
+  html_url: string;
+  assets_url: string;
+  upload_url: string;
+  tarball_url: string;
+  zipball_url: string;
+  id: number;
+  node_id: string;
   tag_name: string;
+  target_commitish: string;
+  name: string;
   body: string;
+  draft: boolean;
+  prerelease: boolean;
+  immutable: boolean;
+  created_at: string;
   published_at: string;
-  draft: false;
-  prerelease: false;
-  assets: Array<{
-    name: string;
-    browser_download_url: string;
-  }>;
+  author: {
+    login: string;
+    id: number;
+    node_id: string;
+    avatar_url: string;
+    gravatar_id: string;
+    url: string;
+    html_url: string;
+    followers_url: string;
+    following_url: string;
+    gists_url: string;
+    starred_url: string;
+    subscriptions_url: string;
+    organizations_url: string;
+    repos_url: string;
+    events_url: string;
+    received_events_url: string;
+    type: "User";
+    site_admin: false;
+  };
+  assets: [
+    {
+      url: string;
+      browser_download_url: string;
+      id: number;
+      node_id: string;
+      name: string;
+      label: string;
+      state: "uploaded";
+      content_type: "application/zip";
+      size: number;
+      digest: string;
+      download_count: number;
+      created_at: string;
+      updated_at: string;
+      uploader: {
+        login: string;
+        id: number;
+        node_id: string;
+        avatar_url: string;
+        gravatar_id: string;
+        url: string;
+        html_url: string;
+        followers_url: string;
+        following_url: string;
+        gists_url: string;
+        starred_url: string;
+        subscriptions_url: string;
+        organizations_url: string;
+        repos_url: string;
+        events_url: string;
+        received_events_url: string;
+        type: "User";
+        site_admin: false;
+      }
+    }
+  ]
 }
 
 /**
@@ -383,7 +452,12 @@ export type Settings = {
   /**
    * Whether debug mode is enabled.
    */
-  isDebugMode: boolean;
+  debugMode: {
+    /**
+     * Whether debug mode is enabled.
+     */
+    enabled: boolean;
+  }
   /**
    * Settings related to update checks.
    */

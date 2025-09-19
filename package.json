@@ -40,10 +40,10 @@
           "default": true,
           "description": "Show update notifications"
         },
-        "bsjs-push-pull.isDebugMode": {
+        "bsjs-push-pull.debugMode.enabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Enable debug mode"
+          "description": "Enable debug mode",
+          "default": false
         }
       }
     },
@@ -171,32 +171,32 @@
       {
         "view": "b6pMenuView",
         "contents": "---- UNDER DEVELOPMENT ----",
-        "when": "bsjs-push-pull.isDebugMode"
+        "when": "bsjs-push-pull.debugMode.enabled"
       },
       {
         "view": "b6pMenuView",
         "contents": "[Check for Updates](command:bsjs-push-pull.checkForUpdates)",
-        "when": "bsjs-push-pull.isDebugMode"
+        "when": "bsjs-push-pull.debugMode.enabled"
       },
       {
         "view": "b6pMenuView",
         "contents": "[GOTO BlueSync](command:bsjs-push-pull.notify)",
-        "when": "bsjs-push-pull.isDebugMode"
+        "when": "bsjs-push-pull.debugMode.enabled"
       },
       {
         "view": "b6pMenuView",
         "contents": "[Trigger BlueSync Task](command:bsjs-push-pull.notify)",
-        "when": "bsjs-push-pull.isDebugMode"
+        "when": "bsjs-push-pull.debugMode.enabled"
       },
       {
         "view": "b6pMenuView",
         "contents": "[Extension Preferences](command:bsjs-push-pull.notify)",
-        "when": "bsjs-push-pull.isDebugMode"
+        "when": "bsjs-push-pull.debugMode.enabled"
       },
       {
         "view": "b6pMenuView",
         "contents": "[Toggle Test Task](command:bsjs-push-pull.testTask)",
-        "when": "bsjs-push-pull.isDebugMode"
+        "when": "bsjs-push-pull.debugMode.enabled"
       }
     ]
   },

@@ -2,7 +2,7 @@
 
 ## Overview
 
-When making changes to this VS Code extension codebase, AI agents MUST obey the guidelines delineated below.
+When making changes to this VS Code extension codebase, AI agents MUST obey the guidelines delineated below:
 
 ## Required Documentation Updates
 
@@ -81,10 +81,7 @@ When making significant changes:
 
 ## Important Notes
 
-- **Never leave documentation outdated** - it's worse than no documentation. If in doubt leave a //TODO comment in the docs.
-- **Update incrementally** - small, frequent updates are better than large overhauls
-- **Focus on the "why"** - explain architectural decisions and design patterns
-- **Include migration notes** when changing existing patterns or APIs
+- **Never leave documentation outdated** - it's worse than no documentation. If there is ever unceartainty, leave a `//HUMAN-REVIEW-NEEDED` comment in the docs to indicate that a human needs to review it.
 - **Maintain the user perspective** in README.md vs developer perspective in copilot-instructions.md
 
 ## Documentation Review Requirement
@@ -108,4 +105,14 @@ function processInput(input: string): ProcessedData {
 
 This ensures all AI-generated documentation receives proper human oversight before being considered complete and accurate.
 
-This ensures the codebase remains approachable for both users and developers, and that AI agents can effectively contribute to the project with proper context.
+## Type Maintenance
+
+**Whenever the AI agent is making any code changes, it MUST ensure that all TypeScript types are accurate and up-to-date.** This includes:
+- Updating type definitions in `src/types.ts` as needed
+- Ensuring all function signatures are correct **and not implied**
+- Verifying that all type imports are accurate and reflect the current codebase
+
+### Finally, it is IMPERATIVE that the keyword `any` is NEVER used in the codebase. If a situation arises where the AI agent believes `any` is necessary, it MUST leave a `//HUMAN-REVIEW-NEEDED` comment explaining the situation so that a human can review and provide an appropriate type. If a human reviewer later decides to use `any`, they must also leave a `//REASON-FOR-ANY` comment explaining why.
+
+## OVERRIDING GUIDELINES
+In exceptional cases where following these guidelines is impractical or impossible, AI agents may override them. However, any such overrides must be clearly documented with a `//HUMAN-REVIEW-NEEDED` comment in the relevant code or documentation, explaining the reason for the override and what needs to be reviewed by a human. This ensures transparency and allows for proper human oversight of any deviations from standard practices.

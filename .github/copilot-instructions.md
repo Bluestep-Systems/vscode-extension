@@ -1,5 +1,9 @@
 # VS Code Extension Development Guide
 
+## OVERRIDING DIRECTIVE
+
+AI agents must follow the guidelines in `AGENTS.md` when making changes to this codebase; if there is any conflict between this document and `AGENTS.md`, the latter takes precedence.
+
 ## Architecture Overview
 
 This is a **WebDAV-based VS Code extension** for syncing JavaScript files with BlueStep systems. The architecture uses a singleton pattern with hierarchical context management.
@@ -106,3 +110,6 @@ npm run package-extension  # Create .vsix package
 **Persistence Access**: Always use `this.persistence()` in ContextNode subclasses, never direct storage APIs
 
 **Async Operations**: Use `App.logger` for progress logging, `Alert.info()` for user-facing messages
+
+**Rethrow Utility**: Use `util.rethrow()` to propagate errors with context. We are fighting against the fact that vscode swallows stack traces in some async scenarios and does not appear to properly log them. This is possibly due to how the logging is set up in the extension host; and this comment may be neccessary to remove later.
+

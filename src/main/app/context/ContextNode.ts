@@ -22,7 +22,7 @@ export abstract class ContextNode {
   /**
    * the map that this context node manages.
    */
-  protected abstract map(): PseudoMap<SavableObject>;
+  protected abstract map(): PseudoMap<string, SavableObject>;
   
   /**
    * Initialize the manager with the given context.

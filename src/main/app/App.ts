@@ -1,21 +1,20 @@
 import * as vscode from 'vscode';
-import { Settings, type ReadOnlyMap } from '../../../types';
+import { type ReadOnlyMap } from '../../../types';
 import { Auth } from './authentication';
 import { SESSION_MANAGER as SM } from './b6p_session/SessionManager';
 import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { UPDATE_MANAGER as UM } from './services/UpdateChecker';
-import { SettingsMap } from './util/data/PseudoMaps';
+import { SettingsWrapper } from './util/data/PseudoMaps';
 import { Alert } from './util/ui/Alert';
 
 
 
 export const App = new class extends ContextNode {
   #_context: vscode.ExtensionContext | null = null;
-  #_settings: SettingsMap | null = null;
+  #_settings: SettingsWrapper | null = null;
   #_outputChannel: vscode.LogOutputChannel | null = null;
-  #debugMode: boolean = false;
   public readonly appKey = "bsjs-push-pull";
   parent: ContextNode | null = null;
 
@@ -119,8 +118,7 @@ export const App = new class extends ContextNode {
       log: true,
     });
     this.context.subscriptions.push(this.#_outputChannel);
-    this.#_settings = new SettingsMap(vscode.workspace.getConfiguration().get<Settings>(this.appKey));
-    console.log(this.settings.toJSON());
+    this.#_settings = new SettingsWrapper();
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor) {
         readOnlyCheck();
@@ -129,8 +127,15 @@ export const App = new class extends ContextNode {
         // console.log('No active editor.');
       }
     }, this, this.context.subscriptions);
-    this.#debugMode = this.settings.get('isDebugMode') as boolean ?? false;
-    vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
+    // Register the settings change listener
+    vscode.workspace.onDidChangeConfiguration(event => {
+      if (event.affectsConfiguration(App.appKey)) {
+        console.log("Configuration changed, updating settings map");
+        this.settings.sync();
+      }
+      
+    });
+    this.settings.sync();
     readOnlyCheck(); // run it once on startup
 
     // Initialize dependancies
@@ -143,18 +148,17 @@ export const App = new class extends ContextNode {
   public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
     !alreadyAlerted && Alert.info("Cleared all Settings", { modal: false });
-    this.#debugMode = false;
-    vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
+    this.settings.set('debugMode', { enabled: false });
+    
   }
 
   public isDebugMode() {
-    return this.#debugMode;
+    return this.settings.get('debugMode').enabled;
   }
 
   public toggleDebugMode() {
-    this.#debugMode = !this.#debugMode;
-    vscode.commands.executeCommand('setContext', 'bsjs-push-pull.isDebugMode', this.#debugMode);
-    Alert.info(`Debug mode ${this.#debugMode ? "enabled" : "disabled"}`, { modal: false });
-    this.settings.set('isDebugMode', this.#debugMode);
+    console.log("Toggling debug mode");
+    this.settings.set('debugMode', { enabled: !this.settings.get('debugMode').enabled });
+    Alert.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`, { modal: false });
   }
 }();

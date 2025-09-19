@@ -11,7 +11,7 @@ export function activate(context: vscode.ExtensionContext) {
 	try {
 		lifeCycle.start(context);
 	}catch (error) {
-		console.trace("Error during activation:", error);
+		console.trace(error);
 	}
 }
 

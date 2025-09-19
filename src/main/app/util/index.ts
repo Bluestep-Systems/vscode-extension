@@ -107,9 +107,16 @@ export namespace Util {
    * @param ms 
    * @returns 
    */
-  export async function sleep(ms: number) {
+  export async function sleep(ms: number): Promise<unknown> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  export function rethrow<U,V>(fn: (arg: U) => V, arg: U): V {
+    try {
+      return fn(arg);
+    } catch (e) {
+      throw e;
+    }
+  }
 }
 
