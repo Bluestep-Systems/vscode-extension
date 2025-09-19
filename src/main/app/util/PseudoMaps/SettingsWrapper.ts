@@ -4,7 +4,7 @@ import { App } from "../../App";
 import { Alert } from "../ui/Alert";
 import { Util } from "..";
 import { TypedMap } from "./TypedMap";
-import { SoftPersistable } from "./Persistable";
+import { Persistable } from "./Persistable";
 
 /**
  * A wrapper around the vscode settings to provide typed access and modification.
@@ -18,7 +18,7 @@ import { SoftPersistable } from "./Persistable";
  * 
  * @lastreviewed null
  */
-export class SettingsWrapper extends TypedMap<Settings> implements SoftPersistable {
+export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
   public static readonly DEFAULT: Settings = { 
     debugMode: { enabled: false }, 
     updateCheck: { enabled: true, showNotifications: true } 
@@ -49,7 +49,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements SoftPersistab
    * @param update Whether to update the VSCode configuration (default: true). Passing false will only update context variables,
    * because otherwise it would cause an infinite loop when called from sync().
    */
-  store(update: boolean = true) {
+  async store(update: boolean = true) {
     const flattened: { key: string, value: SavableObject }[] = [];
     for (const key of this.keys()) {
       Util.rethrow(flattenLayer, { key, obj: this.get(key) });

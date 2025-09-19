@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import type { SavableObject } from "../../../../../types";
-import { SoftPersistableMap } from "./SoftPersistableMap";
-import { HardPersistable } from "./Persistable";
+import { PersistablePseudoMap } from "./PersistablePseudoMap";
+import { Persistable } from "./Persistable";
 import { PrivateKeys } from "./PersistenceKeys";
 
 /**
@@ -9,7 +9,7 @@ import { PrivateKeys } from "./PersistenceKeys";
  * Data loaded is not immediately available upon construction, so any crucial data
  * you'll need to wait until `isInitialized()` returns true.
  */
-export class PrivatePersistanceMap<T extends SavableObject> extends SoftPersistableMap<T> implements HardPersistable {
+export class PrivatePersistanceMap<T extends SavableObject> extends PersistablePseudoMap<T> implements Persistable {
 
   protected initialized: boolean = false;
   
@@ -51,14 +51,7 @@ export class PrivatePersistanceMap<T extends SavableObject> extends SoftPersista
   async set(key: string, value: T) {
     this.requiresInit();
     super.set(key, value);
-  }
-
-  // documented in parent
-  async setAsync(key: string, value: T): Promise<this> {
-    this.requiresInit();
-    super.set(key, value);
-    await this.store();
-    return this;
+    return await this.store();
   }
 
   // documented in parent
@@ -68,26 +61,17 @@ export class PrivatePersistanceMap<T extends SavableObject> extends SoftPersista
   }
 
   // documented in parent
-  delete(key: string): this {
+  delete(key: string) {
     this.requiresInit();
     super.delete(key);
-    this.store();
-    return this;
+    return this.store();
   }
 
   // documented in parent
-  async deleteAsync(key: string): Promise<this> {
-    this.requiresInit();
-    super.delete(key);
-    await this.store();
-    return this;
-  }
-
-  // documented in parent
-  clear(): void {
+  clear() {
     this.requiresInit();
     super.clear();
-    this.store();
+    return this.store();
   }
 
   // documented in parent

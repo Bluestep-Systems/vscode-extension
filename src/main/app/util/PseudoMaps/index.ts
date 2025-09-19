@@ -3,13 +3,13 @@ export { PseudoMap } from "./PseudoMap";
 export { TypedMap } from "./TypedMap";
 
 // Interfaces
-export { SoftPersistable, HardPersistable } from "./Persistable";
+export { Persistable } from "./Persistable";
 
 // Persistence keys
 export { PrivateKeys, PublicKeys } from "./PersistenceKeys";
 
 // Persistable maps
-export { SoftPersistableMap } from "./SoftPersistableMap";
+export { PersistablePseudoMap } from "./PersistablePseudoMap";
 export { PublicPersistanceMap } from "./PublicPersistanceMap";
 export { PrivatePersistanceMap } from "./PrivatePersistanceMap";
 export { TypedPersistable } from "./TypedPersistable";

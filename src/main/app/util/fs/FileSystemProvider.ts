@@ -249,8 +249,8 @@ export class VSCodeFileSystem implements FileSystemProvider {
  * Mock implementation for testing purposes.
  */
 export class MockFileSystem implements FileSystemProvider {
-  private files = new Map<string, Uint8Array>();
-  private stats = new Map<string, vscode.FileStat>();
+  private files = new Map<string, Uint8Array | Error>();
+  private stats = new Map<string, vscode.FileStat | Error>();
   
   constructor() {
     // Initialize with some default behavior
@@ -342,8 +342,8 @@ export class MockFileSystem implements FileSystemProvider {
    * ```
    */
   setMockError(uri: vscode.Uri, error: Error): void {
-    this.files.set(uri.toString(), error as any);
-    this.stats.set(uri.toString(), error as any);
+    this.files.set(uri.toString(), error);
+    this.stats.set(uri.toString(), error);
   }
 
   /**
@@ -545,7 +545,7 @@ export class MockFileSystem implements FileSystemProvider {
         const relativePath = fileUri.path.slice(uri.path.length + 1).split('/')[0];
         if (!entries.find(entry => entry[0] === relativePath)) {
           const fileStat = this.stats.get(fileUriStr);
-          entries.push([relativePath, fileStat ? fileStat.type : vscode.FileType.File]);
+          entries.push([relativePath, fileStat ? (fileStat as vscode.FileStat).type : vscode.FileType.File]);
         }
       }
     }

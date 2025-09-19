@@ -582,15 +582,19 @@ suite('RemoteScriptFile Tests', () => {
 
   suite('Parser Operations', () => {
     test('should allow overwriting parser', () => {
+      // REASON-FOR-ANY: Accessing private property for test verification
       const originalParser = (remoteScriptFile as any).parser;
       const newUri = vscode.Uri.parse('file:///test/workspace/different.domain.com/9999/draft/different.js');
       const newScriptFile = new RemoteScriptFile({ downstairsUri: newUri });
+      // REASON-FOR-ANY: Accessing private property for test verification
       const newParser = (newScriptFile as any).parser;
       
       const result = remoteScriptFile.withParser(newParser);
       
       assert.strictEqual(result, remoteScriptFile);
+      // REASON-FOR-ANY: Accessing private property for test verification
       assert.notStrictEqual((remoteScriptFile as any).parser, originalParser);
+      // REASON-FOR-ANY: Accessing private property for test verification
       assert.strictEqual((remoteScriptFile as any).parser, newParser);
     });
   });

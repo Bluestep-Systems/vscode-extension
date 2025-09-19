@@ -69,13 +69,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * The Github information map for storing update check data
    */
   protected map(): TypedPersistable<ClientInfo> {
-    return this.getState();
+    return this.state;
   }
 
   /**
    * Gets the token map for storing GitHub tokens.
    */
-  private getState(): TypedPersistable<ClientInfo> {
+  private get state(): TypedPersistable<ClientInfo> {
     if (!this.#state) {
       throw new Error("UpdateChecker not initialized!");
     }
@@ -95,7 +95,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       'Accept': 'application/vnd.github.v3+json'
     };
 
-    const githubToken = this.getState().get('githubToken');
+    const githubToken = this.state.get('githubToken');
     if (!githubToken) {
       throw new Error("No GitHub token available");
     }
@@ -117,7 +117,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
         return;
       }
 
-      const lastCheck = this.getState().get(this.LAST_CHECKED_KEY) || 0;
+      const lastCheck = this.state.get(this.LAST_CHECKED_KEY) || 0;
       const now = Date.now();
 
       if (now - lastCheck < this.UPDATE_INTERVAL) {
@@ -125,7 +125,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       }
 
       await this.checkForUpdates();
-      this.getState().set(this.LAST_CHECKED_KEY, now);
+      this.state.set(this.LAST_CHECKED_KEY, now);
     } catch (error) {
       console.error('Error checking for updates:', error);
     }
@@ -173,7 +173,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private getCurrentVersion(): string {
     // Get version from the extension's package.json via VS Code API
-    const extension = this.getState().get('version');
+    const extension = this.state.get('version');
     return extension || (() => { throw new Error('Failed to get current version'); })();
   }
 

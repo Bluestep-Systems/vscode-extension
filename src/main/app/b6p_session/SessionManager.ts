@@ -132,7 +132,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     url = new URL(url);
     const origin = url.origin;
     if (!this.sessions.has(origin)) {
-      await this.sessions.setAsync(origin, { lastCsrfToken: null, INGRESSCOOKIE: null, JSESSIONID: null, lastTouched: Date.now() });
+      await this.sessions.set(origin, { lastCsrfToken: null, INGRESSCOOKIE: null, JSESSIONID: null, lastTouched: Date.now() });
     }
     const session = this.sessions.get(origin);
     if (!session) {
@@ -144,7 +144,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       //if (!session.lastCsrfToken || session.lastTouched < (Date.now() - this.MAX_CSRF_TOKEN_AGE)) {
       const tokenValue = await this.fetch(`${origin}/csrf-token`).then(r => r.text());
       session.lastCsrfToken = tokenValue;
-      await this.sessions.setAsync(origin, session);
+      await this.sessions.set(origin, session);
       await this.sessions.store(); // TODO find why this keeps being needed
       //}
 
@@ -167,7 +167,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         throw new Error("No CSRF token in response");
       }
       session.lastCsrfToken = newToken;
-      await this.sessions.setAsync(origin, session);
+      await this.sessions.set(origin, session);
       return response;
     } catch (e) {
       if (retries <= 0) {
@@ -180,7 +180,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
           throw new Error('Request timed out');
         }
         if (e instanceof UnauthorizedError) {
-          await this.sessions.deleteAsync(origin);
+          await this.sessions.delete(origin);
           Alert.info(e.stack || e.message || String(e), { modal: false });
           Alert.info("Session expired/etc, attempting to re-authenticate...", { modal: false });
           await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
@@ -189,7 +189,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         if (retries > 0) {
           session.lastCsrfToken = null; // force a refresh
           Alert.info(`Request didn't work, retrying... (${retries} attempts left)`, { modal: false });
-          this.sessions.deleteAsync(origin);
+          await this.sessions.delete(origin);
           await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
           return await this.csrfFetch(url, options, retries - 1);
         }
@@ -226,7 +226,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
           || this.sessions.get(responderUrl.origin)?.lastCsrfToken
           || null
       };
-      await this.sessions.setAsync(responderUrl.origin, sessionData);
+      await this.sessions.set(responderUrl.origin, sessionData);
     } else {
       const existing = this.sessions.get(responderUrl.origin);
       if (!existing) {
@@ -234,7 +234,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       }
       existing.lastTouched = Date.now();
       existing.lastCsrfToken = response.headers.get(this.B6P_CSRF_TOKEN) || existing.lastCsrfToken;
-      await this.sessions.setAsync(responderUrl.origin, existing);
+      await this.sessions.set(responderUrl.origin, existing);
     }
 
     return response;

@@ -1,14 +1,14 @@
 import * as vscode from "vscode";
 import type { SavableObject } from "../../../../../types";
 import { TypedMap } from "./TypedMap";
-import { SoftPersistable } from "./Persistable";
+import { Persistable } from "./Persistable";
 import { PublicKeys } from "./PersistenceKeys";
 
 /**
  * A typed persistable pseudomap.
  * @lastreviewed null
  */
-export class TypedPersistable<T extends Record<string, SavableObject>> extends TypedMap<T> implements SoftPersistable {
+export class TypedPersistable<T extends Record<string, SavableObject>> extends TypedMap<T> implements Persistable {
   public readonly key: PublicKeys;
   protected context: vscode.ExtensionContext;
   
