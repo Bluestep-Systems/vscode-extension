@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
-import { App } from '../../App';
-import { flattenDirectory } from '../../util/data/flattenDirectory';
-import { getHostFolderUri } from '../../util/data/getHostFolderUri';
-import { getScript } from "../../util/data/getScript";
-import { parseUpstairsUrl } from "../../util/data/URLParser";
-import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
-import { Alert } from '../../util/ui/Alert';
-import { ProgressHelper } from '../../util/ui/ProgressHelper';
-import { RemoteScriptRoot } from '../../util/script/RemoteScriptRoot';
+import { App } from '../App';
+import { flattenDirectory } from '../util/data/flattenDirectory';
+import { getHostFolderUri } from '../util/data/getHostFolderUri';
+import { getScript } from "../util/data/getScript";
+import { parseUpstairsUrl } from "../util/data/URLParser";
+import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
+import { Alert } from '../util/ui/Alert';
+import { ProgressHelper } from '../util/ui/ProgressHelper';
+import { RemoteScriptRoot } from '../util/script/RemoteScriptRoot';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.

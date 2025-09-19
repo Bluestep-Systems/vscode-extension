@@ -145,7 +145,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       const tokenValue = await this.fetch(`${origin}/csrf-token`).then(r => r.text());
       session.lastCsrfToken = tokenValue;
       await this.sessions.setAsync(origin, session);
-      await this.sessions.storeAsync(); // TODO find why this keeps being needed
+      await this.sessions.store(); // TODO find why this keeps being needed
       //}
 
       options = options || {};

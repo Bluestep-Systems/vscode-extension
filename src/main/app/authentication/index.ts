@@ -1,6 +1,6 @@
 import { SESSION_MANAGER } from '../b6p_session/SessionManager';
 import { AuthManager, AuthObject } from './classes';
-import { BASIC_AUTH_MANAGER } from './managers/BasicAuthManager';
+import { BASIC_AUTH_MANAGER } from './BasicAuthManager';
 
 export { AuthError, AuthManager, AuthObject } from './classes';
 /**

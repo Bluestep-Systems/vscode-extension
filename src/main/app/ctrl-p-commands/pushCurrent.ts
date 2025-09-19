@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { getActiveEditorUri } from '../../util/data/getActiveEditorUri';
-import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
-import { getDirtyDocs } from '../../util/data/getDirtyDocs';
-import { Alert } from '../../util/ui/Alert';
-import pushScript from '../scripts/push';
-import { App } from '../../App';
+import { getActiveEditorUri } from '../util/data/getActiveEditorUri';
+import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
+import { getDirtyDocs } from '../util/data/getDirtyDocs';
+import { Alert } from '../util/ui/Alert';
+import pushScript from './push';
+import { App } from '../App';
 
 
 /**

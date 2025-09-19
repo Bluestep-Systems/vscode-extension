@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { RemoteScriptFile } from '../../util/script/RemoteScriptFile';
-import pullScript from '../scripts/pull';
+import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
+import pullScript from './pull';
 export default async function (): Promise<void> {
   try {
     const workspaceUri = vscode.workspace.workspaceFolders![0]!.uri;

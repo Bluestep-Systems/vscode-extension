@@ -153,6 +153,9 @@ export const App = new class extends ContextNode {
   }
 
   public isDebugMode() {
+    if (this.#_settings === null) {
+      return false;
+    }
     return this.settings.get('debugMode').enabled;
   }
 

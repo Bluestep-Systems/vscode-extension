@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { UpdateInfo, GithubRelease, ClientInfo } from '../../../../types';
 import { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
-import {  TypedPersistable } from '../util/data/PseudoMaps';
+import { PublicKeys, TypedPersistable } from '../util/data/PseudoMaps';
 import { Alert } from '../util/ui/Alert';
 
 
@@ -35,7 +35,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   init(parent: typeof App): this {
     this.#parent = parent;
 
-    this.#state = new TypedPersistable<ClientInfo>(App.appKey, { version: "1.0.0", lastChecked: 0, githubToken: null });
+    this.#state = new TypedPersistable<ClientInfo>(PublicKeys.GITHUB_STATE, this.context, { version: "1.0.0", lastChecked: 0, githubToken: null });
     // Start automatic update checking (async, don't block startup)
     setTimeout(async () => {
       try {

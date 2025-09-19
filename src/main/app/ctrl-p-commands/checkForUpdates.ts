@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { Alert } from '../../util/ui/Alert';
-import { UPDATE_MANAGER } from '../../services/UpdateChecker';
+import { Alert } from '../util/ui/Alert';
+import { UPDATE_MANAGER } from '../services/UpdateChecker';
 
 export default async function checkForUpdates(): Promise<void> {
   try {

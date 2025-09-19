@@ -1,6 +1,6 @@
 
-import { App } from '../../App';
-import { Auth } from '../../authentication';
+import { App } from '../App';
+import { Auth } from '../authentication';
 
 /**
  * Updates the user credentials. As of right now this is only tooled for Basic Auth, so we'll

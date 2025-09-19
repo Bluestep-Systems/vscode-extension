@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import type { SavableObject, Settings } from "../../../../../types";
-import { App } from "../../App";
-import { Alert } from "../ui/Alert";
-import { Util } from "..";
+import type { SavableObject, Settings } from "../../../../../../types";
+import { App } from "../../../App";
+import { Alert } from "../../ui/Alert";
+import { Util } from "../..";
 
 
 /**
@@ -48,9 +48,8 @@ export class PseudoMap<K extends string, V> {
    * @param value The value to associate with the key.
    * @returns The PseudoMap instance.
    */
-  set(key: K, value: V): this {
+  set(key: K, value: V): void {
     this.obj[key] = value;
-    return this;
   }
 
   /**
@@ -68,9 +67,8 @@ export class PseudoMap<K extends string, V> {
    * @param key The key to delete.
    * @returns The PseudoMap instance.
    */
-  delete(key: K): this {
+  delete(key: K): void {
     delete this.obj[key];
-    return this;
   }
 
   /**
@@ -112,9 +110,8 @@ export class TypedMap<T extends Record<string, SavableObject>> extends PseudoMap
    * @returns This instance for method chaining
    * @lastreviewed null
    */
-  public set<K extends keyof T & string>(key: K, value: T[K]): this {
+  public set<K extends keyof T & string>(key: K, value: T[K]) {
     this.obj[key] = value;
-    return this;
   }
 
   /**
@@ -147,11 +144,12 @@ export class TypedMap<T extends Record<string, SavableObject>> extends PseudoMap
    * @returns This instance for method chaining
    * @lastreviewed null
    */
-  public delete<K extends keyof T & string>(key: K): this {
+  public delete<K extends keyof T & string>(key: K) {
     if (key in this.obj) {
       delete this.obj[key];
+    } else {
+      throw new Error(`Key ${key} does not exist in TypedMap and cannot be deleted.`);
     }
-    return this;
   }
 
   /**
@@ -253,11 +251,7 @@ interface HardPersistable extends SoftPersistable {
    * @returns A promise that resolves to the PersistableMap instance.
    */
   deleteAsync(key: string): Thenable<this>;
-  /**
-   * Checks if the map is fully initialized.
-   * @returns True if the map is initialized, false otherwise.
-   */
-  storeAsync(): Thenable<void>;
+  
 }
 
 
@@ -294,10 +288,9 @@ export abstract class SoftPersistableMap<T extends SavableObject> extends Pseudo
    * @param value The value to associate with the key.
    * @returns The PersistableMap instance.
    */
-  set(key: string, value: T): this {
+  async set(key: string, value: T) {
     super.set(key, value);
-    this.store();
-    return this;
+    await this.store();
   }
 
   /**
@@ -311,7 +304,7 @@ export abstract class SoftPersistableMap<T extends SavableObject> extends Pseudo
   /**
    * Stores the current state of the of the map in the appropriate storage.
    */
-  abstract store(): void;
+  abstract store(): Thenable<void>;
 
 
   /**
@@ -340,8 +333,8 @@ export class PublicPersistanceMap<T extends SavableObject> extends SoftPersistab
   /**
    * Stores the current state of the of the map in the vscode workspaceState
    */
-  store(): void {
-    this.context.workspaceState.update(this.key, this.obj);
+  store(): Thenable<void> {
+    return this.context.workspaceState.update(this.key, this.obj);
   }
 
 
@@ -392,16 +385,16 @@ export class PrivatePersistanceMap<T extends SavableObject> extends SoftPersista
   }
 
   // documented in parent
-  set(key: string, value: T): this {
+  async set(key: string, value: T) {
     this.requiresInit();
-    return super.set(key, value);
+    super.set(key, value);
   }
 
   // documented in parent
   async setAsync(key: string, value: T): Promise<this> {
     this.requiresInit();
     super.set(key, value);
-    await this.storeAsync();
+    await this.store();
     return this;
   }
 
@@ -423,7 +416,7 @@ export class PrivatePersistanceMap<T extends SavableObject> extends SoftPersista
   async deleteAsync(key: string): Promise<this> {
     this.requiresInit();
     super.delete(key);
-    await this.storeAsync();
+    await this.store();
     return this;
   }
 
@@ -435,15 +428,9 @@ export class PrivatePersistanceMap<T extends SavableObject> extends SoftPersista
   }
 
   // documented in parent
-  store(): void {
+  store(): Thenable<void> {
     this.requiresInit();
-    this.context.secrets.store(this.key, JSON.stringify(this.obj));
-  }
-
-  // documented in parent
-  async storeAsync(): Promise<void> {
-    this.requiresInit();
-    await this.context.secrets.store(this.key, JSON.stringify(this.obj));
+    return this.context.secrets.store(this.key, JSON.stringify(this.obj));
   }
 
 
@@ -475,13 +462,12 @@ export enum PrivateKeys {
 /**
  * Keys used for public persistance maps
  * 
- * We may not end up needing these, but leaving them here for now.
  */
 export enum PublicKeys {
   /**
-   * //TODO
+   * Key for the data we persist for the GitHub state
    */
-  TODO = 'TODO',
+  GITHUB_STATE = 'b6p:github_state',
 
 }
 
@@ -490,11 +476,13 @@ export enum PublicKeys {
  * @lastreviewed null
  */
 export class TypedPersistable<T extends Record<string, SavableObject>> extends TypedMap<T> implements SoftPersistable {
-  public readonly key: string;
-  constructor(key: string, defaultValue: T) {
+  public readonly key: PublicKeys;
+  protected context: vscode.ExtensionContext;
+  constructor(key: PublicKeys, context: vscode.ExtensionContext, defaultValue: T) {
     super();
     this.key = key;
-    this.obj = vscode.workspace.getConfiguration().get<T>(key, defaultValue);
+    this.context = context;
+    this.obj = this.context.workspaceState.get<T>(this.key, defaultValue);
   }
 
 
@@ -511,15 +499,14 @@ export class TypedPersistable<T extends Record<string, SavableObject>> extends T
     return this;
   }
 
-
   // documented in parent
   toJSON(): string {
     return JSON.stringify(this.obj);
   }
 
   // documented in parent
-  store(): void {
-    throw new Error("Method not implemented.");
+  store(): Thenable<void> {
+    return this.context.workspaceState.update(this.key, JSON.stringify(this.obj));
   }
 }
 
@@ -559,7 +546,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements SoftPersistab
   }
 
   // documented in parent
-  store(update: boolean = true): void {
+  store(update: boolean = true) {
     console.log('attempting to store');
     const flattened: { key: string, value: SavableObject }[] = [];
     for (const key of this.keys()) {
@@ -598,10 +585,6 @@ export class SettingsWrapper extends TypedMap<Settings> implements SoftPersistab
     const inspectResult = vscode.workspace.getConfiguration().inspect<Settings>(App.appKey);
     const config = inspectResult?.globalValue || SettingsWrapper.DEFAULT;
     const fleshedOut = { ...SettingsWrapper.DEFAULT, ...config };
-    console.log("Settings changed, syncing");
-    console.log("Current settings:", this.obj);
-    console.log("Inspect result:", inspectResult);
-    console.log("New effective settings:", fleshedOut);
     // Update each property individually to maintain type safety
     for (const key of Object.keys(fleshedOut)) {
 

@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { SESSION_MANAGER as SM} from "../../b6p_session/SessionManager";
-import { Alert } from "../../util/ui/Alert";
-import { ProgressHelper } from "../../util/ui/ProgressHelper";
-import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../../types";
+import { SESSION_MANAGER as SM} from "../b6p_session/SessionManager";
+import { Alert } from "../util/ui/Alert";
+import { ProgressHelper } from "../util/ui/ProgressHelper";
+import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../types";
 import push from "./push";
-import { App } from '../../App';
+import { App } from '../App';
 
 /**
  * Pushes the current file to multiple origins and topIds as specified by a function in the current file.

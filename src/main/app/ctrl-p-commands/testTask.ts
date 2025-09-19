@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getActiveEditorUri } from '../../util/data/getActiveEditorUri';
+import { getActiveEditorUri } from '../util/data/getActiveEditorUri';
 
 /**
  * A test task for development. be sure to remove it before production.

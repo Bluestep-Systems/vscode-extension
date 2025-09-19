@@ -1,13 +1,13 @@
-import pullScript from "./scripts/pull";
-import pullCurrent from "./scripts/pullCurrent";
-import pushScript from "./scripts/push";
-import pushCurrent from "./scripts/pushCurrent";
-import updateCredentials from "./scripts/updateCredentials";
-import runTask from "./scripts/runTask";
-import checkForUpdates from "./scripts/checkForUpdates";
-import notify from "./scripts/notify";
-import quickDeploy from "./scripts/quickDeploy";
-import testTask from "./scripts/testTask";
+import pullScript from "./pull";
+import pullCurrent from "./pullCurrent";
+import pushScript from "./push";
+import pushCurrent from "./pushCurrent";
+import updateCredentials from "./updateCredentials";
+import runTask from "./runTask";
+import checkForUpdates from "./checkForUpdates";
+import notify from "./notify";
+import quickDeploy from "./quickDeploy";
+import testTask from "./testTask";
 
 /**
  * Namespace for Ctrl+P command related functions.
