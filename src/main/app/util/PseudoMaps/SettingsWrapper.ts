@@ -12,10 +12,9 @@ import { SoftPersistable } from "./Persistable";
  * A convention is used where the settings key in vscode is `bsjs-push-pull.<settingKey>`
  * and nested keys are represented with dot notation, e.g. `bsjs-push-pull.nested.key`.
  * 
- * We very specifically want to funnel all settings changes through this class
- * so that we can ensure that the settings are always in sync with the vscode and appropriate context variables.
- * 
- * The thing to note here is that c
+ * We very specifically want to funnel all active settings changes through this class
+ * so that we can ensure that the settings are always in sync with the appropriate context variables
+ * that we use for UI responsiveness.
  * 
  * @lastreviewed null
  */
@@ -45,9 +44,12 @@ export class SettingsWrapper extends TypedMap<Settings> implements SoftPersistab
     return this;
   }
 
-  // documented in parent
+  /**
+   * Stores the current settings to the VSCode configuration.
+   * @param update Whether to update the VSCode configuration (default: true). Passing false will only update context variables,
+   * because otherwise it would cause an infinite loop when called from sync().
+   */
   store(update: boolean = true) {
-    console.log('attempting to store');
     const flattened: { key: string, value: SavableObject }[] = [];
     for (const key of this.keys()) {
       Util.rethrow(flattenLayer, { key, obj: this.get(key) });
@@ -63,7 +65,6 @@ export class SettingsWrapper extends TypedMap<Settings> implements SoftPersistab
       }
     }
     
-    console.log("Storing settings:", flattened);
     flattened.forEach(({ key, value }) => {
       const config = vscode.workspace.getConfiguration(App.appKey);
 
@@ -81,16 +82,24 @@ export class SettingsWrapper extends TypedMap<Settings> implements SoftPersistab
     });
   }
 
+  /**
+   * Synchronizes the in-memory settings with the actual VSCode settings.
+   * This reads the current settings from VSCode and updates the internal state accordingly.
+   * It also removes any obsolete settings that are no longer present in the VSCode configuration.
+   * 
+   * @lastreviewed null
+   */
   sync(): void {
     // Read the effective configuration value (includes recent updates)
     const inspectResult = vscode.workspace.getConfiguration().inspect<Settings>(App.appKey);
     const config = inspectResult?.globalValue || SettingsWrapper.DEFAULT;
+    // Merge with defaults to ensure all keys are present
+    // It appears VScode likes to drop keys that are set to undefined or false for some reason
     const fleshedOut = { ...SettingsWrapper.DEFAULT, ...config };
     
     // Update each property individually to maintain type safety
     for (const key of Object.keys(fleshedOut)) {
       const k = key as keyof Settings;
-      console.log(`Syncing setting ${k}`);
       const value = fleshedOut[k];
       type K = keyof Settings;
       // Use the set method without store() call to avoid redundant updates
