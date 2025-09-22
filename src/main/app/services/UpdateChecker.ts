@@ -3,7 +3,8 @@ import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
 import type { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
 import { PublicKeys, TypedPersistable } from '../util/PseudoMaps';
-
+import { FileSystem } from '../util/fs/FileSystemFactory';
+const fs = FileSystem.getInstance;
 /**
  * Singleton update checker for the BlueStep VS Code extension.
  * Checks for new releases on GitHub and notifies users when updates are available.
@@ -406,7 +407,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
       // Ensure the directory exists
       try {
-        await vscode.workspace.fs.createDirectory(vscode.Uri.file(tempDir));
+        await fs().createDirectory(vscode.Uri.file(tempDir));
       } catch {
         // Directory might already exist, ignore error
       }
@@ -414,7 +415,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       // Write the file
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      await vscode.workspace.fs.writeFile(tempFilePath, uint8Array);
+      await fs().writeFile(tempFilePath, uint8Array);
 
       return tempFilePath.fsPath;
 
