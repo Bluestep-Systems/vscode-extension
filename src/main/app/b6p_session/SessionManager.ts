@@ -5,6 +5,7 @@ import { ContextNode } from "../context/ContextNode";
 import { Alert } from "../util/ui/Alert";
 import { Util } from "../util";
 import { App } from "../App";
+import { ResponseCodes } from "../util/network/StatusCodes";
 
 /**
  * The session manager is responsible for managing individual sessions with BlueStep servers.
@@ -207,7 +208,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * @returns 
    */
   private async processResponse(response: Response): Promise<Response> {
-    if (response.status === 403) {
+    if (response.status === ResponseCodes.FORBIDDEN) {
       throw new UnauthorizedError(`HTTP Error: ${response.status} ${response.statusText}`);
     }
     const cookies = response.headers.get("set-cookie");
@@ -275,7 +276,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         }
       });
       App.logger.info("login status:" + response.status);
-      if (response.status >= 400) {
+      if (response.status >= ResponseCodes.BAD_REQUEST) {
         throw new SessionError(`HTTP Error: ${response.status} ${response.statusText}`);
       }
       await this.processResponse(response);

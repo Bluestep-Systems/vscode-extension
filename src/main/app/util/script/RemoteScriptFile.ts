@@ -8,6 +8,7 @@ import * as path from 'path';
 import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
 import { FileSystem } from '../fs/FileSystemFactory';
 import { GlobMatcher } from '../data/GlobMatcher';
+import { ResponseCodes, ResponseCodes as StatusCodes } from '../network/StatusCodes';
 const fs = FileSystem.getInstance;
 
 /**
@@ -239,7 +240,7 @@ export class RemoteScriptFile {
         "Accept": "*/*",
       }
     });
-    if (response.status >= 400) {
+    if (response.status >= StatusCodes.BAD_REQUEST) {
       throw new Error(`Error fetching upstairs file. Status: ${response.status}.\n ${response.statusText}`);
     }
     return await response.text();
@@ -272,7 +273,7 @@ export class RemoteScriptFile {
     if (ignore) {
       App.logger.info(`not downloading \`${this.getFileName()}\` because in .gitignore`);
       await this.deleteFromMetadata();
-      return new Response("", { status: 418 });
+      return new Response("", { status: ResponseCodes.TEAPOT });
     }
     const lookupUri = this.toUpstairsURL();
     App.logger.info("downloading from:" + lookupUri);
@@ -282,7 +283,7 @@ export class RemoteScriptFile {
         "Accept": "*/*",
       }
     });
-    if (response.status >= 400) {
+    if (response.status >= StatusCodes.BAD_REQUEST) {
       App.logger.error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
       throw new Error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
     }
