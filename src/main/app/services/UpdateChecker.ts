@@ -1,11 +1,8 @@
 import * as vscode from 'vscode';
 import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
-import { App } from '../App';
+import type { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
 import { PublicKeys, TypedPersistable } from '../util/PseudoMaps';
-import { Alert } from '../util/ui/Alert';
-
-
 
 /**
  * Singleton update checker for the BlueStep VS Code extension.
@@ -17,7 +14,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   private readonly UPDATE_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
   private readonly REPO_OWNER: string = 'bluestep-systems';
-  private readonly repoName: string = 'vscode-extension';
+  private readonly REPO_NAME: string = 'vscode-extension';
 
   /**
    * The ancestor context node that is used to instantiate this manager
@@ -36,16 +33,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     this._parent = parent;
     const version = parent.getVersion();
     this._state = new TypedPersistable<ClientInfo>({ key: PublicKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null } });
-    // Start automatic update checking (async, don't block startup)
     setTimeout(async () => {
       try {
         console.log("B6P: Starting automatic update check...");
         await this.checkForUpdatesIfNeeded();
       } catch (error) {
-        App.isDebugMode() && Alert.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));
-        !App.isDebugMode() && App.logger.error("B6P: Update check failed:");
+        this.parent.logger.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));
       }
-
     }, 5_000);
     return this;
   }
@@ -126,13 +120,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   public async checkForUpdatesIfNeeded(): Promise<void> {
     try {
-      const updateCheck = App.settings.get('updateCheck');
+      const updateCheck = this.parent.settings.get('updateCheck');
       const updateCheckEnabled = updateCheck.enabled;
 
       if (!updateCheckEnabled) {
         return;
       } else if (this.state.get('githubToken') === null) {
-        vscode.window.showWarningMessage('GitHub token not set. Update checking is disabled until a valid token is provided.');
+        vscode.window.showWarningMessage('B6P -- GitHub token not set. Update checking is disabled');
         return;
       }
 
@@ -201,12 +195,12 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private async getLatestRelease(): Promise<GithubRelease | null> {
     try {
-      const url = `https://api.github.com/repos/${this.REPO_OWNER}/${this.repoName}/releases/latest`;
+      const url = `https://api.github.com/repos/${this.REPO_OWNER}/${this.REPO_NAME}/releases/latest`;
 
       const response = await fetch(url, {
         method: 'GET',
         headers: await this.getGitHubHeaders(),
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+        signal: AbortSignal.timeout(10_000) // 10 second timeout
       });
 
       if (response.status === 404) {
@@ -286,17 +280,17 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     }
 
     // Fallback to release page
-    return `https://github.com/${this.REPO_OWNER}/${this.repoName}/releases/tag/${release.tag_name}`;
+    return `https://github.com/${this.REPO_OWNER}/${this.REPO_NAME}/releases/tag/${release.tag_name}`;
   }
 
-  /**
+    /**
    * Show update notification to user
    * @param updateInfo Information about the available update
    * @lastreviewed null
    */
   private async notifyUser(updateInfo: UpdateInfo): Promise<void> {
-    const config = this.parent.settings;
-    const showNotifications = config.get('updateCheck').showNotifications;
+    const config = vscode.workspace.getConfiguration(this.parent.appKey);
+    const showNotifications = config.get<boolean>('updateCheck.showNotifications', true);
 
     if (!showNotifications) {
       return;
@@ -304,6 +298,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
     const message = `B6P Extension v${updateInfo.version} is available. You have v${this.getCurrentVersion()}.`;
     const Actions = {
+      AUTO_INSTALL: "Auto Install",
       DOWNLOAD: "Download",
       VIEW_NOTES: "View Release Notes",
       REMIND_LATER: "Remind Later",
@@ -314,6 +309,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     const selection = await vscode.window.showInformationMessage(message, ...actions);
 
     switch (selection) {
+      case Actions.AUTO_INSTALL:
+        await this.autoInstallUpdate(updateInfo);
+        break;
       case Actions.DOWNLOAD:
         await this.openDownloadUrl(updateInfo.downloadUrl);
         break;
@@ -323,11 +321,118 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       case Actions.DISABLE:
         await this.disableUpdateChecking();
         break;
-      case Actions.REMIND_LATER:
-        //TODO implement some kind of snooze functionality
-        break;
-      default:
-        throw new Error("No action selected");
+      // 'Remind Later' or no selection - do nothing
+    }
+  }
+
+  /**
+   * Automatically download and install the extension update
+   * @param updateInfo Information about the available update
+   * @lastreviewed null
+   */
+  private async autoInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
+    try {
+      // Show progress notification
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Installing B6P Extension v${updateInfo.version}`,
+        cancellable: false
+      }, async (progress) => {
+        progress.report({ increment: 0, message: "Downloading..." });
+
+        // Check if the download URL is a .vsix file
+        if (!updateInfo.downloadUrl.endsWith('.vsix')) {
+          throw new Error('Auto-install requires a direct .vsix download link');
+        }
+
+        // Download the .vsix file
+        progress.report({ increment: 30, message: "Downloading extension..." });
+        const vsixPath = await this.downloadVsixFile(updateInfo.downloadUrl, updateInfo.version);
+
+        // Install the extension
+        progress.report({ increment: 70, message: "Installing extension..." });
+        await this.installVsixFile(vsixPath);
+
+        progress.report({ increment: 100, message: "Installation complete!" });
+      });
+
+      // Prompt user to reload VS Code
+      const reloadAction = "Reload Now";
+      const selection = await vscode.window.showInformationMessage(
+        `B6P Extension v${updateInfo.version} has been installed successfully! Please reload VS Code to activate the new version.`,
+        reloadAction,
+        "Later"
+      );
+
+      if (selection === reloadAction) {
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+      }
+
+    } catch (error) {
+      console.error('Auto-install failed:', error);
+      vscode.window.showErrorMessage(
+        `Failed to auto-install extension: ${error instanceof Error ? error.message : error}. Please download and install manually.`
+      );
+      // Fallback to opening download URL
+      await this.openDownloadUrl(updateInfo.downloadUrl);
+    }
+  }
+
+  /**
+   * Download the .vsix file to a temporary location
+   * @param downloadUrl URL to download the .vsix file from
+   * @param version Version string for temporary file naming
+   * @returns Path to the downloaded .vsix file
+   * @lastreviewed null
+   */
+  private async downloadVsixFile(downloadUrl: string, version: string): Promise<string> {
+    try {
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'B6P-VSCode-Extension',
+        },
+        signal: AbortSignal.timeout(30000) // 30 second timeout
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed with status ${response.status}`);
+      }
+
+      // Create temporary file path
+      const tempDir = this.context.globalStorageUri.fsPath;
+      const tempFileName = `bsjs-push-pull-${version}.vsix`;
+      const tempFilePath = vscode.Uri.joinPath(this.context.globalStorageUri, tempFileName);
+
+      // Ensure the directory exists
+      try {
+        await vscode.workspace.fs.createDirectory(vscode.Uri.file(tempDir));
+      } catch {
+        // Directory might already exist, ignore error
+      }
+
+      // Write the file
+      const arrayBuffer = await response.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      await vscode.workspace.fs.writeFile(tempFilePath, uint8Array);
+
+      return tempFilePath.fsPath;
+
+    } catch (error) {
+      throw new Error(`Failed to download extension: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  /**
+   * Install a .vsix file using VS Code's extension API
+   * @param vsixPath Local file path to the .vsix file
+   * @lastreviewed null
+   */
+  private async installVsixFile(vsixPath: string): Promise<void> {
+    try {
+      await vscode.commands.executeCommand('workbench.extensions.installExtension', vscode.Uri.file(vsixPath));
+    } catch (error) {
+      throw new Error(`Failed to install extension: ${error instanceof Error ? error.message : error}`);
     }
   }
 
@@ -431,15 +536,15 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @lastreviewed null
    */
   private async disableUpdateChecking(): Promise<void> {
-    const curUpdateSettings = App.settings.get('updateCheck');
-    App.settings.set('updateCheck', { ...curUpdateSettings, ...{ enabled: false } });
+    const curUpdateSettings = this.parent.settings.get('updateCheck');
+    this.parent.settings.set('updateCheck', { ...curUpdateSettings, ...{ enabled: false } });
 
     vscode.window.showInformationMessage(
       'Automatic update checking has been disabled. You can re-enable it in the extension settings.',
       'Open Settings'
     ).then(selection => {
       if (selection === 'Open Settings') {
-        vscode.commands.executeCommand('workbench.action.openSettings', `${App.appKey}.updateCheck`);
+        vscode.commands.executeCommand('workbench.action.openSettings', `${this.parent.appKey}.updateCheck`);
       }
     });
   }
@@ -452,7 +557,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   public async getAllReleases(includePrerelease = false): Promise<GithubRelease[]> {
     try {
-      const response = await fetch(`https://api.github.com/repos/${this.REPO_OWNER}/${this.repoName}/releases`, {
+      const response = await fetch(`https://api.github.com/repos/${this.REPO_OWNER}/${this.REPO_NAME}/releases`, {
         method: 'GET',
         headers: await this.getGitHubHeaders(),
       });
