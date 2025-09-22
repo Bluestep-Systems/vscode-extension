@@ -15,7 +15,12 @@ export enum PrivateKeys {
   /**
    * key for the data we persist for the github keys map
    */
-  GITHUB_KEYS = 'b6p:github_keys'
+  GITHUB_KEYS = 'b6p:github_keys',
+
+  /**
+   * Key for the data we persist for the GitHub state
+   */
+  GITHUB_STATE = 'b6p:private_github_state',
 }
 
 /**
@@ -25,5 +30,5 @@ export enum PublicKeys {
   /**
    * Key for the data we persist for the GitHub state
    */
-  GITHUB_STATE = 'b6p:github_state',
+  GITHUB_STATE = 'b6p:public_github_state',
 }

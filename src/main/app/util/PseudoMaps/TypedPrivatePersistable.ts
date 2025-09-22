@@ -29,7 +29,7 @@ export class TypedPrivatePersistable<T extends Record<string, SavableObject>> ex
    * @param defaultValue The default value if no stored data exists
    * @lastreviewed null
    */
-  constructor(key: PrivateKeys, context: vscode.ExtensionContext, defaultValue: T) {
+  constructor({ key, context, defaultValue }: { key: PrivateKeys; context: vscode.ExtensionContext; defaultValue: T }) {
     // Call super with a dummy public key since we'll override the behavior
     super({ key, context, defaultValue });
     this.context.secrets.get(this.key).then(jsonString => {
@@ -63,11 +63,10 @@ export class TypedPrivatePersistable<T extends Record<string, SavableObject>> ex
    * @returns This instance for chaining
    * @lastreviewed null
    */
-  set<K extends keyof T & string>(key: K, value: T[K]): this
-  set<K extends keyof T & string>(key: K, value: T[K], update: boolean = true): this {
+  set<K extends keyof T & string>(key: K, value: T[K]): this {
     this.checkIsInitialized();
     super.set(key, value);
-    update && this.store();
+    this.store();
     return this;
   }
 

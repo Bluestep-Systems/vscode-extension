@@ -2,8 +2,9 @@ import * as vscode from 'vscode';
 import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
 import type { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
-import { PublicKeys, TypedPersistable } from '../util/PseudoMaps';
 import { FileSystem } from '../util/fs/FileSystemFactory';
+import { PrivateKeys, TypedPersistable } from '../util/PseudoMaps';
+import { TypedPrivatePersistable } from '../util/PseudoMaps/TypedPrivatePersistable';
 const fs = FileSystem.getInstance;
 /**
  * Singleton update checker for the BlueStep VS Code extension.
@@ -33,7 +34,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   init(parent: typeof App): this {
     this._parent = parent;
     const version = parent.getVersion();
-    this._state = new TypedPersistable<ClientInfo>({ key: PublicKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null } });
+    this._state = new TypedPrivatePersistable<ClientInfo>({ key: PrivateKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null } });
     setTimeout(async () => {
       try {
         console.log("B6P: Starting automatic update check...");
