@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { UpdateInfo, GithubRelease, ClientInfo } from '../../../../types';
+import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
 import { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
 import { PublicKeys, TypedPersistable } from '../util/PseudoMaps';
@@ -16,15 +16,15 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   private readonly LAST_CHECKED_KEY = 'lastChecked';
   private readonly UPDATE_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-  private readonly repoOwner: string = 'bluestep-systems';
+  private readonly REPO_OWNER: string = 'bluestep-systems';
   private readonly repoName: string = 'vscode-extension';
 
   /**
    * The ancestor context node that is used to instantiate this manager
    */
-  #parent: typeof App | null = null;
+  private _parent: typeof App | null = null;
 
-  #state: TypedPersistable<ClientInfo> | null = null;
+  private _state: TypedPersistable<ClientInfo> | null = null;
 
   /**
    * Initializes the update checker, and also starts automatic update checking.
@@ -33,9 +33,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
 
   init(parent: typeof App): this {
-    this.#parent = parent;
-
-    this.#state = new TypedPersistable<ClientInfo>(PublicKeys.GITHUB_STATE, this.context, { version: "1.0.0", lastChecked: 0, githubToken: null });
+    this._parent = parent;
+    const version = parent.getVersion();
+    this._state = new TypedPersistable<ClientInfo>({ key: PublicKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null } });
     // Start automatic update checking (async, don't block startup)
     setTimeout(async () => {
       try {
@@ -45,24 +45,25 @@ export const UPDATE_MANAGER = new class extends ContextNode {
         App.isDebugMode() && Alert.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));
         !App.isDebugMode() && App.logger.error("B6P: Update check failed:");
       }
-    }, 5000);
+
+    }, 5_000);
     return this;
   }
 
   // documented in parent
   public get parent(): typeof App {
-    if (!this.#parent) {
+    if (!this._parent) {
       throw new Error("UpdateChecker not initialized");
     }
-    return this.#parent;
+    return this._parent;
   }
 
   // documented in parent
   public get context(): vscode.ExtensionContext {
-    if (!this.#parent) {
+    if (!this._parent) {
       throw new Error("UpdateChecker not initialized");
     }
-    return this.#parent.context;
+    return this._parent.context;
   }
 
   /**
@@ -73,29 +74,44 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   }
 
   /**
-   * Gets the token map for storing GitHub tokens.
+   * Gets the Client Information state, which represents things like version, last update, etc.
    */
   private get state(): TypedPersistable<ClientInfo> {
-    if (!this.#state) {
+    if (!this._state) {
       throw new Error("UpdateChecker not initialized!");
     }
-    return this.#state;
+    return this._state;
   }
 
-
+  private async getGithubToken() {
+    const token = this.state.get('githubToken');
+    if (!token) {
+      return vscode.window.showInputBox({
+        prompt: 'A GitHub token is required: please enter it',
+        placeHolder: 'ghp_XXXXXXXXXXXXXXXXXXXXXX'
+      }).then(input => {
+        if (input) {
+          this.state.set('githubToken', input);
+          return input;
+        }
+        throw new Error("No GitHub token available");
+      });
+    }
+    return token;
+  }
 
   /**
    * Get GitHub authentication headers if token is available
    * @returns Headers object with authentication if configured
    * @lastreviewed null
    */
-  private getGitHubHeaders(): Record<string, string> {
+  private async getGitHubHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
       'User-Agent': 'B6P-VSCode-Extension',
       'Accept': 'application/vnd.github.v3+json'
     };
 
-    const githubToken = this.state.get('githubToken');
+    const githubToken = await this.getGithubToken();
     if (!githubToken) {
       throw new Error("No GitHub token available");
     }
@@ -114,6 +130,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       const updateCheckEnabled = updateCheck.enabled;
 
       if (!updateCheckEnabled) {
+        return;
+      } else if (this.state.get('githubToken') === null) {
+        vscode.window.showWarningMessage('GitHub token not set. Update checking is disabled until a valid token is provided.');
         return;
       }
 
@@ -167,14 +186,12 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   }
 
   /**
-   * Get current extension version from VS Code extension context
+   * Get current extension version from App singleton
    * @returns Current extension version string
    * @lastreviewed null
    */
   private getCurrentVersion(): string {
-    // Get version from the extension's package.json via VS Code API
-    const extension = this.state.get('version');
-    return extension || (() => { throw new Error('Failed to get current version'); })();
+    return this.parent.getVersion();
   }
 
   /**
@@ -184,11 +201,11 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private async getLatestRelease(): Promise<GithubRelease | null> {
     try {
-      const url = `https://api.github.com/repos/${this.repoOwner}/${this.repoName}/releases/latest`;
+      const url = `https://api.github.com/repos/${this.REPO_OWNER}/${this.repoName}/releases/latest`;
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: this.getGitHubHeaders(),
+        headers: await this.getGitHubHeaders(),
         signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
@@ -269,7 +286,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     }
 
     // Fallback to release page
-    return `https://github.com/${this.repoOwner}/${this.repoName}/releases/tag/${release.tag_name}`;
+    return `https://github.com/${this.REPO_OWNER}/${this.repoName}/releases/tag/${release.tag_name}`;
   }
 
   /**
@@ -278,8 +295,8 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @lastreviewed null
    */
   private async notifyUser(updateInfo: UpdateInfo): Promise<void> {
-    const config = vscode.workspace.getConfiguration(App.appKey);
-    const showNotifications = config.get<boolean>('updateCheck.showNotifications', true);
+    const config = this.parent.settings;
+    const showNotifications = config.get('updateCheck').showNotifications;
 
     if (!showNotifications) {
       return;
@@ -306,7 +323,11 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       case Actions.DISABLE:
         await this.disableUpdateChecking();
         break;
-      // 'Remind Later' or no selection - do nothing
+      case Actions.REMIND_LATER:
+        //TODO implement some kind of snooze functionality
+        break;
+      default:
+        throw new Error("No action selected");
     }
   }
 
@@ -431,9 +452,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   public async getAllReleases(includePrerelease = false): Promise<GithubRelease[]> {
     try {
-      const response = await fetch(`https://api.github.com/repos/${this.repoOwner}/${this.repoName}/releases`, {
+      const response = await fetch(`https://api.github.com/repos/${this.REPO_OWNER}/${this.repoName}/releases`, {
         method: 'GET',
-        headers: this.getGitHubHeaders(),
+        headers: await this.getGitHubHeaders(),
       });
 
       if (!response.ok) {

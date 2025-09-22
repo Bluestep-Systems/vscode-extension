@@ -103,6 +103,9 @@ function processInput(input: string): ProcessedData {
 }
 ```
 
+## Number Formatting Guidelines
+- Use underscores for thousands separators in numeric literals (e.g., `1_000`, `10_000_000`).
+
 This ensures all AI-generated documentation receives proper human oversight before being considered complete and accurate.
 
 ## Type Maintenance

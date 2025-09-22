@@ -2,17 +2,17 @@ import * as vscode from "vscode";
 import type { SavableObject } from "../../../../../types";
 import { TypedMap } from "./TypedMap";
 import { Persistable } from "./Persistable";
-import { PublicKeys } from "./PersistenceKeys";
+import { PrivateKeys, PublicKeys } from "./PersistenceKeys";
 
 /**
  * A typed persistable pseudomap.
  * @lastreviewed null
  */
 export class TypedPersistable<T extends Record<string, SavableObject>> extends TypedMap<T> implements Persistable {
-  public readonly key: PublicKeys;
+  public readonly key: PublicKeys | PrivateKeys;
   protected context: vscode.ExtensionContext;
-  
-  constructor(key: PublicKeys, context: vscode.ExtensionContext, defaultValue: T) {
+
+  constructor({key, context, defaultValue}: {key: PublicKeys | PrivateKeys, context: vscode.ExtensionContext, defaultValue: T}) {
     super();
     this.key = key;
     this.context = context;
@@ -23,12 +23,15 @@ export class TypedPersistable<T extends Record<string, SavableObject>> extends T
    * Sets a value with type safety and automatic persistence.
    * @param key The key to set
    * @param value The value to set
+   * @param update Whether to immediately store the updated map. This is primarily intended to allow you to await store() after multiple sets
+   * so it doesn't get called multiple times in a row.
    * @returns This instance for chaining
    * @lastreviewed null
    */
-  set<K extends keyof T & string>(key: K, value: T[K]): this {
+  set<K extends keyof T & string>(key: K, value: T[K]): this
+  set<K extends keyof T & string>(key: K, value: T[K], update: boolean = true): this {
     super.set(key, value);
-    this.store();
+    update && this.store();
     return this;
   }
 
@@ -39,6 +42,6 @@ export class TypedPersistable<T extends Record<string, SavableObject>> extends T
 
   // documented in parent
   store(): Thenable<void> {
-    return this.context.workspaceState.update(this.key, JSON.stringify(this.obj));
+    return this.context!.workspaceState.update(this.key, JSON.stringify(this.obj));
   }
 }

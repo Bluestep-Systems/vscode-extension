@@ -12,9 +12,9 @@ import { Alert } from './util/ui/Alert';
 
 
 export const App = new class extends ContextNode {
-  #_context: vscode.ExtensionContext | null = null;
-  #_settings: SettingsWrapper | null = null;
-  #_outputChannel: vscode.LogOutputChannel | null = null;
+  private _context: vscode.ExtensionContext | null = null;
+  private _settings: SettingsWrapper | null = null;
+  private _outputChannel: vscode.LogOutputChannel | null = null;
   public readonly appKey = "bsjs-push-pull";
   parent: ContextNode | null = null;
 
@@ -75,14 +75,14 @@ export const App = new class extends ContextNode {
    * @returns true if the app is initialized, false otherwise.
    */
   public isInitialized(): boolean {
-    return this.#_context !== null;
+    return this._context !== null;
   }
 
   public get context(): vscode.ExtensionContext {
     if (!this.isInitialized()) {
       throw new Error('Extension context is not set');
     }
-    return this.#_context!;
+    return this._context!;
   }
 
   protected map() {
@@ -90,35 +90,35 @@ export const App = new class extends ContextNode {
   }
 
   public get settings() {
-    if (this.#_settings === null) {
+    if (this._settings === null) {
       throw new Error('Settings map is not set');
     }
-    return this.#_settings!;
+    return this._settings!;
   }
 
   /**
    * the output channel for logging. logs to a channel named "B6P" in the vscode output pane.
    */
   public get logger() {
-    if (this.#_outputChannel === null) {
+    if (this._outputChannel === null) {
       throw new Error('Output channel is not set');
     }
-    return this.#_outputChannel;
+    return this._outputChannel;
   }
 
   public init(context: vscode.ExtensionContext) {
-    if (this.#_context !== null) {
+    if (this._context !== null) {
       throw new Error('Extension context is already set');
     }
-    this.#_context = context;
+    this._context = context;
     // for some reason we can't perform the truncated version of this. I.E.
     // `.forEach(context.subscriptions.push)`
     this.disposables.forEach(disposable => this.context.subscriptions.push(disposable));
-    this.#_outputChannel = vscode.window.createOutputChannel("B6P", {
+    this._outputChannel = vscode.window.createOutputChannel("B6P", {
       log: true,
     });
-    this.context.subscriptions.push(this.#_outputChannel);
-    this.#_settings = new SettingsWrapper();
+    this.context.subscriptions.push(this._outputChannel);
+    this._settings = new SettingsWrapper();
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor) {
         readOnlyCheck();
@@ -153,7 +153,7 @@ export const App = new class extends ContextNode {
   }
 
   public isDebugMode() {
-    if (this.#_settings === null) {
+    if (this._settings === null) {
       return false;
     }
     return this.settings.get('debugMode').enabled;
@@ -163,5 +163,24 @@ export const App = new class extends ContextNode {
     console.log("Toggling debug mode");
     this.settings.set('debugMode', { enabled: !this.settings.get('debugMode').enabled });
     Alert.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`, { modal: false });
+  }
+
+  /**
+   * Gets the current extension version from VS Code extension API
+   * @returns The version string from the extension's package.json
+   * @lastreviewed null
+   */
+  public getVersion(): string {
+    try {
+      // Get the extension from VS Code's extension API
+      const extension = vscode.extensions.getExtension('bluestep-systems.bsjs-push-pull');
+      if (extension && extension.packageJSON && extension.packageJSON.version) {
+        return extension.packageJSON.version;
+      }
+      throw new Error('Could not find extension package.json');
+    } catch (error) {
+      //TODO determine if we want to rethrow or not
+      throw error;
+    }
   }
 }();

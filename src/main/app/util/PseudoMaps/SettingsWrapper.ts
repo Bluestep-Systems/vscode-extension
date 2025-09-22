@@ -19,11 +19,11 @@ import { Persistable } from "./Persistable";
  * @lastreviewed null
  */
 export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
-  public static readonly DEFAULT: Settings = { 
-    debugMode: { enabled: false }, 
-    updateCheck: { enabled: true, showNotifications: true } 
+  public static readonly DEFAULT: Settings = {
+    debugMode: { enabled: false },
+    updateCheck: { enabled: true, showNotifications: true }
   };
-  
+
   constructor() {
     // Read from user settings (global) with fallback to defaults
     const config = vscode.workspace.getConfiguration().inspect<Settings>(App.appKey)?.globalValue ||
@@ -33,7 +33,11 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
 
   // documented in parent
   get<K extends keyof Settings>(key: K): Settings[K] {
-    return super.get(key) || SettingsWrapper.DEFAULT[key];
+    let ret = super.get(key) || SettingsWrapper.DEFAULT[key];
+    if (Object.keys(ret).length !== Object.keys(SettingsWrapper.DEFAULT[key]).length) {
+      ret = { ...SettingsWrapper.DEFAULT[key], ...ret };
+    }
+    return ret;
   }
 
   // documented in parent
@@ -54,7 +58,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
     for (const key of this.keys()) {
       Util.rethrow(flattenLayer, { key, obj: this.get(key) });
     }
-    
+
     function flattenLayer({ key, obj }: { key: string, obj: SavableObject }) {
       if (typeof obj === 'object' && obj !== null) {
         for (const [k, v] of Object.entries(obj)) {
@@ -64,13 +68,13 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
         flattened.push({ key, value: obj });
       }
     }
-    
+
     flattened.forEach(({ key, value }) => {
       const config = vscode.workspace.getConfiguration(App.appKey);
 
       // Set context variable for immediate UI responsiveness
       vscode.commands.executeCommand('setContext', `bsjs-push-pull.${key}`, value);
-      
+
       if (update) {
         try {
           config.update(key, value, vscode.ConfigurationTarget.Global);
@@ -96,7 +100,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
     // Merge with defaults to ensure all keys are present
     // It appears VScode likes to drop keys that are set to undefined or false for some reason
     const fleshedOut = { ...SettingsWrapper.DEFAULT, ...config };
-    
+
     // Update each property individually to maintain type safety
     for (const key of Object.keys(fleshedOut)) {
       const k = key as keyof Settings;
@@ -105,14 +109,14 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
       // Use the set method without store() call to avoid redundant updates
       (this.obj as Record<K, Settings[K]>)[k] = value as Settings[K];
     }
-    
+
     for (const key of this.keys()) {
       if (!(key in fleshedOut)) {
         console.log(`Removing obsolete setting ${key}`);
         this.delete(key);
       }
     }
-    
+
     this.store(false);
   }
 }
