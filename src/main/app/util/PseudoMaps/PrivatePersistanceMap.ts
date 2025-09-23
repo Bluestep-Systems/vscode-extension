@@ -35,46 +35,46 @@ export class PrivateGenericMap<T extends Serializable> extends PersistablePseudo
     }
   }
 
-  // documented in parent
+  
   get(key: string): T | undefined {
     this.requiresInit();
     return super.get(key);
   }
 
-  // documented in parent
+  
   has(key: string): boolean {
     this.requiresInit();
     return super.has(key);
   }
 
-  // documented in parent
+  
   async set(key: string, value: T) {
     this.requiresInit();
     super.set(key, value);
     return await this.store();
   }
 
-  // documented in parent
+  
   forEach(callback: (value: T, key: string, map: this) => void): void {
     this.requiresInit();
     super.forEach(callback);
   }
 
-  // documented in parent
+  
   delete(key: string) {
     this.requiresInit();
     super.delete(key);
     return this.store();
   }
 
-  // documented in parent
+  
   clear() {
     this.requiresInit();
     super.clear();
     return this.store();
   }
 
-  // documented in parent
+  
   store(): Thenable<void> {
     this.requiresInit();
     return this.context.secrets.store(this.key, JSON.stringify(this.obj));

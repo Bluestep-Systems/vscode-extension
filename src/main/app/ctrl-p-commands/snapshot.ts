@@ -7,8 +7,9 @@ import { Alert } from "../util/ui/Alert";
 
 //const fs = FileSystem.getInstance;
 export default async function snapshot({ overrideFormulaUri, sourceOps }: { overrideFormulaUri?: string, sourceOps?: SourceOps } = {}) {
-  //TODO remove when done
+  
   try {
+    //TODO remove when done
     App.logger.info("Snapshot command called with:", overrideFormulaUri, sourceOps);
     if (overrideFormulaUri === undefined && sourceOps === undefined) {
       App.logger.info("Snapshot command called with no arguments, assuming current context");

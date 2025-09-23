@@ -46,7 +46,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     return this;
   }
 
-  // documented in parent
+  
   public get parent(): typeof App {
     if (!this._parent) {
       throw new Error("UpdateChecker not initialized");
@@ -54,7 +54,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     return this._parent;
   }
 
-  // documented in parent
+  
   public get context(): vscode.ExtensionContext {
     if (!this._parent) {
       throw new Error("UpdateChecker not initialized");

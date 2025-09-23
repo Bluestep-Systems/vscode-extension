@@ -35,12 +35,12 @@ export class TypedPersistable<T extends Record<string, Serializable>> extends Ty
     return this;
   }
 
-  // documented in parent
+  
   toJSON(): string {
     return JSON.stringify(this.obj);
   }
 
-  // documented in parent
+  
   store(): Thenable<void> {
     return this.context!.workspaceState.update(this.key, JSON.stringify(this.obj));
   }
