@@ -1,4 +1,4 @@
-import type { SavableObject } from "../../../../../types";
+import type { Serializable } from "../../../../../types";
 import { PseudoMap } from "./PseudoMap";
 
 /**
@@ -6,7 +6,7 @@ import { PseudoMap } from "./PseudoMap";
  * Extends PseudoMap to provide strongly-typed persistence storage.
  * @lastreviewed null
  */
-export class TypedMap<T extends Record<string, SavableObject>> extends PseudoMap<keyof T & string, T[keyof T]> {
+export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<keyof T & string, T[keyof T]> {
 
   constructor(initialData?: T) {
     super();

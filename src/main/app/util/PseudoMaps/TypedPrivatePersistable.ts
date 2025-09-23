@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { SavableObject } from "../../../../../types";
+import type { Serializable } from "../../../../../types";
 import { PrivateKeys } from "./PersistenceKeys";
 import { TypedPersistable } from "./TypedPersistable";
 
@@ -13,7 +13,7 @@ import { TypedPersistable } from "./TypedPersistable";
  * @template T The type of the object being persisted
  * @lastreviewed null
  */
-export class TypedPrivatePersistable<T extends Record<string, SavableObject>> extends TypedPersistable<T> {
+export class TypedPrivatePersistable<T extends Record<string, Serializable>> extends TypedPersistable<T> {
   private isInitialized: boolean = false;
   /**
    * Constructor for TypedPrivatePersistable.

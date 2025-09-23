@@ -34,7 +34,6 @@ export default async function () {
  * 
  * //TODO improve this logic to be more efficient
  * @param sf 
- * @returns 
  */
 async function determine(sf: RemoteScriptFile) {
   const curFileName = sf.getFileName();

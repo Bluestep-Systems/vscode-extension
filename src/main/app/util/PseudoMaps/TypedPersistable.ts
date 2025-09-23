@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { SavableObject } from "../../../../../types";
+import type { Serializable } from "../../../../../types";
 import { TypedMap } from "./TypedMap";
 import { Persistable } from "./Persistable";
 import { PrivateKeys, PublicKeys } from "./PersistenceKeys";
@@ -8,7 +8,7 @@ import { PrivateKeys, PublicKeys } from "./PersistenceKeys";
  * A typed persistable pseudomap.
  * @lastreviewed null
  */
-export class TypedPersistable<T extends Record<string, SavableObject>> extends TypedMap<T> implements Persistable {
+export class TypedPersistable<T extends Record<string, Serializable>> extends TypedMap<T> implements Persistable {
   public readonly key: PublicKeys | PrivateKeys;
   protected context: vscode.ExtensionContext;
 

@@ -10,7 +10,7 @@ declare interface ReadOnlyMap<T> {
 /**
  * A primitive value that can be serialized.
  */
-export type PrimitiveSerializable = string | number | boolean | null;
+export type Primitive = string | number | boolean | null;
 
 /**
  * A nested object where all values are primitives or other nested objects.
@@ -22,7 +22,7 @@ export type PrimitiveSerializable = string | number | boolean | null;
  * const example3: PrimitiveNestedObject = { k1: null, k2: { k3: false } };
  */
 export type PrimitiveNestedObject = {
-  [key: string]: PrimitiveSerializable | PrimitiveNestedObject
+  [key: string]: Primitive | PrimitiveNestedObject
 }
 
 /**
@@ -36,15 +36,15 @@ export type PrimitiveNestedObject = {
  * ``` 
  *
  * @example
- * // Valid SavableObject examples:
- * const example2: SavableObject = 42;
- * const example5: SavableObject = [1, "two", false, null];
- * const example6: SavableObject = { k1: "v1", k2: 2, k3: [true, 5], k4: { nestedKey: "something" } };
+ * // Valid Serializable examples:
+ * const example2: Serializable = 42;
+ * const example5: Serializable = [1, "two", false, null];
+ * const example6: Serializable = { k1: "v1", k2: 2, k3: [true, 5], k4: { nestedKey: "something" } };
  */
-export type SavableObject =
-  | PrimitiveSerializable
-  | SavableObject[]
-  | { [key: string]: SavableObject };
+export type Serializable =
+  | Primitive
+  | Serializable[]
+  | { [key: string]: Serializable };
 
 /**
  * The structure of a WebDAV XML response.

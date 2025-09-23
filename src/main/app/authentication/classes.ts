@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { BasicAuthParams, SavableObject } from "../../../../types";
+import { BasicAuthParams, Serializable } from "../../../../types";
 import { ContextNode } from "../context/ContextNode";
 import type { SESSION_MANAGER } from "../b6p_session/SessionManager";
 
@@ -10,20 +10,20 @@ export abstract class AuthObject {
   /**
    * the internal savable object
    */
-  protected sObj: SavableObject;
+  protected sObj: Serializable;
 
   /**
    * constructs an auth object containing the given savable object.
    * @param arg the internal savable object
    */
-  constructor(arg: SavableObject) {
+  constructor(arg: Serializable) {
     this.sObj = arg;
   }
   /**
    * produces a savable object representing the internal state that can be used
    * in any one of the persistable maps.
    */
-  abstract toSavableObject(): SavableObject;
+  abstract toSavableObject(): Serializable;
 
   /**
    * produces a JSON representation of the internal state.

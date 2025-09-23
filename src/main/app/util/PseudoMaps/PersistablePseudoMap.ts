@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { SavableObject } from "../../../../../types";
+import type { Serializable } from "../../../../../types";
 import { PseudoMap } from "./PseudoMap";
 import { Persistable } from "./Persistable";
 
@@ -7,7 +7,7 @@ import { Persistable } from "./Persistable";
  * A persistable version of a pseudomap. Extending classes must implement an initializer
  * that will load the data from the appropriate source, and a storage method.
  */
-export abstract class PersistablePseudoMap<T extends SavableObject> extends PseudoMap<string, T> implements Persistable {
+export abstract class PersistablePseudoMap<T extends Serializable> extends PseudoMap<string, T> implements Persistable {
 
   /**
    * The key used for persisting the map in the vscode context.

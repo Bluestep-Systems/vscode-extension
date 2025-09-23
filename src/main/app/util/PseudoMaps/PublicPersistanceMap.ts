@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { SavableObject } from "../../../../../types";
+import type { Serializable } from "../../../../../types";
 import { PersistablePseudoMap } from "./PersistablePseudoMap";
 import { PublicKeys } from "./PersistenceKeys";
 
@@ -7,7 +7,7 @@ import { PublicKeys } from "./PersistenceKeys";
  * A persistable map that uses the vscode workspace state to persist data.
  * Note that this is synchronous, so you can use it immediately after construction.
  */
-export class PublicPersistanceMap<T extends SavableObject> extends PersistablePseudoMap<T> {
+export class PublicPersistanceMap<T extends Serializable> extends PersistablePseudoMap<T> {
   /**
    * Creates an instance of PublicPersistanceMap.
    * @param key The key used for persisting the map.

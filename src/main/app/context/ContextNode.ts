@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { PseudoMap } from "../util/PseudoMaps";
-import { SavableObject } from "../../../../types";
+import { Serializable } from "../../../../types";
 
 /**
  * An abstract base class for elements of the extension that require a vscode context, and some form of persistance.
@@ -22,7 +22,7 @@ export abstract class ContextNode {
   /**
    * the map that this context node manages.
    */
-  protected abstract map(): PseudoMap<string, SavableObject>;
+  protected abstract map(): PseudoMap<string, Serializable>;
   
   /**
    * Initialize the manager with the given context.
