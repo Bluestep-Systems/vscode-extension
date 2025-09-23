@@ -650,6 +650,10 @@ export class RemoteScriptFile {
   public isInBuildFolder() {
     return this.getDownstairsUri().fsPath.includes(`${path.sep}/.build${path.sep}`);
   }
+
+  public get extension() {
+    return path.extname(this.getFileName()).toLowerCase();
+  }
 }
 
 

@@ -75,11 +75,11 @@ export class RemoteScriptRoot {
       const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
       if (existingEntryIndex !== -1) {
         const newDateString = new Date().toUTCString();
-        
+
         md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
         md.pushPullRecords[existingEntryIndex].lastVerifiedHash = lastHash;
       } else {
-        
+
         const now = new Date().toUTCString();
         md.pushPullRecords.push({
           downstairsPath,
@@ -89,7 +89,7 @@ export class RemoteScriptRoot {
         });
       }
     });
-    App.isDebugMode() && console.log("Updated metadata:", metaData); 
+    App.isDebugMode() && console.log("Updated metadata:", metaData);
     return void 0;
   }
 
@@ -155,7 +155,7 @@ export class RemoteScriptRoot {
             // Don't retry content/parsing errors, fall through to create new metadata
             throw readError;
           }
-          
+
           // For other file system errors, retry
           attempts++;
           if (attempts >= maxAttempts) {
@@ -236,7 +236,7 @@ export class RemoteScriptRoot {
         "**/.DS_Store",
       ];
       modified = true;
-    } 
+    }
     const preModified = JSON.parse(JSON.stringify(currentContents));
     if (callBack) {
       callBack(currentContents);
@@ -261,7 +261,7 @@ export class RemoteScriptRoot {
    * @lastreviewed 2025-09-15
    */
   public getDownstairsRootUri() {
-    
+
     return vscode.Uri.file(this.downstairsRootPath.dir + path.sep + this.downstairsRootPath.base);
   }
 
@@ -320,7 +320,7 @@ export class RemoteScriptRoot {
    * @lastreviewed 2025-09-15
    */
   static fromRootUri(rootUri: vscode.Uri) {
-    return new RemoteScriptRoot({ childUri: vscode.Uri.joinPath(rootUri,"/") });
+    return new RemoteScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, "/") });
   }
 
   /**
@@ -351,7 +351,7 @@ export class RemoteScriptRoot {
   public async getInfoFolder() {
     return this.getFolderContents("info");
   }
-  
+
   /**
    * Gets the contents of the scripts folder.
    * @lastreviewed 2025-09-15
@@ -359,7 +359,7 @@ export class RemoteScriptRoot {
   public async getScriptsFolder() {
     return this.getFolderContents("scripts");
   }
-  
+
   /**
    * Gets the contents of the objects folder.
    * @lastreviewed 2025-09-15
@@ -419,16 +419,31 @@ export class RemoteScriptRoot {
     await this.compileTypeScriptInScriptsFolder();
   }
 
+  private async deleteBuildFolder() {
+    try {
+      return await fs().delete(this.getDraftBuildFolderUri(), { recursive: true });
+    } catch (error) {
+      // Ignore FileNotFound errors - the folder doesn't exist, which is fine
+      if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') {
+        console.log("Build folder doesn't exist (this is fine)");
+        return;
+      }
+      // Re-throw other errors (like permission issues)
+      throw error;
+    }
+  }
+
   public async compileTypeScriptInScriptsFolder(): Promise<void> {
-    console.log("Compiling TypeScript in scripts folder...");
+    
     //TODO do a safety check on the hash to prevent deleted files needlessly
-    await fs().delete(this.getDraftBuildFolderUri(), { recursive: true });
+    await this.deleteBuildFolder();
     try {
       await fs().stat(this.getDraftBuildFolderUri());
       throw new Error("Failed to delete existing build folder");
-    }catch(e) {
+    } catch (e) {
       console.log("Confirmed build folder deletion");
     }
+
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: 'Compiling TypeScript',
@@ -437,23 +452,21 @@ export class RemoteScriptRoot {
       progress.report({ increment: 10, message: 'Reading tsconfig.json...' });
 
       // Read tsconfig.json
-      const scriptRoot = this.getDraftFolderUri();
-      const tsconfigPath = path.join(scriptRoot.fsPath, 'tsconfig.json');
-      // Default compiler options, will be overridden if tsconfig.json is valid
+      const draftFolderUri = this.getDraftFolderUri();
+      const tsconfigPath = path.join(draftFolderUri.fsPath, 'tsconfig.json');
 
-      
+      // Default compiler options, will be overridden if tsconfig.json is valid
       let compilerOptions: ts.CompilerOptions = {
         module: ts.ModuleKind.ESNext,
         target: ts.ScriptTarget.ES2022,
         outDir: ".build",
-        rootDir: scriptRoot.fsPath,
+        rootDir: draftFolderUri.fsPath,
         strict: true,
         esModuleInterop: true,
         skipLibCheck: true,
         forceConsistentCasingInFileNames: true,
         sourceMap: false,
         inlineSourceMap: false,
-        lib: ["ESNext"],
         allowJs: false,
         noEmitOnError: false,
         suppressOutputPathCheck: true,
@@ -467,28 +480,28 @@ export class RemoteScriptRoot {
         if (tsconfig.error) {
           throw new Error(ts.flattenDiagnosticMessageText(tsconfig.error.messageText, '\n'));
         }
-        
+
         // Parse the configuration but ignore file discovery errors
         // We'll handle file discovery ourselves since we're working with specific files
         const parsedConfig = ts.parseJsonConfigFileContent(
-          tsconfig.config, 
+          tsconfig.config,
           {
             ...ts.sys,
             // Override readDirectory to return empty array - we don't want TS to validate include/exclude
             readDirectory: () => []
-          }, 
-          scriptRoot.fsPath,
+          },
+          draftFolderUri.fsPath,
           undefined,
           tsconfigPath
         );
-        
+
         // Filter out file discovery errors (error code 18003)
         const relevantErrors = parsedConfig.errors.filter(error => error.code !== 18003);
         if (relevantErrors.length > 0) {
           const errorMessages = relevantErrors.map(error => ts.flattenDiagnosticMessageText(error.messageText, '\n')).join('\n');
           throw new Error(errorMessages);
         }
-        
+
         compilerOptions = parsedConfig.options;
         console.log('Successfully loaded tsconfig.json with options:', compilerOptions);
       } catch (error) {
@@ -501,7 +514,7 @@ export class RemoteScriptRoot {
       // Find all .ts files in the scripts folder
       const tsFiles = (await flattenDirectory(this.getDraftFolderUri()))
         .map(file => new RemoteScriptFile({ downstairsUri: file }))
-        .filter(sf => !sf.isInBuildFolder())
+        .filter(sf => !sf.isInBuildFolder() && sf.extension === '.ts')
         .map(v => v.getDownstairsUri().fsPath);
 
       if (tsFiles.length === 0) {
@@ -514,7 +527,7 @@ export class RemoteScriptRoot {
       const emitResult = program.emit();
 
       // Handle diagnostics
-      const allDiagnostics =  ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
+      const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
       if (allDiagnostics.length > 0) {
         const diagnosticMessages = allDiagnostics.map(diagnostic => {
           if (diagnostic.file) {
@@ -525,8 +538,9 @@ export class RemoteScriptRoot {
             return ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
           }
         }).join('\n');
-
-        vscode.window.showErrorMessage(`TypeScript compilation errors:\n${diagnosticMessages}`);
+        //TODO these errors need to be handled appropriately by ultimately fixing the B typedoc problems
+        App.logger.error("TypeScript compilation errors:\n" + diagnosticMessages);
+        //vscode.window.showErrorMessage(`TypeScript compilation errors:\n${diagnosticMessages}`);
       } else {
         vscode.window.showInformationMessage('TypeScript compiled successfully.');
       }
