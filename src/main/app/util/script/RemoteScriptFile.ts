@@ -648,7 +648,7 @@ export class RemoteScriptFile {
     return fs().closest(this.getDownstairsUri(), fileName);
   }
   public isInBuildFolder() {
-    return this.getDownstairsUri().fsPath.includes(`${path.sep}/build${path.sep}`);
+    return this.getDownstairsUri().fsPath.includes(`${path.sep}/.build${path.sep}`);
   }
 }
 

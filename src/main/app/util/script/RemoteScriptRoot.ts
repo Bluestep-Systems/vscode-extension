@@ -421,6 +421,7 @@ export class RemoteScriptRoot {
 
   public async compileTypeScriptInScriptsFolder(): Promise<void> {
     console.log("Compiling TypeScript in scripts folder...");
+    //TODO do a safety check on the hash to prevent deleted files needlessly
     await fs().delete(this.getDraftBuildFolderUri(), { recursive: true });
     try {
       await fs().stat(this.getDraftBuildFolderUri());
@@ -436,8 +437,8 @@ export class RemoteScriptRoot {
       progress.report({ increment: 10, message: 'Reading tsconfig.json...' });
 
       // Read tsconfig.json
-      const scriptsFolderUri = this.getFolderUri("scripts");
-      const tsconfigPath = path.join(scriptsFolderUri.fsPath, 'tsconfig.json');
+      const scriptRoot = this.getDraftFolderUri();
+      const tsconfigPath = path.join(scriptRoot.fsPath, 'tsconfig.json');
       // Default compiler options, will be overridden if tsconfig.json is valid
 
       
@@ -445,7 +446,7 @@ export class RemoteScriptRoot {
         module: ts.ModuleKind.ESNext,
         target: ts.ScriptTarget.ES2022,
         outDir: ".build",
-        rootDir: scriptsFolderUri.fsPath,
+        rootDir: scriptRoot.fsPath,
         strict: true,
         esModuleInterop: true,
         skipLibCheck: true,
@@ -476,7 +477,7 @@ export class RemoteScriptRoot {
             // Override readDirectory to return empty array - we don't want TS to validate include/exclude
             readDirectory: () => []
           }, 
-          scriptsFolderUri.fsPath,
+          scriptRoot.fsPath,
           undefined,
           tsconfigPath
         );
