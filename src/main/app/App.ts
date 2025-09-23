@@ -34,6 +34,7 @@ export const App = new class extends ContextNode {
       ['bsjs-push-pull.notify', vscode.commands.registerCommand('bsjs-push-pull.notify', ctrlPCommands.notify)],
       ['bsjs-push-pull.quickDeploy', vscode.commands.registerCommand('bsjs-push-pull.quickDeploy', ctrlPCommands.quickDeploy)],
       ['bsjs-push-pull.testTask', vscode.commands.registerCommand('bsjs-push-pull.testTask', ctrlPCommands.testTask)],
+      ['bsjs-push-pull.snapshot', vscode.commands.registerCommand('bsjs-push-pull.snapshot', ctrlPCommands.snapshot)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
         //Alert.info("Settings: " + App.settings.toJSON(), { modal: false });
         Alert.info("NOT IMPLEMENTED YET", { modal: false });

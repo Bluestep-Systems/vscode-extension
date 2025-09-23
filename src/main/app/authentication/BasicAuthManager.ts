@@ -68,7 +68,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * Private field to ensure proper initialization and context hierarchy.
    * @lastreviewed null
    */
-  #parent: ContextNode | null = null;
+  private _parent: ContextNode | null = null;
 
   /**
    * Initializes the BasicAuth manager with SESSION_MANAGER as parent.
@@ -82,7 +82,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * @lastreviewed null
    */
   public init(parent: typeof SESSION_MANAGER) {
-    this.#parent = parent;
+    this._parent = parent;
     if (this._flagMap) {
       throw new Error("only one auth manager may be initialized");
     }
@@ -98,10 +98,10 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * @lastreviewed null
    */
   public get parent() {
-    if (!this.#parent) {
+    if (!this._parent) {
       throw new Error("AuthManager not initialized");
     }
-    return this.#parent;
+    return this._parent;
   }
 
   /**

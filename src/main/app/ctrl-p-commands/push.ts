@@ -6,13 +6,12 @@ import { SESSION_MANAGER as SM } from '../b6p_session/SessionManager';
 import { Util } from '../util';
 import { flattenDirectory } from '../util/data/flattenDirectory';
 import { getScript } from '../util/data/getScript';
-import { IdUtility } from '../util/data/IdUtility';
 import { parseUpstairsUrl } from '../util/data/URLParser';
 import { FileSystem } from '../util/fs/FileSystemFactory';
+import { DownstairsUriParser } from '../util/script/DownstairsUrIParser';
 import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
-import { DownstairsUriParser } from '../util/script/DownstairsUrIParser';
 const fs = FileSystem.getInstance;
 /**
  * Pushes a script to a WebDAV location.
@@ -20,9 +19,9 @@ const fs = FileSystem.getInstance;
  * @param sourceOps The source operations to perform.
  * @returns A promise that resolves when the push is complete.
  */
-export default async function (overrideFormulaUri?: string, sourceOps?: SourceOps): Promise<void> {
+export default async function ({ overrideFormulaUri, sourceOps }: { overrideFormulaUri?: string, sourceOps?: SourceOps }): Promise<void> {
   try {
-    const sourceEditorUri = await getDownstairsFileUri(sourceOps);
+    const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
     if (sourceEditorUri === undefined) {
       Alert.error('No source path provided');
       return;
@@ -207,7 +206,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
       const dsurlp = new DownstairsUriParser(downstairsRootFolderUri);
       const sf = new RemoteScriptFile({ downstairsUri: vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath) });
       if (!(await sf.isCopacetic())) {
-        throw new Error("File is not copacetic: " + sf.toDownstairsUri().toString());        
+        throw new Error("File is not copacetic: " + sf.getDownstairsUri().toString());        
       }
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
@@ -220,48 +219,6 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
       });
     }
   }
-}
-
-
-/**
- * Gets the URI for the current file based on the provided source operations.
- * @param sourceOps The source operations to use for determining the URI.
- * @returns The URI of the current file.
- */
-async function getDownstairsFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
-  if (!sourceOps) {
-    return vscode.window.activeTextEditor?.document.uri || (() => { throw new Error("No active editor found"); })();
-  }
-  const { sourceOrigin, topId } = sourceOps;
-  const url = new URL(sourceOrigin);
-  let found = false;
-  const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
-  const wsDir = await fs().readDirectory(curWorkspaceFolder.uri);
-
-  const folderUri = wsDir.reduce(
-    (curValue, [subFolderName, _fileType]) => {
-      const subFolderPath = path.join(curWorkspaceFolder.uri.fsPath, subFolderName);
-      if (subFolderPath.includes(url.host)) {
-        if (found) {
-          throw new Error("Multiple folders found for source origin");
-        }
-        found = true;
-        return vscode.Uri.file(subFolderPath);
-      }
-      return curValue;
-    },
-    undefined as vscode.Uri | undefined
-  );
-  if (!folderUri) {
-    throw new Error("No folder found for source origin");
-  }
-  const id = new IdUtility(topId);
-
-  const ret = await id.findFileContaining(folderUri);
-  if (!ret) {
-    throw new Error("No matching file found");
-  }
-  return ret;
 }
 
 

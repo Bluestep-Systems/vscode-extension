@@ -1,14 +1,9 @@
-import * as vscode from 'vscode';
-import { getActiveEditorUri } from '../util/data/getActiveEditorUri';
-import { App } from '../App';
+import snapshot from './snapshot';
 
 /**
- * A test task for development. be sure to remove it before production.
+ * TypeScript compiler worker that compiles the current file using TypeScript's programmatic API.
+ * Outputs compiled JavaScript and declaration files to a specified location.
  */
 export default async function () {
-  vscode.window.showInformationMessage('Test Task toggled!');
-  const activeEditorUri = getActiveEditorUri() || (() => { throw new Error("No active editor URI"); })();
-  const fsStat =  await vscode.workspace.fs.stat(activeEditorUri);
-  const s = App.context.workspaceState.update('testTaskLastRun', new Date().toISOString());
-  console.log("fsStat", fsStat,s);
+  snapshot();
 }

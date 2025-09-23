@@ -1,14 +1,15 @@
+import * as path from 'path';
+import ts from 'typescript';
 import * as vscode from 'vscode';
+import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
+import { App } from '../../App';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
+import { GlobMatcher } from '../data/GlobMatcher';
+import { readFileText } from '../data/readFile';
+import { FileSystem } from '../fs/FileSystemFactory';
+import { ResponseCodes, ResponseCodes as StatusCodes } from '../network/StatusCodes';
 import { DownstairsUriParser } from './DownstairsUrIParser';
 import { RemoteScriptRoot } from './RemoteScriptRoot';
-import { App } from '../../App';
-import { readFileText } from '../data/readFile';
-import * as path from 'path';
-import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
-import { FileSystem } from '../fs/FileSystemFactory';
-import { GlobMatcher } from '../data/GlobMatcher';
-import { ResponseCodes, ResponseCodes as StatusCodes } from '../network/StatusCodes';
 const fs = FileSystem.getInstance;
 
 /**
@@ -87,7 +88,7 @@ export class RemoteScriptFile {
    * Gets the downstairs (local) {@link vscode.Uri} for this file
    * @lastreviewed 2025-09-15
    */
-  public toDownstairsUri() {
+  public getDownstairsUri() {
     return this.parser.rawUri;
   }
 
@@ -147,7 +148,7 @@ export class RemoteScriptFile {
    * @lastreviewed 2025-09-15
    */
   public async getHash(): Promise<string> {
-    const bufferSource = await fs().readFile(this.toDownstairsUri());
+    const bufferSource = await fs().readFile(this.getDownstairsUri());
     const localHashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
     if (hexArray.length !== 64) {
@@ -214,7 +215,7 @@ export class RemoteScriptFile {
    * @lastreviewed 2025-09-15
    */
   public async getDownstairsContent(): Promise<string> {
-    const downstairsUri = this.toDownstairsUri();
+    const downstairsUri = this.getDownstairsUri();
     try {
       const fileData = await fs().readFile(downstairsUri);
       return Buffer.from(fileData).toString('utf8');
@@ -252,7 +253,7 @@ export class RemoteScriptFile {
    */
   private async deleteFromMetadata() {
     await this.getScriptRoot().modifyMetaData((md) => {
-      const index = md.pushPullRecords.findIndex(record => record.downstairsPath === this.toDownstairsUri().fsPath);
+      const index = md.pushPullRecords.findIndex(record => record.downstairsPath === this.getDownstairsUri().fsPath);
       if (index !== -1) {
         md.pushPullRecords.splice(index, 1);
       }
@@ -325,7 +326,7 @@ export class RemoteScriptFile {
    * @lastreviewed 2025-09-15
    */
   public async writeContent(buffer: ArrayBuffer) {
-    await fs().writeFile(this.toDownstairsUri(), Buffer.from(buffer));
+    await fs().writeFile(this.getDownstairsUri(), Buffer.from(buffer));
   }
 
   /**
@@ -335,7 +336,7 @@ export class RemoteScriptFile {
    */
   public async exists(): Promise<boolean> {
     try {
-      const stat = await fs().stat(this.toDownstairsUri());
+      const stat = await fs().stat(this.getDownstairsUri());
       if (stat.type === vscode.FileType.Directory) {
         return false;
       }
@@ -359,7 +360,7 @@ export class RemoteScriptFile {
    */
   public async fileStat(): Promise<vscode.FileStat | null> {
     try {
-      return await fs().stat(this.toDownstairsUri());
+      return await fs().stat(this.getDownstairsUri());
     } catch (e) {
       return null;
     }
@@ -393,7 +394,7 @@ export class RemoteScriptFile {
    */
   public async getLastPulledTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
-    return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPulled || null;
+    return md.pushPullRecords.find(record => record.downstairsPath === this.getDownstairsUri().fsPath)?.lastPulled || null;
   }
 
   /**
@@ -416,7 +417,7 @@ export class RemoteScriptFile {
    */
   public async getLastPushedTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
-    return md.pushPullRecords.find(record => record.downstairsPath === this.toDownstairsUri().fsPath)?.lastPushed || null;
+    return md.pushPullRecords.find(record => record.downstairsPath === this.getDownstairsUri().fsPath)?.lastPushed || null;
   }
 
   /**
@@ -526,7 +527,7 @@ export class RemoteScriptFile {
    * @lastreviewed 2025-09-15
    */
   public getFileName(): string {
-    return path.parse(this.toDownstairsUri().fsPath).base;
+    return path.parse(this.getDownstairsUri().fsPath).base;
   }
 
   /**
@@ -543,7 +544,7 @@ export class RemoteScriptFile {
    */
   public async isInInfo(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolder();
-    return infoFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
+    return infoFolder.some(file => file.fsPath === this.getDownstairsUri().fsPath);
   }
 
   /**
@@ -552,7 +553,7 @@ export class RemoteScriptFile {
    */
   public async isInObjects(): Promise<boolean> {
     const objectsFolder = await this.getScriptRoot().getObjectsFolder();
-    return objectsFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
+    return objectsFolder.some(file => file.fsPath === this.getDownstairsUri().fsPath);
   }
 
   /**
@@ -577,7 +578,7 @@ export class RemoteScriptFile {
    */
   public async isInInfoFolder(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolder();
-    return infoFolder.some(file => file.fsPath === this.toDownstairsUri().fsPath);
+    return infoFolder.some(file => file.fsPath === this.getDownstairsUri().fsPath);
   }
 
   /**
@@ -597,7 +598,7 @@ export class RemoteScriptFile {
     const scriptRoot = this.getScriptRoot();
     const gitIgnorePatterns = await scriptRoot.getGitIgnore();
     const globMatcher = new GlobMatcher(scriptRoot.getDownstairsRootUri(), gitIgnorePatterns);
-    return globMatcher.matches(this.toDownstairsUri());
+    return globMatcher.matches(this.getDownstairsUri());
   }
 
   /**
@@ -615,11 +616,39 @@ export class RemoteScriptFile {
    */
   public async delete() {
     if (await this.exists()) {
-      await fs().delete(this.toDownstairsUri(), { recursive: true, useTrash: false });
+      await fs().delete(this.getDownstairsUri(), { recursive: true, useTrash: false });
       await this.deleteFromMetadata();
     } else {
       throw new Error("File does not exist, cannot delete");
     }
+  }
+
+  public async getClosestTsConfigUri() {
+    return await fs().closest(this.getDownstairsUri(), 'tsconfig.json');
+  }
+
+  public async getClosestTsConfig() {
+    const tsConfigUri = await this.getClosestTsConfigUri();
+    if (!tsConfigUri) {
+      throw new Error("Could not find tsconfig.json in any parent folder");
+    }
+    const tsConfigContent = await readFileText(tsConfigUri);
+    return JSON.parse(tsConfigContent) as ts.ParsedTsconfig;
+  }
+
+  public shouldCopyRaw() {
+    return path.extname(this.getFileName()).toLowerCase() !== '.ts';
+  }
+
+  public copyToSnapshot() {
+    console.log("copying file over", this.getDownstairsUri().fsPath);
+  }
+
+  public closest(fileName: string) {
+    return fs().closest(this.getDownstairsUri(), fileName);
+  }
+  public isInBuildFolder() {
+    return this.getDownstairsUri().fsPath.includes(`${path.sep}/build${path.sep}`);
   }
 }
 

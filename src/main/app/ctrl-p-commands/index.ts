@@ -8,6 +8,7 @@ import checkForUpdates from "./checkForUpdates";
 import notify from "./notify";
 import quickDeploy from "./quickDeploy";
 import testTask from "./testTask";
+import snapshot from "./snapshot";
 
 /**
  * Namespace for Ctrl+P command related functions.
@@ -22,5 +23,6 @@ export default {
   checkForUpdates,
   notify,
   quickDeploy,
-  testTask
+  testTask,
+  snapshot
 };

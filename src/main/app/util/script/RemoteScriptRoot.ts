@@ -3,10 +3,12 @@ import * as vscode from 'vscode';
 import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
-import { FileDoesNotExistError, FileReadError } from './Errors';
-import { DownstairsUriParser } from './DownstairsUrIParser';
-import { RemoteScriptFile } from './RemoteScriptFile';
 import { FileSystem } from '../fs/FileSystemFactory';
+import { DownstairsUriParser } from './DownstairsUrIParser';
+import { FileDoesNotExistError, FileReadError } from './Errors';
+import { RemoteScriptFile } from './RemoteScriptFile';
+import ts from 'typescript';
+import { flattenDirectory } from '../data/flattenDirectory';
 const fs = FileSystem.getInstance;
 
 /**
@@ -69,7 +71,7 @@ export class RemoteScriptRoot {
   async touchFile(file: RemoteScriptFile, touchType: "lastPulled" | "lastPushed"): Promise<void> {
     const lastHash = await file.getHash();
     const metaData = await this.modifyMetaData(md => {
-      const downstairsPath = file.toDownstairsUri().fsPath;
+      const downstairsPath = file.getDownstairsUri().fsPath;
       const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
       if (existingEntryIndex !== -1) {
         const newDateString = new Date().toUTCString();
@@ -411,5 +413,137 @@ export class RemoteScriptRoot {
       this.getDownstairsRootUri().fsPath === b.getDownstairsRootUri().fsPath &&
       this.toBaseUpstairsString() === b.toBaseUpstairsString()
     );
+  }
+
+  public async snapshot() {
+    await this.compileTypeScriptInScriptsFolder();
+  }
+
+  public async compileTypeScriptInScriptsFolder(): Promise<void> {
+    console.log("Compiling TypeScript in scripts folder...");
+    await fs().delete(this.getDraftBuildFolderUri(), { recursive: true });
+    try {
+      await fs().stat(this.getDraftBuildFolderUri());
+      throw new Error("Failed to delete existing build folder");
+    }catch(e) {
+      console.log("Confirmed build folder deletion");
+    }
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'Compiling TypeScript',
+      cancellable: false
+    }, async (progress) => {
+      progress.report({ increment: 10, message: 'Reading tsconfig.json...' });
+
+      // Read tsconfig.json
+      const scriptsFolderUri = this.getFolderUri("scripts");
+      const tsconfigPath = path.join(scriptsFolderUri.fsPath, 'tsconfig.json');
+      // Default compiler options, will be overridden if tsconfig.json is valid
+
+      
+      let compilerOptions: ts.CompilerOptions = {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+        outDir: ".build",
+        rootDir: scriptsFolderUri.fsPath,
+        strict: true,
+        esModuleInterop: true,
+        skipLibCheck: true,
+        forceConsistentCasingInFileNames: true,
+        sourceMap: false,
+        inlineSourceMap: false,
+        lib: ["ESNext"],
+        allowJs: false,
+        noEmitOnError: false,
+        suppressOutputPathCheck: true,
+        declarationDir: undefined,
+        declaration: false,
+      };
+
+      try {
+        const tsconfigText = await fs().readFile(vscode.Uri.joinPath(this.getDraftFolderUri(), 'tsconfig.json'));
+        const tsconfig = ts.parseConfigFileTextToJson(tsconfigPath, Buffer.from(tsconfigText).toString('utf-8'));
+        if (tsconfig.error) {
+          throw new Error(ts.flattenDiagnosticMessageText(tsconfig.error.messageText, '\n'));
+        }
+        
+        // Parse the configuration but ignore file discovery errors
+        // We'll handle file discovery ourselves since we're working with specific files
+        const parsedConfig = ts.parseJsonConfigFileContent(
+          tsconfig.config, 
+          {
+            ...ts.sys,
+            // Override readDirectory to return empty array - we don't want TS to validate include/exclude
+            readDirectory: () => []
+          }, 
+          scriptsFolderUri.fsPath,
+          undefined,
+          tsconfigPath
+        );
+        
+        // Filter out file discovery errors (error code 18003)
+        const relevantErrors = parsedConfig.errors.filter(error => error.code !== 18003);
+        if (relevantErrors.length > 0) {
+          const errorMessages = relevantErrors.map(error => ts.flattenDiagnosticMessageText(error.messageText, '\n')).join('\n');
+          throw new Error(errorMessages);
+        }
+        
+        compilerOptions = parsedConfig.options;
+        console.log('Successfully loaded tsconfig.json with options:', compilerOptions);
+      } catch (error) {
+        console.error("Error reading tsconfig.json, using default compiler options:", error);
+        vscode.window.showWarningMessage(`Could not read tsconfig.json. Using default compiler options. Error: ${error}`);
+      }
+
+      progress.report({ increment: 30, message: 'Compiling TypeScript files...' });
+
+      // Find all .ts files in the scripts folder
+      const tsFiles = (await flattenDirectory(this.getDraftFolderUri()))
+        .map(file => new RemoteScriptFile({ downstairsUri: file }))
+        .filter(sf => !sf.isInBuildFolder())
+        .map(v => v.getDownstairsUri().fsPath);
+
+      if (tsFiles.length === 0) {
+        vscode.window.showInformationMessage('No TypeScript files found in the scripts folder.');
+        return;
+      }
+
+      // Create a TypeScript program
+      const program = ts.createProgram(tsFiles, compilerOptions);
+      const emitResult = program.emit();
+
+      // Handle diagnostics
+      const allDiagnostics =  ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
+      if (allDiagnostics.length > 0) {
+        const diagnosticMessages = allDiagnostics.map(diagnostic => {
+          if (diagnostic.file) {
+            const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start!);
+            const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+            return `${diagnostic.file.fileName} (${line + 1},${character + 1}): ${message}`;
+          } else {
+            return ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+          }
+        }).join('\n');
+
+        vscode.window.showErrorMessage(`TypeScript compilation errors:\n${diagnosticMessages}`);
+      } else {
+        vscode.window.showInformationMessage('TypeScript compiled successfully.');
+      }
+
+      progress.report({ increment: 100, message: 'Compilation complete.' });
+    });
+  }
+
+  public getDraftFolderUri() {
+    return vscode.Uri.joinPath(this.getDownstairsRootUri(), "draft");
+  }
+
+  public getDraftBuildFolderUri() {
+    return vscode.Uri.joinPath(this.getDraftFolderUri(), ".build");
+  }
+
+  public getSnapshotFolderUri() {
+    //return vscode.Uri.joinPath(this.getDownstairsRootUri(), "snapshot");
+    throw new Error("Not sure if we want to interact with snapshot folder directly outside of snapshot yet");
   }
 }

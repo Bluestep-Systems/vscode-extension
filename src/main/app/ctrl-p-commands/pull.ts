@@ -121,7 +121,7 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
     if (await sf.exists() && await sf.integrityMatches()) {
       App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
       await sf.getScriptRoot().touchFile(sf, "lastPulled");
-      return sf.toDownstairsUri();
+      return sf.getDownstairsUri();
     }
     await sf.download();
   }

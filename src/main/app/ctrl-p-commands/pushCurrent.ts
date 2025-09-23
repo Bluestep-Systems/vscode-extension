@@ -40,7 +40,7 @@ export default async function (): Promise<void> {
       }
     }
 
-    await pushScript(fileMetaData.getScriptRoot().toBaseUpstairsString());
+    await pushScript({ overrideFormulaUri: fileMetaData.getScriptRoot().toBaseUpstairsString() });
   } catch(e) {
     
     if (e instanceof Error) { 

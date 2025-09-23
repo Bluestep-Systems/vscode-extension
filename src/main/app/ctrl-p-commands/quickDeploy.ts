@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SESSION_MANAGER as SM} from "../b6p_session/SessionManager";
+import { SESSION_MANAGER as SM } from "../b6p_session/SessionManager";
 import { Alert } from "../util/ui/Alert";
 import { ProgressHelper } from "../util/ui/ProgressHelper";
 import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../types";
@@ -35,7 +35,11 @@ export default async function (): Promise<void> {
         execute: async () => {
           const webDavId = await getScriptWebdavId(origin, topId);
           if (webDavId !== null) {
-            await push(`${origin}/files/${webDavId}/`, { sourceOrigin, topId, skipMessage: true });
+            await push(
+              { 
+                overrideFormulaUri: `${origin}/files/${webDavId}/`, 
+                sourceOps: { sourceOrigin, topId, skipMessage: true } 
+            });
             return { origin, topId, webDavId };
           } else {
             await Alert.error(`Could not find script at ${origin} with topId ${topId}`);
@@ -107,7 +111,7 @@ async function getScriptWebdavId(origin: string, topId: string): Promise<string 
 class WebDavId {
   classid: string;
   seqnum: string;
-  constructor(id: string) { 
+  constructor(id: string) {
     // take an id of this format "530003___1082638" and parse it into classid and seqnum using regex
     const match = id.match(/^(\d+)___(\d+)$/);
     if (!match) {

@@ -4,7 +4,7 @@ import { PrivateKeys, PrivateGenericMap } from "../util/PseudoMaps";
 import { ContextNode } from "../context/ContextNode";
 import { Alert } from "../util/ui/Alert";
 import { Util } from "../util";
-import { App } from "../App";
+import type { App } from "../App";
 import { ResponseCodes } from "../util/network/StatusCodes";
 
 /**
@@ -43,7 +43,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
   /**
    * The AuthManager used for authentication.
    */
-  #authManager: AuthManager<AuthObject> | null = null;
+  private _authManager: AuthManager<AuthObject> | null = null;
 
   /**
    * Returns the persistence map for the session data.
@@ -56,12 +56,12 @@ export const SESSION_MANAGER = new class extends ContextNode {
   /**
    * The persistence map for the session data. Largely used as alias for the `persistence()` method.
    */
-  #sessions: PrivateGenericMap<SessionData> | null = null;
+  private _sessions: PrivateGenericMap<SessionData> | null = null;
 
   /**
    * The ancestor context node that is used to instantiate this manager
    */
-  #parent: typeof App | null = null;
+  private _parent: typeof App | null = null;
 
   /**
    * Initializes the session manager.
@@ -69,14 +69,14 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * @returns The initialized session manager.
    */
   init(parent: typeof App) {
-    this.#parent = parent;
-    if (this.#sessions) {
+    this._parent = parent;
+    if (this._sessions) {
       throw new Error("only one session manager may be initialized");
     }
-    this.#sessions = new PrivateGenericMap<SessionData>(PrivateKeys.SESSIONS, this.context);
+    this._sessions = new PrivateGenericMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
     Auth.initManagers(this);
-    this.#authManager = Auth.determineManager();
+    this._authManager = Auth.determineManager();
     return this;
   }
 
@@ -84,20 +84,20 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * The AuthManager used for authentication.
    */
   public get authManager() {
-    if (!this.#authManager) {
+    if (!this._authManager) {
       throw new Error("AuthManager not initialized");
     }
-    return this.#authManager;
+    return this._authManager;
   }
 
   /**
    * The ancestor context node that was used to instantiate this manager
    */
   public get parent() {
-    if (!this.#parent) {
+    if (!this._parent) {
       throw new Error("SessionManager not initialized");
     }
-    return this.#parent;
+    return this._parent;
   }
 
   /**
@@ -114,10 +114,10 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * The persistence map for the session data.
    */
   private get sessions() {
-    if (!this.#sessions) {
+    if (!this._sessions) {
       throw new Error("SessionManager not initialized");
     }
-    return this.#sessions;
+    return this._sessions;
   }
 
 
@@ -254,7 +254,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     url = new URL(url);
     const sessionData = this.sessions.get(url.origin);
     if (sessionData && (sessionData.JSESSIONID) && (sessionData.lastTouched > (Date.now() - this.MAX_SESSION_DURATION))) {
-      App.isDebugMode() && App.logger.info("using existing session for fetch to:" + url.href + "\n " + JSON.stringify(sessionData));
+      this.parent.isDebugMode() && this.parent.logger.info("using existing session for fetch to:" + url.href + "\n " + JSON.stringify(sessionData));
       options = {
         ...options,
         headers: {
@@ -265,17 +265,17 @@ export const SESSION_MANAGER = new class extends ContextNode {
       const response = await globalThis.fetch(url, options);
       return await this.processResponse(response);
     } else {
-      App.logger.info("performing login to:" + url.origin);
-      //TODO perform this login on a more dedicated endpoint (graphql?)
+      this.parent.logger.info("performing login to:" + url.origin);
       const authLoginBodyValue = await this.authManager.authLoginBodyValue();
-      App.isDebugMode() && App.logger.info("login body:" + authLoginBodyValue);
+      this.parent.isDebugMode() && this.parent.logger.info("login body:" + authLoginBodyValue);
+      //TODO have this moved use the proper login servlet instead of this dummy endpoint
       const response = await globalThis.fetch(url.origin + "/lookup/test", {
         method: "POST",
         headers: {
           "Authorization": `${await this.authManager.authHeaderValue()}`,
         }
       });
-      App.logger.info("login status:" + response.status);
+      this.parent.logger.info("login status:" + response.status);
       if (response.status >= ResponseCodes.BAD_REQUEST) {
         throw new SessionError(`HTTP Error: ${response.status} ${response.statusText}`);
       }

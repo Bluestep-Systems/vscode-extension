@@ -92,7 +92,7 @@ suite('RemoteScriptFile Tests', () => {
   suite('URI Operations', () => {
     test('should convert to downstairs URI correctly', () => {
       const expectedPath = path.join('/test/workspace/configbeh.bluestep.net/1466960', 'draft', 'test.js');
-      const downstairsUri = remoteScriptFile.toDownstairsUri();
+      const downstairsUri = remoteScriptFile.getDownstairsUri();
       
       // Normalize paths for cross-platform compatibility
       assert.strictEqual(
@@ -497,7 +497,7 @@ suite('RemoteScriptFile Tests', () => {
         scriptName: 'Test',
         webdavId: '1466960',
         pushPullRecords: [{
-          downstairsPath: remoteScriptFile.toDownstairsUri().fsPath,
+          downstairsPath: remoteScriptFile.getDownstairsUri().fsPath,
           lastPulled: '2023-01-01T12:00:00.000Z',
           lastPushed: null,
           lastVerifiedHash: 'abcd1234'
@@ -527,7 +527,7 @@ suite('RemoteScriptFile Tests', () => {
         scriptName: 'Test',
         webdavId: '1466960',
         pushPullRecords: [{
-          downstairsPath: remoteScriptFile.toDownstairsUri().fsPath,
+          downstairsPath: remoteScriptFile.getDownstairsUri().fsPath,
           lastPulled: null,
           lastPushed: '2023-01-02T15:30:00.000Z',
           lastVerifiedHash: 'abcd1234'

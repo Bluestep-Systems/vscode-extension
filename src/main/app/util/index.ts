@@ -1,4 +1,10 @@
-import { PrimitiveNestedObject, SavableObject } from "../../../../types";
+import * as path from 'path';
+import * as vscode from "vscode";
+import { PrimitiveNestedObject, SavableObject, SourceOps } from "../../../../types";
+import { IdUtility } from "./data/IdUtility";
+import { FileSystem } from "./fs/FileSystemFactory";
+
+const fs = FileSystem.getInstance;
 /**
  * Utility functions and types.
  */
@@ -117,6 +123,47 @@ export namespace Util {
     } catch (e) {
       throw e;
     }
+  }
+
+  /**
+   * Gets the URI for the current file based on the provided source operations.
+   * @param sourceOps The source operations to use for determining the URI.
+   * @returns The URI of the current file.
+   */
+  export async function getDownstairsFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
+    if (!sourceOps) {
+      return vscode.window.activeTextEditor?.document.uri || (() => { throw new Error("No active editor found"); })();
+    }
+    const { sourceOrigin, topId } = sourceOps;
+    const url = new URL(sourceOrigin);
+    let found = false;
+    const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
+    const wsDir = await fs().readDirectory(curWorkspaceFolder.uri);
+  
+    const folderUri = wsDir.reduce(
+      (curValue, [subFolderName, _fileType]) => {
+        const subFolderPath = path.join(curWorkspaceFolder.uri.fsPath, subFolderName);
+        if (subFolderPath.includes(url.host)) {
+          if (found) {
+            throw new Error("Multiple folders found for source origin");
+          }
+          found = true;
+          return vscode.Uri.file(subFolderPath);
+        }
+        return curValue;
+      },
+      undefined as vscode.Uri | undefined
+    );
+    if (!folderUri) {
+      throw new Error("No folder found for source origin");
+    }
+    const id = new IdUtility(topId);
+  
+    const ret = await id.findFileContaining(folderUri);
+    if (!ret) {
+      throw new Error("No matching file found");
+    }
+    return ret;
   }
 }
 

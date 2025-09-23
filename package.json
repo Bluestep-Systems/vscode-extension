@@ -1,6 +1,6 @@
 {
   "name": "bsjs-push-pull",
-  "displayName": "B6P - BlueStep JavaScript Push/Pull",
+  "displayName": "B6P Push/Pull",
   "description": "Sync JavaScript files with BlueStep systems via WebDAV",
   "version": "1.0.1",
   "publisher": "bluestep-systems",
@@ -99,6 +99,10 @@
       {
         "command": "bsjs-push-pull.quickDeploy",
         "title": "B6P: Quick Deploy"
+      },
+      {
+        "command": "bsjs-push-pull.snapshot",
+        "title": "B6P: Snapshot"
       }
     ],
     "viewsContainers": {
@@ -122,7 +126,7 @@
     "viewsWelcome": [
       {
         "view": "b6pMenuView",
-        "contents": "--- Quick Tasks ---"
+        "contents": "--- Contextual Tasks ---"
       },
       {
         "view": "b6pMenuView",
@@ -134,11 +138,19 @@
       },
       {
         "view": "b6pMenuView",
+        "contents": "[Snapshot Current](command:bsjs-push-pull.snapshot)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Run Script](command:bsjs-push-pull.runTask)"
+      },
+      {
+        "view": "b6pMenuView",
         "contents": "[Quick Deploy](command:bsjs-push-pull.quickDeploy)"
       },
       {
         "view": "b6pMenuView",
-        "contents": "--- Main ---"
+        "contents": "--- Primary Tasks ---"
       },
       {
         "view": "b6pMenuView",
@@ -150,19 +162,15 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Run Script](command:bsjs-push-pull.runTask)"
-      },
-      {
-        "view": "b6pMenuView",
         "contents": "[Update Credentials](command:bsjs-push-pull.updateCredentials)"
       },
       {
         "view": "b6pMenuView",
-        "contents": "---- Advanced ----"
+        "contents": "[Check for Updates](command:bsjs-push-pull.checkForUpdates)"
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Check for Updates](command:bsjs-push-pull.checkForUpdates)"
+        "contents": "---- Advanced ----"
       },
       {
         "view": "b6pMenuView",
@@ -179,6 +187,11 @@
       },
       {
         "view": "b6pMenuView",
+        "contents": "[Toggle Test Task](command:bsjs-push-pull.testTask)",
+        "when": "bsjs-push-pull.debugMode.enabled"
+      },
+      {
+        "view": "b6pMenuView",
         "contents": "[GOTO BlueSync](command:bsjs-push-pull.notify)",
         "when": "bsjs-push-pull.debugMode.enabled"
       },
@@ -190,11 +203,6 @@
       {
         "view": "b6pMenuView",
         "contents": "[Extension Preferences](command:bsjs-push-pull.notify)",
-        "when": "bsjs-push-pull.debugMode.enabled"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Toggle Test Task](command:bsjs-push-pull.testTask)",
         "when": "bsjs-push-pull.debugMode.enabled"
       }
     ]
@@ -216,7 +224,8 @@
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
     "test": "vscode-test",
-    "tests": "npm run test"
+    "tests": "npm run test",
+    "build": "npm run compile"
   },
   "devDependencies": {
     "@types/archiver": "^6.0.2",

@@ -6,6 +6,9 @@ import { RemoteScriptRoot } from "../util/script/RemoteScriptRoot";
 
 export default async function () {
   try {
+    if (App.isDebugMode()) {
+     return; // in debug mode, don't enforce read-only
+    }
     const activeEditorUri = getActiveEditorUri({ quiet: true });
     if (!activeEditorUri) {
       return; // if there's no active editor, just return. not our problem

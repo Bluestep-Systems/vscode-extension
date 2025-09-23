@@ -204,6 +204,34 @@ export interface FileSystemProvider {
    * ```
    */
   isWritableFileSystem(scheme: string): boolean | undefined;
+
+  /**
+   * Recursively search for a file with a specific name, starting from sibling files
+   * and then moving up through parent directories.
+   * 
+   * @param startUri The URI to start the search from (typically current file's directory)
+   * @param fileName The name of the file to search for (e.g., 'tsconfig.json', 'package.json')
+   * @param maxDepth Optional maximum number of parent directories to search (default: 10)
+   * @returns A promise that resolves to the URI of the found file, or null if not found
+   * 
+   * @example
+   * ```typescript
+   * // Search for tsconfig.json starting from current file's directory
+   * const currentFile = vscode.Uri.file('/project/src/components/Button.tsx');
+   * const tsconfig = await fs.closest(
+   *   vscode.Uri.file(path.dirname(currentFile.fsPath)), 
+   *   'tsconfig.json'
+   * );
+   * 
+   * // Search for package.json with limited depth
+   * const packageJson = await fs.closest(
+   *   startDir,
+   *   'package.json',
+   *   5
+   * );
+   * ```
+   */
+  closest(startUri: vscode.Uri, fileName: string, maxDepth?: number): Promise<vscode.Uri | null>;
 }
 
 /**
@@ -242,6 +270,47 @@ export class VSCodeFileSystem implements FileSystemProvider {
   }
   isWritableFileSystem(scheme: string): boolean | undefined {
     return vscode.workspace.fs.isWritableFileSystem(scheme);
+  }
+
+  /**
+   * Recursively search for a file with a specific name, starting from sibling files
+   * and then moving up through parent directories.
+   */
+  async closest(startUri: vscode.Uri, fileName: string, maxDepth: number = 10): Promise<vscode.Uri | null> {
+    let currentDir = startUri;
+    let depth = 0;
+
+    while (depth < maxDepth) {
+      try {
+        // Check if the target file exists in the current directory
+        const targetFile = vscode.Uri.joinPath(currentDir, fileName);
+        
+        try {
+          await this.stat(targetFile);
+          // File exists, return its URI
+          return targetFile;
+        } catch {
+          // File doesn't exist in this directory, continue searching
+        }
+
+        // Get the parent directory
+        const parentDir = vscode.Uri.joinPath(currentDir, '..');
+        
+        // Check if we've reached the root (parent is same as current)
+        if (parentDir.path === currentDir.path || currentDir.path === '/' || currentDir.path === '') {
+          break;
+        }
+
+        currentDir = parentDir;
+        depth++;
+      } catch (error) {
+        // Error accessing directory, stop searching
+        console.error(`Error searching in directory ${currentDir.path}:`, error);
+        break;
+      }
+    }
+
+    return null; // File not found
   }
 }
 
@@ -657,5 +726,39 @@ export class MockFileSystem implements FileSystemProvider {
       return true;
     }
     return undefined;
+  }
+
+  /**
+   * Recursively search for a file with a specific name in the mock file system.
+   * This implementation searches through the mock files for the target filename.
+   */
+  async closest(startUri: vscode.Uri, fileName: string, maxDepth: number = 10): Promise<vscode.Uri | null> {
+    let currentPath = startUri.path;
+    let depth = 0;
+
+    while (depth < maxDepth) {
+      // Normalize the path to ensure it ends with '/' for directory operations
+      const searchPath = currentPath.endsWith('/') ? currentPath : currentPath + '/';
+      const targetPath = searchPath + fileName;
+      const targetUri = vscode.Uri.file(targetPath);
+
+      // Check if the target file exists in our mock files
+      if (this.files.has(targetUri.toString())) {
+        return targetUri;
+      }
+
+      // Move to parent directory
+      const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+      
+      // Check if we've reached the root
+      if (parentPath === currentPath || parentPath === '' || currentPath === '/') {
+        break;
+      }
+
+      currentPath = parentPath;
+      depth++;
+    }
+
+    return null; // File not found
   }
 }
