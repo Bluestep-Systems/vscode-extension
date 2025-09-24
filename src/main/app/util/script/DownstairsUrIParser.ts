@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { RemoteScriptRoot } from './RemoteScriptRoot';
 
 
@@ -17,7 +17,7 @@ export class DownstairsUriParser {
   /**
    * The type of the downstairs file: "draft", "declarations", or "metadata" (for .b6p_metadata.json files)
    */
-  public readonly type: "draft" | "declarations" | "metadata" | "root";
+  public readonly type: "draft" | "declarations" | "metadata" | "root" | "snapshot";
 
   /**
    * the "rest" of the path after the type folder (draft, declarations, or .b6p_metadata.json)
@@ -47,12 +47,12 @@ export class DownstairsUriParser {
     const match = cleanPath.match(DownstairsUriParser.URI_DISAMBIGUATION_REGEX);
 
     if (!match) {
-      throw new Error("The provided URI does not conform to expected structure: " + downstairsUri.toString() + ", expected /^(.*?)[/\\\\](\\d+)[/\\\\](draft|declarations|\\.b6p_metadata\\.json||\\.gitignore)(?:[/\\\\](.*))?$/");
+      throw new Error("The provided URI does not conform to expected structure: " + downstairsUri.toString() + ", expected /^(.*?)[/\\\\](\\d+)[/\\\\](draft|declarations|snapshot|\\.b6p_metadata\\.json||\\.gitignore)(?:[/\\\\](.*))?$/");
     }
 
     this.prependingPath = match[1]; // Extract the path before the WebDAV ID
     this.webDavId = match[2]; // Extract the WebDAV ID
-    const typeStr = match[3] as "draft" | "declarations" | ".b6p_metadata.json" | ".gitignore" || undefined; // Extract the type string
+    const typeStr = match[3] as "draft" | "declarations" | ".b6p_metadata.json" | ".gitignore" | "snapshot" || undefined; // Extract the type string
     this.rest = match[4] || ""; // Extract the relative path after the type
 
     if (typeStr === undefined) {
@@ -62,8 +62,10 @@ export class DownstairsUriParser {
     } else if (typeStr === RemoteScriptRoot.METADATA_FILE || typeStr === RemoteScriptRoot.GITIGNORE_FILE) {
       // both of these are considered "metadata" files
       this.type = "metadata";
+    } else if (typeStr === "snapshot") {
+      this.type = "snapshot";
     } else {
-      throw new Error("Unrecognized type in downstairs URI: " + typeStr);
+      throw new Error("unhandled type in downstairs URI: " + typeStr);
     }
     
   }

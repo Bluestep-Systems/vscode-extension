@@ -7,12 +7,13 @@ import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { GlobMatcher } from '../data/GlobMatcher';
 import { readFileText } from '../data/readFile';
 import { FileSystem } from '../fs/FileSystemFactory';
-import { ResponseCodes, ResponseCodes as StatusCodes } from '../network/StatusCodes';
+import { ResponseCodes } from '../network/StatusCodes';
 import { DownstairsUriParser } from './DownstairsUrIParser';
-import { RemoteScriptRoot } from './RemoteScriptRoot';
-import { RemoteTsConfigFile } from './RemoteTsConfigFile';
+import { PathElement } from './PathElement';
 import { RemoteScriptFolder } from './RemoteScriptFolder';
-import { RemotePathElement } from './RemotePathElement';
+import { RemoteScriptRoot } from './RemoteScriptRoot';
+import { TsConfigFile } from './TsConfigFile';
+import { TerminalElement } from './TerminalElement';
 const fs = FileSystem.getInstance;
 
 /**
@@ -22,9 +23,7 @@ const fs = FileSystem.getInstance;
  * to extract the WebDAV ID and domain associated with that formula.
  * @lastreviewed 2025-09-15
  */
-export class RemoteScriptFile extends RemotePathElement {
-
-  
+export class RemoteScriptFile extends PathElement implements TerminalElement {
 
   /**
    * The downstairs URI (local file system path).
@@ -65,6 +64,11 @@ export class RemoteScriptFile extends RemotePathElement {
   }
 
   public static fromUri(uri: vscode.Uri): RemoteScriptFile {
+    return new RemoteScriptFile({ downstairsUri: uri });
+  }
+
+  public static fromPath(fsPath: string): RemoteScriptFile {
+    const uri = vscode.Uri.file(fsPath);
     return new RemoteScriptFile({ downstairsUri: uri });
   }
 
@@ -254,7 +258,7 @@ export class RemoteScriptFile extends RemotePathElement {
         "Accept": "*/*",
       }
     });
-    if (response.status >= StatusCodes.BAD_REQUEST) {
+    if (response.status >= ResponseCodes.BAD_REQUEST) {
       throw new Error(`Error fetching upstairs file. Status: ${response.status}.\n ${response.statusText}`);
     }
     return await response.text();
@@ -297,7 +301,7 @@ export class RemoteScriptFile extends RemotePathElement {
         "Accept": "*/*",
       }
     });
-    if (response.status >= StatusCodes.BAD_REQUEST) {
+    if (response.status >= ResponseCodes.BAD_REQUEST) {
       App.logger.error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
       throw new Error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
     }
@@ -554,12 +558,16 @@ export class RemoteScriptFile extends RemotePathElement {
     return this.parser.type === "declarations";
   }
 
+  public isInSnapshot(): boolean {
+    return this.parser.type === "snapshot";
+  }
+
   /**
    * Checks if the script file is in the info folder.
    * @lastreviewed 2025-09-15
    */
   public async isInInfo(): Promise<boolean> {
-    const infoFolder = await this.getScriptRoot().getInfoFolder();
+    const infoFolder = await this.getScriptRoot().getInfoFolderContents();
     return infoFolder.some(file => file.fsPath === this.getUri().fsPath);
   }
 
@@ -568,7 +576,7 @@ export class RemoteScriptFile extends RemotePathElement {
    * @lastreviewed 2025-09-15
    */
   public async isInObjects(): Promise<boolean> {
-    const objectsFolder = await this.getScriptRoot().getObjectsFolder();
+    const objectsFolder = await this.getScriptRoot().getObjectsFolderContents();
     return objectsFolder.some(file => file.fsPath === this.getUri().fsPath);
   }
 
@@ -593,7 +601,7 @@ export class RemoteScriptFile extends RemotePathElement {
    * @lastreviewed 2025-09-15
    */
   public async isInInfoFolder(): Promise<boolean> {
-    const infoFolder = await this.getScriptRoot().getInfoFolder();
+    const infoFolder = await this.getScriptRoot().getInfoFolderContents();
     return infoFolder.some(file => file.fsPath === this.getUri().fsPath);
   }
 
@@ -651,24 +659,24 @@ export class RemoteScriptFile extends RemotePathElement {
 
   /**
    * 
-   * @returns The closest tsconfig.json file as a RemoteTsConfigFile instance
+   * @returns The closest tsconfig.json file as a TsConfigFile instance
    * @throws {Error} When no tsconfig.json file is found
    * @lastreviewed null
    */
-  public async getClosestTsConfigFile(): Promise<RemoteTsConfigFile> {
+  public async getClosestTsConfigFile(){
     const tsConfigUri = await this.getClosestTsConfigUri();
     if (!tsConfigUri) {
       throw new Error("Could not find a tsconfig.json file");
     }
-    return new RemoteTsConfigFile(RemoteScriptFile.fromUri(tsConfigUri));
+    return new TsConfigFile(RemoteScriptFile.fromUri(tsConfigUri));
   }
   
   /**
    * 
    * @returns The {@link vscode.Uri} of the closest tsconfig.json file
    */
-  private async getClosestTsConfigUri() {
-    return await fs().closest(this.getUri(), RemoteTsConfigFile.FILENAME);
+  public async getClosestTsConfigUri() {
+    return await fs().closest(this.getUri(), PathElement.TS_CONFIG_JSON);
   }
 
   public async getClosestTsConfig() {
@@ -703,6 +711,9 @@ export class RemoteScriptFile extends RemotePathElement {
     return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), "draft").fsPath, this.getUri().fsPath);
   }
 
+  create(vsCodeUri: vscode.Uri) {
+    return new RemoteScriptFile({ downstairsUri: vsCodeUri });
+  }
 
 }
 

@@ -1,5 +1,5 @@
-import { FileSystemProvider, VSCodeFileSystem, MockFileSystem } from './FileSystemProvider';
 import * as vscode from 'vscode';
+import { FileSystemProvider, MockFileSystem, VSCodeFileSystem } from './FileSystemProvider';
 /**
  * Namespace for managing the file system provider.
  * This allows us to switch between real and mock implementations for testing.

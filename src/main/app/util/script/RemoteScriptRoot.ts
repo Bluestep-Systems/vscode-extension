@@ -6,8 +6,10 @@ import { App } from '../../App';
 import { FileSystem } from '../fs/FileSystemFactory';
 import { DownstairsUriParser } from './DownstairsUrIParser';
 import { FileDoesNotExistError, FileReadError } from './Errors';
-import { RemoteScriptFile } from './RemoteScriptFile';
 import { RemoteScriptFolder } from './RemoteScriptFolder';
+import { RemoteScriptFile } from './RemoteScriptFile';
+import { ScriptCompiler } from './ScriptCompiler';
+import { PathElement } from './PathElement';
 const fs = FileSystem.getInstance;
 
 /**
@@ -16,7 +18,8 @@ const fs = FileSystem.getInstance;
  * This originally was the webdavid root file.
  * @lastreviewed null
  */
-export class RemoteScriptRoot extends RemoteScriptFolder {
+export class RemoteScriptRoot implements PathElement {
+  private folder: RemoteScriptFolder;
   private static readonly ScriptContentFolders = ["info", "scripts", "objects"] as const;
   public static readonly METADATA_FILE = ".b6p_metadata.json";
   public static readonly GITIGNORE_FILE = ".gitignore";
@@ -33,13 +36,20 @@ export class RemoteScriptRoot extends RemoteScriptFolder {
    * @lastreviewed 2025-09-15
    */
   constructor({ childUri }: { childUri: vscode.Uri; }) {
+
     const parser = new DownstairsUriParser(childUri);
     const shavedName = parser.getShavedName();
     const scriptPath = path.parse(shavedName);                  // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
     const parentDirBase = path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
-    super(vscode.Uri.file(scriptPath.dir + path.sep + scriptPath.base));
+    this.folder = new RemoteScriptFolder(vscode.Uri.file(scriptPath.dir + path.sep + scriptPath.base));
     this.downstairsRootPath = scriptPath;
     this.downstairsRootOrgPath = parentDirBase;
+  }
+  fsPath(): string {
+    throw new Error('Method not implemented.');
+  }
+  getUri(): vscode.Uri {
+    throw new Error('Method not implemented.');
   }
 
   /**
@@ -261,7 +271,7 @@ export class RemoteScriptRoot extends RemoteScriptFolder {
    * @lastreviewed 2025-09-15
    */
   public getRootUri() {
-    return this.uri;
+    return this.folder.getUri();
   }
 
   /**
@@ -322,14 +332,6 @@ export class RemoteScriptRoot extends RemoteScriptFolder {
     return new RemoteScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, "/") });
   }
 
-  /**
-   * Generic helper to get a folder {@link vscode.Uri} under the downstairs root.
-   * @param folderName The name of the folder to get the URI for
-   * @lastreviewed 2025-09-15
-   */
-  private getFolderUri(folderName: typeof RemoteScriptRoot.ScriptContentFolders[number]) {
-    return vscode.Uri.joinPath(this.getRootUri(), "draft", folderName);
-  }
 
   /**
    * Generic helper to get the contents of a folder.
@@ -337,34 +339,34 @@ export class RemoteScriptRoot extends RemoteScriptFolder {
    * @returns Array of URIs for files and folders within the specified folder
    * @lastreviewed 2025-09-15
    */
-  private async getFolderContents(folderName: typeof RemoteScriptRoot.ScriptContentFolders[number]): Promise<vscode.Uri[]> {
-    const folderUri = this.getFolderUri(folderName);
-    const dirContents = await fs().readDirectory(folderUri);
-    return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folderUri, name));
+  private async getDraftFolderContents(folderName: typeof RemoteScriptRoot.ScriptContentFolders[number]): Promise<vscode.Uri[]> {
+    const folder = this.getDraftFolder().getChildFolder(folderName);
+    const dirContents = await fs().readDirectory(folder);
+    return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folder.getUri(), name));
   }
 
   /**
    * Gets the contents of the info folder.
    * @lastreviewed 2025-09-15
    */
-  public async getInfoFolder() {
-    return this.getFolderContents("info");
+  public async getInfoFolderContents() {
+    return this.getDraftFolderContents("info");
   }
 
   /**
    * Gets the contents of the scripts folder.
    * @lastreviewed 2025-09-15
    */
-  public async getScriptsFolder() {
-    return this.getFolderContents("scripts");
+  public async getScriptsFolderContents() {
+    return this.getDraftFolderContents("scripts");
   }
 
   /**
    * Gets the contents of the objects folder.
    * @lastreviewed 2025-09-15
    */
-  public async getObjectsFolder() {
-    return this.getFolderContents("objects");
+  public async getObjectsFolderContents() {
+    return this.getDraftFolderContents("objects");
   }
 
   /**
@@ -374,8 +376,8 @@ export class RemoteScriptRoot extends RemoteScriptFolder {
    * @lastreviewed 2025-09-15
    */
   public async isCopacetic(): Promise<boolean> {
-    const infoContent = await this.getInfoFolder();
-    const objectsContent = await this.getObjectsFolder();
+    const infoContent = await this.getInfoFolderContents();
+    const objectsContent = await this.getObjectsFolderContents();
     const reasonsWhyBad: string[] = [];
     if (infoContent.length !== 3) {
       reasonsWhyBad.push("`info` folder must have 3 elements");
@@ -407,7 +409,7 @@ export class RemoteScriptRoot extends RemoteScriptFolder {
    */
   equals(b: RemoteScriptRoot) {
     return (
-      super.equals(b) &&
+      this.folder.equals(b.folder) &&
       this.origin === b.origin &&
       this.webDavId === b.webDavId &&
       this.toBaseUpstairsString() === b.toBaseUpstairsString()
@@ -436,19 +438,30 @@ export class RemoteScriptRoot extends RemoteScriptFolder {
 
     //TODO do a safety check on the hash to prevent deleted files needlessly
     await this.deleteBuildFolder();
-
+    const draftFolder = this.getDraftFolder();
+    const allFiles = await draftFolder.flatten();
+    const compiler = new ScriptCompiler();
+    for (const file of allFiles) {
+      if (file.fsPath().endsWith(".ts") || file.fsPath().endsWith(".tsx")) {
+        await compiler.addFile(file);
+      }
+    }
+    await compiler.compile();
   }
 
   public getDraftFolder() {
-    return this.getChildFolder("draft");
+    return this.folder.getChildFolder("draft");
   }
 
   public getDraftBuildFolder() {
     return this.getDraftFolder().getChildFolder(".build");
   }
 
-  public getSnapshotFolderUri() {
-    //return vscode.Uri.joinPath(this.getDownstairsRootUri(), "snapshot");
-    throw new Error("Not sure if we want to interact with snapshot folder directly outside of snapshot yet");
+  public getSnapshotFolder() {
+    return this.folder.getChildFolder("snapshot");
+  }
+  
+  public getDeclarationsFolder() {
+    return this.folder.getChildFolder("declarations");
   }
 }

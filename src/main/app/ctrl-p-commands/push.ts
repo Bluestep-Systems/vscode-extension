@@ -48,7 +48,7 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
     const downstairsRootFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
     App.logger.info("Reading directory:", downstairsRootFolderUri.toString());
     const fileList = await fs()
-      .readDirectory(downstairsRootFolderUri)
+      .readDirectory(new RemoteScriptFolder(downstairsRootFolderUri))
       .then(async node => await tunnelNode(node, { nodeURI: uriStringToFilePath(sourceFolder) }));
 
     // Create tasks for progress helper
@@ -88,7 +88,7 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   await Promise.all(node.map(async ([name, type]) => {
     const newNodeUri = nodeURI + "/" + name;
     if (type === vscode.FileType.Directory) {
-      const nestedNode = await fs().readDirectory(vscode.Uri.file(newNodeUri));
+      const nestedNode = await fs().readDirectory(new RemoteScriptFolder(vscode.Uri.file(newNodeUri)));
       await tunnelNode(nestedNode, { pathList, nodeURI: newNodeUri });
     } else {
       pathList.push(newNodeUri);

@@ -324,7 +324,7 @@ suite('RemoteScriptRoot Tests', () => {
             mockFileSystem.setMockFile(permissionsFile, '{}');
             mockFileSystem.setMockFile(configFile, '{}');
             
-            const infoContents = await remoteScriptRoot.getInfoFolder();
+            const infoContents = await remoteScriptRoot.getInfoFolderContents();
             
             assert.strictEqual(infoContents.length, 3);
             assert.ok(infoContents.some(uri => uri.fsPath.endsWith('metadata.json')));
@@ -345,7 +345,7 @@ suite('RemoteScriptRoot Tests', () => {
             mockFileSystem.setMockFile(mainFile, 'console.log("main");');
             mockFileSystem.setMockFile(helperFile, 'console.log("helper");');
             
-            const scriptsContents = await remoteScriptRoot.getScriptsFolder();
+            const scriptsContents = await remoteScriptRoot.getScriptsFolderContents();
             
             assert.strictEqual(scriptsContents.length, 2);
             assert.ok(scriptsContents.some(uri => uri.fsPath.endsWith('main.js')));
@@ -362,7 +362,7 @@ suite('RemoteScriptRoot Tests', () => {
             const importsFile = vscode.Uri.joinPath(objectsFolderUri, 'imports.ts');
             mockFileSystem.setMockFile(importsFile, 'export {};');
             
-            const objectsContents = await remoteScriptRoot.getObjectsFolder();
+            const objectsContents = await remoteScriptRoot.getObjectsFolderContents();
             
             assert.strictEqual(objectsContents.length, 1);
             assert.ok(objectsContents[0].fsPath.endsWith('imports.ts'));
