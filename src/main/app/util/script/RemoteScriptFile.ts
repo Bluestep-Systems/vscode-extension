@@ -21,6 +21,8 @@ const fs = FileSystem.getInstance;
  */
 export class RemoteScriptFile {
 
+  private static TS_CONFIG_FILE = "tsconfig.json";
+
   /**
    * The downstairs URI (local file system path).
    */
@@ -624,13 +626,13 @@ export class RemoteScriptFile {
   }
 
   public async getClosestTsConfigUri() {
-    return await fs().closest(this.getDownstairsUri(), 'tsconfig.json');
+    return await fs().closest(this.getDownstairsUri(), RemoteScriptFile.TS_CONFIG_FILE);
   }
 
   public async getClosestTsConfig() {
     const tsConfigUri = await this.getClosestTsConfigUri();
     if (!tsConfigUri) {
-      throw new Error("Could not find tsconfig.json in any parent folder");
+      return null;
     }
     const tsConfigContent = await readFileText(tsConfigUri);
     return JSON.parse(tsConfigContent) as ts.ParsedTsconfig;
@@ -653,6 +655,10 @@ export class RemoteScriptFile {
 
   public get extension() {
     return path.extname(this.getFileName()).toLowerCase();
+  }
+
+  public pathWithRespectToDraftRoot() {
+    return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getDownstairsRootUri(), "draft").fsPath, this.getDownstairsUri().fsPath);
   }
 }
 
