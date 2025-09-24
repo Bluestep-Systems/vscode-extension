@@ -1,6 +1,6 @@
 import { Util } from '../util';
 //@ts-ignore
-import { ScriptCompiler } from '../util/script/FileCompiler';
+import { ScriptCompiler } from '../util/script/ScriptCompiler';
 import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
 //import { FileSystem } from "../util/fs/FileSystemFactory";
 /**
@@ -10,8 +10,9 @@ import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
 //const fs = FileSystem.getInstance;
 export default async function () {
   const activeUri = await Util.getDownstairsFileUri();
-  const sf = new RemoteScriptFile({ downstairsUri: activeUri });
-  console.log(sf.pathWithRespectToDraftRoot());
-  const compiler = new ScriptCompiler(sf);
-  await compiler.compile();
+  const sf = RemoteScriptFile.fromUri(activeUri);
+  console.log("folderUri", sf.folder().fsPath());
+  // console.log(sf.pathWithRespectToDraftRoot());
+  // const compiler = new ScriptCompiler(sf);
+  // await compiler.compile();
 }

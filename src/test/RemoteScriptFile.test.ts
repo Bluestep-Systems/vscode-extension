@@ -68,7 +68,7 @@ suite('RemoteScriptFile Tests', () => {
   suite('File Type Detection', () => {
     test('should identify draft files correctly', () => {
       const draftUri = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
-      const scriptFile = new RemoteScriptFile({ downstairsUri: draftUri });
+      const scriptFile = RemoteScriptFile.fromUri(draftUri);
       
       assert.strictEqual(scriptFile.isInDraft(), true);
       assert.strictEqual(scriptFile.isInDeclarations(), false);
@@ -76,7 +76,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should identify declarations files correctly', () => {
       const declarationsUri = vscode.Uri.file('/test/workspace/123/declarations/test-script.js');
-      const scriptFile = new RemoteScriptFile({ downstairsUri: declarationsUri });
+      const scriptFile = RemoteScriptFile.fromUri(declarationsUri);
       
       assert.strictEqual(scriptFile.isInDeclarations(), true);
       assert.strictEqual(scriptFile.isInDraft(), false);
@@ -92,7 +92,7 @@ suite('RemoteScriptFile Tests', () => {
   suite('URI Operations', () => {
     test('should convert to downstairs URI correctly', () => {
       const expectedPath = path.join('/test/workspace/configbeh.bluestep.net/1466960', 'draft', 'test.js');
-      const downstairsUri = remoteScriptFile.getDownstairsUri();
+      const downstairsUri = remoteScriptFile.getUri();
       
       // Normalize paths for cross-platform compatibility
       assert.strictEqual(
@@ -103,7 +103,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should throw error for metadata files when converting to upstairs URL', () => {
       const metadataUri = vscode.Uri.file('/test/workspace/123/.b6p_metadata.json');
-      const scriptFile = new RemoteScriptFile({ downstairsUri: metadataUri });
+      const scriptFile = RemoteScriptFile.fromUri(metadataUri);
       
       assert.throws(() => {
         scriptFile.toUpstairsURL();
@@ -230,10 +230,10 @@ suite('RemoteScriptFile Tests', () => {
     test('should return true for equal script files with same path', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
-      
-      const scriptFile1 = new RemoteScriptFile({ downstairsUri: uri1 });
-      const scriptFile2 = new RemoteScriptFile({ downstairsUri: uri2 });
-      
+
+      const scriptFile1 = RemoteScriptFile.fromUri(uri1);
+      const scriptFile2 = RemoteScriptFile.fromUri(uri2);
+
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, true);
     });
@@ -241,10 +241,10 @@ suite('RemoteScriptFile Tests', () => {
     test('should return false for different script files', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/456/draft/other-script.js');
-      
-      const scriptFile1 = new RemoteScriptFile({ downstairsUri: uri1 });
-      const scriptFile2 = new RemoteScriptFile({ downstairsUri: uri2 });
-      
+
+      const scriptFile1 = RemoteScriptFile.fromUri(uri1);
+      const scriptFile2 = RemoteScriptFile.fromUri(uri2);
+
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
     });
@@ -252,10 +252,10 @@ suite('RemoteScriptFile Tests', () => {
     test('should return false for same webdav id but different file types', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/123/declarations/test-script.js');
-      
-      const scriptFile1 = new RemoteScriptFile({ downstairsUri: uri1 });
-      const scriptFile2 = new RemoteScriptFile({ downstairsUri: uri2 });
-      
+
+      const scriptFile1 = RemoteScriptFile.fromUri(uri1);
+      const scriptFile2 = RemoteScriptFile.fromUri(uri2);
+
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
     });
@@ -280,7 +280,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should throw error when trying to overwrite script root of metadata file', () => {
       const metadataUri = vscode.Uri.file('/test/workspace/configbeh.bluestep.net/123/.b6p_metadata.json');
-      const metadataFile = new RemoteScriptFile({ downstairsUri: metadataUri });
+      const metadataFile = RemoteScriptFile.fromUri(metadataUri);
       const newChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/other.js');
       const newRoot = new RemoteScriptRoot({ childUri: newChildUri });
       
@@ -298,9 +298,9 @@ suite('RemoteScriptFile Tests', () => {
       // Set up directory and file
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
-      
-      const scriptFile = new RemoteScriptFile({ downstairsUri: infoUri });
-      
+
+      const scriptFile = RemoteScriptFile.fromUri(infoUri);
+
       const isInInfo = await scriptFile.isInInfo();
       const isInInfoFolder = await scriptFile.isInInfoFolder();
       
@@ -315,9 +315,9 @@ suite('RemoteScriptFile Tests', () => {
       // Set up directory and file
       mockFileSystemProvider.setMockDirectory(objectsFolderUri);
       mockFileSystemProvider.setMockFile(objectsUri, 'export {};');
-      
-      const scriptFile = new RemoteScriptFile({ downstairsUri: objectsUri });
-      
+
+      const scriptFile = RemoteScriptFile.fromUri(objectsUri);
+
       const isInObjects = await scriptFile.isInObjects();
       
       assert.strictEqual(isInObjects, true);
@@ -330,9 +330,9 @@ suite('RemoteScriptFile Tests', () => {
       // Set up directory and file
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
-      
-      const scriptFile = new RemoteScriptFile({ downstairsUri: infoUri });
-      
+
+      const scriptFile = RemoteScriptFile.fromUri(infoUri);
+
       const isInInfoOrObjects = await scriptFile.isInInfoOrObjects();
       
       assert.strictEqual(isInInfoOrObjects, true);
@@ -340,7 +340,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should return false for files not in info or objects', async () => {
       const scriptUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/scripts/main.js');
-      const scriptFile = new RemoteScriptFile({ downstairsUri: scriptUri });
+      const scriptFile = RemoteScriptFile.fromUri(scriptUri);
       
       // Set up empty folders so the file isn't found in them
       const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
@@ -497,7 +497,7 @@ suite('RemoteScriptFile Tests', () => {
         scriptName: 'Test',
         webdavId: '1466960',
         pushPullRecords: [{
-          downstairsPath: remoteScriptFile.getDownstairsUri().fsPath,
+          downstairsPath: remoteScriptFile.getUri().fsPath,
           lastPulled: '2023-01-01T12:00:00.000Z',
           lastPushed: null,
           lastVerifiedHash: 'abcd1234'
@@ -527,7 +527,7 @@ suite('RemoteScriptFile Tests', () => {
         scriptName: 'Test',
         webdavId: '1466960',
         pushPullRecords: [{
-          downstairsPath: remoteScriptFile.getDownstairsUri().fsPath,
+          downstairsPath: remoteScriptFile.getUri().fsPath,
           lastPulled: null,
           lastPushed: '2023-01-02T15:30:00.000Z',
           lastVerifiedHash: 'abcd1234'
@@ -585,7 +585,7 @@ suite('RemoteScriptFile Tests', () => {
       // REASON-FOR-ANY: Accessing private property for test verification
       const originalParser = (remoteScriptFile as any).parser;
       const newUri = vscode.Uri.parse('file:///test/workspace/different.domain.com/9999/draft/different.js');
-      const newScriptFile = new RemoteScriptFile({ downstairsUri: newUri });
+      const newScriptFile = RemoteScriptFile.fromUri(newUri);
       // REASON-FOR-ANY: Accessing private property for test verification
       const newParser = (newScriptFile as any).parser;
       
@@ -627,7 +627,7 @@ suite('RemoteScriptFile Tests', () => {
   suite('Push Validation', () => {
     test('should return reason for metadata files', async () => {
       const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
-      const metadataFile = new RemoteScriptFile({ downstairsUri: metadataUri });
+      const metadataFile = RemoteScriptFile.fromUri(metadataUri);
       
       const reason = await metadataFile.getReasonToNotPush();
       
@@ -636,7 +636,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should return reason for declarations files', async () => {
       const declarationsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/test.js');
-      const declarationsFile = new RemoteScriptFile({ downstairsUri: declarationsUri });
+      const declarationsFile = RemoteScriptFile.fromUri(declarationsUri);
       
       const reason = await declarationsFile.getReasonToNotPush();
       
@@ -684,7 +684,7 @@ suite('RemoteScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
       
-      const scriptFile = new RemoteScriptFile({ downstairsUri: infoUri });
+      const scriptFile = RemoteScriptFile.fromUri(infoUri);
       const reason = await scriptFile.getReasonToNotPush();
       
       assert.strictEqual(reason, 'File is in info or objects');

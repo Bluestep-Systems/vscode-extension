@@ -15,7 +15,7 @@ export default async function snapshot({ overrideFormulaUri, sourceOps }: { over
       App.logger.info("Snapshot command called with no arguments, assuming current context");
     }
     const activeEditor = await Util.getDownstairsFileUri(sourceOps);
-    const sf = new RemoteScriptFile({ downstairsUri: activeEditor });
+    const sf = RemoteScriptFile.fromUri(activeEditor!);
     sf.getScriptRoot().snapshot();
     // console.log("sf.getScriptRoot().getDraftBuildFolderUri())", sf.getScriptRoot().getDraftBuildFolderUri());
     // await fs().delete(sf.getScriptRoot().getDraftBuildFolderUri()).catch(e => {console.error(e);});

@@ -96,7 +96,7 @@ suite('RemoteScriptRoot Tests', () => {
 
     suite('URI Generation', () => {
         test('should generate correct downstairs root URI', () => {
-            const rootUri = remoteScriptRoot.getDownstairsRootUri();
+            const rootUri = remoteScriptRoot.getRootUri();
             const expectedPath = path.normalize('/test/workspace/configbeh.bluestep.net/1466960');
             
             assert.strictEqual(
@@ -220,7 +220,7 @@ suite('RemoteScriptRoot Tests', () => {
     suite('Touch File Operations', () => {
         test('should touch file with lastPulled timestamp', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = new RemoteScriptFile({ downstairsUri: fileUri });
+            const scriptFile = RemoteScriptFile.fromUri(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -241,7 +241,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should touch file with lastPushed timestamp', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = new RemoteScriptFile({ downstairsUri: fileUri });
+            const scriptFile = RemoteScriptFile.fromUri(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -262,7 +262,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should update existing record when touching same file again', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = new RemoteScriptFile({ downstairsUri: fileUri });
+            const scriptFile = RemoteScriptFile.fromUri(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -287,7 +287,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should store hash when touching file', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = new RemoteScriptFile({ downstairsUri: fileUri });
+            const scriptFile = RemoteScriptFile.fromUri(fileUri);
             const testContent = 'console.log("test");';
             
             // Set up mock file content for hash calculation

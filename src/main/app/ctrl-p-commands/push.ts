@@ -12,6 +12,7 @@ import { DownstairsUriParser } from '../util/script/DownstairsUrIParser';
 import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
+import { RemoteScriptFolder } from '../util/script/RemoteScriptFolder';
 const fs = FileSystem.getInstance;
 /**
  * Pushes a script to a WebDAV location.
@@ -108,7 +109,7 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
   const upstairsOverride = new URL(upstairsUrl);
   const downstairsUri = vscode.Uri.file(localFile);
-  const scriptFile = new RemoteScriptFile({ downstairsUri });
+  const scriptFile = RemoteScriptFile.fromUri(downstairsUri);
 
   const desto = localFile
     .split(upstairsUrl.host + "/" + webDavId)[1];
@@ -191,7 +192,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   }
   const rawFilePaths = getScriptRet;
 
-  const flattenedDownstairs = await flattenDirectory(downstairsRootFolderUri);
+  const flattenedDownstairs = await flattenDirectory(new RemoteScriptFolder(downstairsRootFolderUri));
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
   // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for
@@ -204,9 +205,9 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     if (!downstairsPath) {
       // we don't want to delete stuff that is in gitignore
       const dsurlp = new DownstairsUriParser(downstairsRootFolderUri);
-      const sf = new RemoteScriptFile({ downstairsUri: vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath) });
+      const sf = RemoteScriptFile.fromUri(vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath));
       if (!(await sf.isCopacetic())) {
-        throw new Error("File is not copacetic: " + sf.getDownstairsUri().toString());        
+        throw new Error("File is not copacetic: " + sf.getUri().toString());        
       }
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);

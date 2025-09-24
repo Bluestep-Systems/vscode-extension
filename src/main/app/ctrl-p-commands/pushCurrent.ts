@@ -19,8 +19,8 @@ export default async function (): Promise<void> {
     if (activeEditorUri === undefined) {
       return;
     }
-    const fileMetaData = new RemoteScriptFile({ downstairsUri: activeEditorUri });
-    const dirtyDocs = await getDirtyDocs(fileMetaData.getScriptRoot().getDownstairsRootUri());
+    const fileMetaData = RemoteScriptFile.fromUri(activeEditorUri);
+    const dirtyDocs = await getDirtyDocs(fileMetaData.getScriptRoot().getRootUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
       const CANCEL = 'Cancel';

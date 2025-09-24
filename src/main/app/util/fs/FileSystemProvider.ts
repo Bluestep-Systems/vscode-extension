@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { RemotePathElement } from '../script/RemotePathElement';
 
 /**
  * Interface defining the file system operations we need.
@@ -121,7 +122,7 @@ export interface FileSystemProvider {
    * await fs.delete(vscode.Uri.file('/path/to/file.txt'), { useTrash: true });
    * ```
    */
-  delete(uri: vscode.Uri, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void>;
+  delete(element: RemotePathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void>;
 
   /**
    * Create a directory.
@@ -256,8 +257,8 @@ export class VSCodeFileSystem implements FileSystemProvider {
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
     return vscode.workspace.fs.readDirectory(uri);
   }
-  async delete(uri: vscode.Uri, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
-    return vscode.workspace.fs.delete(uri, { recursive: options?.recursive ?? true, useTrash: options?.useTrash ?? false });
+  async delete(element: RemotePathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
+    return vscode.workspace.fs.delete(element.getUri(), { recursive: options?.recursive ?? true, useTrash: options?.useTrash ?? false });
   }
   async createDirectory(uri: vscode.Uri): Promise<void> {
     return vscode.workspace.fs.createDirectory(uri);
@@ -621,10 +622,10 @@ export class MockFileSystem implements FileSystemProvider {
     
     return entries;
   }
-  
-  async delete(uri: vscode.Uri, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
-    const key = uri.toString();
-    
+
+  async delete(element: RemotePathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
+    const key = element.getUri().toString();
+
     // In a more sophisticated mock, we could handle recursive deletion of directories
     // and simulate trash behavior, but for now we'll just acknowledge the options exist
     const recursive = options?.recursive ?? true;
@@ -636,7 +637,7 @@ export class MockFileSystem implements FileSystemProvider {
       
       // If recursive, we could delete all files under this path
       if (recursive) {
-        const pathToDelete = uri.path;
+        const pathToDelete = element.getUri().path;
         const keysToDelete: string[] = [];
         
         for (const [fileKey] of this.files) {
@@ -652,7 +653,7 @@ export class MockFileSystem implements FileSystemProvider {
         });
       }
     } else {
-      throw new Error(`File not found: ${uri.toString()}`);
+      throw new Error(`File not found: ${element.getUri().toString()}`);
     }
   }
 

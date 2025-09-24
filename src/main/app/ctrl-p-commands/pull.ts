@@ -8,6 +8,7 @@ import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
 import { RemoteScriptRoot } from '../util/script/RemoteScriptRoot';
+import { RemoteScriptFolder } from '../util/script/RemoteScriptFolder';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -41,7 +42,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       cleanupMessage: "Cleaning up the downstairs folder..."
     });
 
-    const flattenedDirectory = await flattenDirectory(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
+    const flattenedDirectory = await flattenDirectory(new RemoteScriptFolder(vscode.Uri.joinPath(getHostFolderUri(url), webDavId)));
     await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
     Alert.info('Pull complete!');
@@ -61,7 +62,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
   const toDelete: vscode.Uri[] = [];
   for (const ep of existingPaths) {
     //ignore special files
-    if (await new RemoteScriptFile({ downstairsUri: ep }).isInGitIgnore()) {
+    if (await RemoteScriptFile.fromUri(ep).isInGitIgnore()) {
       continue;
     }
     if ([RemoteScriptRoot.METADATA_FILE, RemoteScriptRoot.GITIGNORE_FILE].some(special => ep.fsPath.endsWith(special))) {
@@ -117,11 +118,11 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const sf = new RemoteScriptFile({ downstairsUri: ultimatePath });
+    const sf = RemoteScriptFile.fromUri(ultimatePath);
     if (await sf.exists() && await sf.integrityMatches()) {
       App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
       await sf.getScriptRoot().touchFile(sf, "lastPulled");
-      return sf.getDownstairsUri();
+      return sf.getUri();
     }
     await sf.download();
   }
