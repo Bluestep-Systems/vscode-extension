@@ -3,14 +3,12 @@ import { flattenDirectory } from '../data/flattenDirectory';
 import { PathElement } from './PathElement';
 import { RemoteScriptFile } from './RemoteScriptFile';
 import { TsConfigFile } from './TsConfigFile';
-export class RemoteScriptFolder extends PathElement {
-  constructor(private readonly folderUri: vscode.Uri) {  
-    super();
-  }
+export class RemoteScriptFolder implements PathElement {
+  constructor(private readonly folderUri: vscode.Uri) { }
   public static async fromUri(uri: vscode.Uri): Promise<RemoteScriptFolder> {
     let isFolder = false;
     try {
-      const stat = await vscode.workspace.  fs.stat(uri);
+      const stat = await vscode.workspace.fs.stat(uri);
       isFolder = stat.type === vscode.FileType.Directory;
     } catch (error) {
       // URI doesn't exist or can't be accessed
@@ -21,7 +19,7 @@ export class RemoteScriptFolder extends PathElement {
     return new RemoteScriptFolder(uri);
   }
   public async findAllTsConfigFiles(): Promise<TsConfigFile[]> {
-    const files = await vscode.workspace.findFiles(new vscode.RelativePattern(this.uri(), '**/metadata.json'));
+    const files = await vscode.workspace.findFiles(new vscode.RelativePattern(this.uri(), '**/tsconfig.json'));
     return files.map(file => TsConfigFile.fromUri(file));
   }
   public equals(other: RemoteScriptFolder): boolean {
@@ -30,7 +28,7 @@ export class RemoteScriptFolder extends PathElement {
     }
     return this.uri().fsPath === other.uri().fsPath;
   }
-  public fsPath(): string {
+  public path(): string {
     return this.uri().fsPath;
   }
   public uri(): vscode.Uri {
@@ -45,7 +43,7 @@ export class RemoteScriptFolder extends PathElement {
     if (!(other instanceof RemoteScriptFolder)) {
       return false;
     }
-    return other.fsPath().includes(this.fsPath());
+    return other.path().includes(this.path());
   }
 
   public async flatten(): Promise<RemoteScriptFile[]> {

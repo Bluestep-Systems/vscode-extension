@@ -45,7 +45,7 @@ export class RemoteScriptRoot implements PathElement {
     this.downstairsRootPath = scriptPath;
     this.downstairsRootOrgPath = parentDirBase;
   }
-  fsPath(): string {
+  path(): string {
     throw new Error('Method not implemented.');
   }
   uri(): vscode.Uri {
@@ -442,7 +442,7 @@ export class RemoteScriptRoot implements PathElement {
     const allFiles = await draftFolder.flatten();
     const compiler = new ScriptCompiler();
     for (const file of allFiles) {
-      if (file.fsPath().endsWith(".ts") || file.fsPath().endsWith(".tsx")) {
+      if (file.path().endsWith(".ts") || file.path().endsWith(".tsx")) {
         await compiler.addFile(file);
       }
     }

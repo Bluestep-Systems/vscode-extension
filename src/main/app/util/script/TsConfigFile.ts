@@ -1,20 +1,19 @@
 import * as vscode from "vscode";
-import { PathElement } from "./PathElement";
 import { RemoteScriptFile } from "./RemoteScriptFile";
 import { TerminalElement } from "./TerminalElement";
 
 /**
  * A specialized RemoteScriptFile representing a tsconfig.json file.
  */
-export class TsConfigFile extends PathElement implements TerminalElement {
+export class TsConfigFile implements TerminalElement {
+  static NAME = "tsconfig.json";
   constructor(private readonly sf: RemoteScriptFile) {
-    super();
-    if (!this.sf.fsPath().endsWith(PathElement.TS_CONFIG_JSON)) {
-      throw new Error("Provided RemoteScriptFile is not a tsconfig.json file: " + this.sf.fsPath());
+    if (!this.sf.path().endsWith(TsConfigFile.NAME)) {
+      throw new Error("Provided RemoteScriptFile is not a tsconfig.json file: " + this.sf.path());
     }
   }
   static fromUri(uri: vscode.Uri): TsConfigFile {
-    if (!uri.fsPath.endsWith(PathElement.TS_CONFIG_JSON)) {
+    if (!uri.fsPath.endsWith(TsConfigFile.NAME)) {
       throw new Error("Provided URI does not point to a tsconfig.json file.");
     }
     return new TsConfigFile(RemoteScriptFile.fromUri(uri));
@@ -31,8 +30,8 @@ export class TsConfigFile extends PathElement implements TerminalElement {
   }
 
 
-  public fsPath(): string {
-    return this.sf.fsPath();
+  public path(): string {
+    return this.sf.path();
   }
 
   public uri(): vscode.Uri {

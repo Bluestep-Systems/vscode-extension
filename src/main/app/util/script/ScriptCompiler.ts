@@ -30,7 +30,7 @@ export class ScriptCompiler {
   private getDefaultOptions(sf: TerminalElement): ts.CompilerOptions {
     throw new Error("we probably don't want to be using this");
     const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
-    LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().fsPath();
+    LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
     return LOCAL_CONFIG;
   }
 
@@ -43,11 +43,11 @@ export class ScriptCompiler {
     }
 
     const tsconfigTextArray = await fs().readFile(tsConfigFile.uri());
-    const pseudoParsedConfig = ts.parseConfigFileTextToJson(tsConfigFile.fsPath(), Buffer.from(tsconfigTextArray).toString('utf-8'));
-    pseudoParsedConfig.config.compilerOptions.rootDir = tsConfigFile.folder().fsPath();
+    const pseudoParsedConfig = ts.parseConfigFileTextToJson(tsConfigFile.path(), Buffer.from(tsconfigTextArray).toString('utf-8'));
+    pseudoParsedConfig.config.compilerOptions.rootDir = tsConfigFile.folder().path();
     if (pseudoParsedConfig.error) {
       const message = ts.flattenDiagnosticMessageText(pseudoParsedConfig.error.messageText, '\n');
-      throw new Error(`Error parsing tsconfig.json at ${tsConfigFile.fsPath()}: ${message}`);
+      throw new Error(`Error parsing tsconfig.json at ${tsConfigFile.path()}: ${message}`);
     }
     // Parse the configuration but ignore file discovery errors
     // We'll handle file discovery ourselves since we're working with specific files
@@ -58,11 +58,11 @@ export class ScriptCompiler {
         // Override readDirectory to return empty array - we don't want TS to validate include/exclude
         readDirectory: () => []
       },
-      tsConfigFile.folder().fsPath(),
+      tsConfigFile.folder().path(),
       undefined,
-      tsConfigFile.fsPath()
+      tsConfigFile.path()
     );
-    App.logger.info("Using tsconfig.json compiler options from:", tsConfigFile.fsPath);
+    App.logger.info("Using tsconfig.json compiler options from:", tsConfigFile.path);
     return parsedConfig.options;
   }
 
@@ -71,8 +71,8 @@ export class ScriptCompiler {
       throw new Error("File is not copacetic, cannot compile.");
     }
     const newTsConfigFile = await sf.getClosestTsConfigFile();
-    const existingVals = this.programs.get(newTsConfigFile.fsPath()) || [];
-    this.programs.set(newTsConfigFile.fsPath(), [...existingVals, sf]);
+    const existingVals = this.programs.get(newTsConfigFile.path()) || [];
+    this.programs.set(newTsConfigFile.path(), [...existingVals, sf]);
   }
 
   public async compile() {

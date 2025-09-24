@@ -11,7 +11,7 @@ import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
 export default async function () {
   const activeUri = await Util.getDownstairsFileUri();
   const sf = RemoteScriptFile.fromUri(activeUri);
-  console.log("folderUri", sf.folder().fsPath());
+  console.log("folderUri", sf.folder().path());
   // console.log(sf.pathWithRespectToDraftRoot());
   // const compiler = new ScriptCompiler(sf);
   // await compiler.compile();

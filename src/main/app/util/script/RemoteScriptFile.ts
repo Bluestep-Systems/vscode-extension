@@ -9,11 +9,10 @@ import { readFileText } from '../data/readFile';
 import { FileSystem } from '../fs/FileSystemFactory';
 import { ResponseCodes } from '../network/StatusCodes';
 import { DownstairsUriParser } from './DownstairsUrIParser';
-import { PathElement } from './PathElement';
 import { RemoteScriptFolder } from './RemoteScriptFolder';
 import { RemoteScriptRoot } from './RemoteScriptRoot';
-import { TsConfigFile } from './TsConfigFile';
 import { TerminalElement } from './TerminalElement';
+import { TsConfigFile } from './TsConfigFile';
 const fs = FileSystem.getInstance;
 
 /**
@@ -23,12 +22,12 @@ const fs = FileSystem.getInstance;
  * to extract the WebDAV ID and domain associated with that formula.
  * @lastreviewed 2025-09-15
  */
-export class RemoteScriptFile extends PathElement implements TerminalElement {
+export class RemoteScriptFile implements TerminalElement {
 
   /**
    * The downstairs URI (local file system path).
    */
-  private parser: DownstairsUriParser;
+  private _parser: DownstairsUriParser;
 
   /**
    * The downstairs root object.
@@ -58,8 +57,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   constructor({ downstairsUri }: { downstairsUri: vscode.Uri, }) {
-    super();
-    this.parser = new DownstairsUriParser(downstairsUri);
+    this._parser = new DownstairsUriParser(downstairsUri);
     this._scriptRoot = new RemoteScriptRoot({ childUri: downstairsUri });
   }
 
@@ -81,18 +79,18 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
 
     const upstairsBaseUrl = this.getScriptRoot().toBaseUpstairsUrl();
     const newUrl = new URL(upstairsBaseUrl);
-    if (this.parser.type === "root") {
+    if (this._parser.type === "root") {
       return newUrl;
-    } else if (this.parser.type === "metadata") {
+    } else if (this._parser.type === "metadata") {
       const fileName = this.getFileName();
       if (fileName === RemoteScriptRoot.METADATA_FILE) {
         throw new Error(`should never try to convert ${RemoteScriptRoot.METADATA_FILE} file to upstairs URL. Review logic on how you got here.`);
       }
       newUrl.pathname = upstairsBaseUrl.pathname + fileName;
-    } else if (this.parser.isDeclarationsOrDraft()) {
-      newUrl.pathname = upstairsBaseUrl.pathname + this.parser.type + "/" + this.parser.rest;
+    } else if (this._parser.isDeclarationsOrDraft()) {
+      newUrl.pathname = upstairsBaseUrl.pathname + this._parser.type + "/" + this._parser.rest;
     } else {
-      throw new Error(`unexpected type: \`${this.parser.type}\`, cannot convert to upstairs URL`);
+      throw new Error(`unexpected type: \`${this._parser.type}\`, cannot convert to upstairs URL`);
     }
 
     return newUrl;
@@ -103,9 +101,9 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   public uri() {
-    return this.parser.rawUri;
+    return this._parser.rawUri;
   }
-  public fsPath() {
+  public path() {
     return this.uri().fsPath;
   }
 
@@ -136,7 +134,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string> {
 
-    if (this.parser.type === "root") {
+    if (this._parser.type === "root") {
       return "File is the root folder";
     }
     if (this.getFileName() === RemoteScriptRoot.METADATA_FILE) {
@@ -462,7 +460,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
   withScriptRoot(root: RemoteScriptRoot): RemoteScriptFile {
     this._scriptRoot = root;
     //TODO determine if this if-check is even neccessary
-    if (this.parser.type === "metadata") {
+    if (this._parser.type === "metadata") {
       throw new Error("Cannot overwrite script root of a metadata file");
     }
     return this;
@@ -477,7 +475,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   withParser(parser: DownstairsUriParser): RemoteScriptFile {
-    this.parser = parser;
+    this._parser = parser;
     return this;
   }
 
@@ -491,7 +489,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
       return false;
     }
     return this._scriptRoot.equals(other._scriptRoot) &&
-      this.parser.equals(other.parser);
+      this._parser.equals(other._parser);
   }
 
   /**
@@ -555,11 +553,11 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   public isInDeclarations(): boolean {
-    return this.parser.type === "declarations";
+    return this._parser.type === "declarations";
   }
 
   public isInSnapshot(): boolean {
-    return this.parser.type === "snapshot";
+    return this._parser.type === "snapshot";
   }
 
   /**
@@ -593,7 +591,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   public isInDraft(): boolean {
-    return this.parser.type === "draft";
+    return this._parser.type === "draft";
   }
 
   /**
@@ -676,7 +674,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @returns The {@link vscode.Uri} of the closest tsconfig.json file
    */
   public async getClosestTsConfigUri() {
-    return await fs().closest(this.uri(), PathElement.TS_CONFIG_JSON);
+    return await fs().closest(this.uri(), TsConfigFile.NAME);
   }
 
   public async getClosestTsConfig() {
