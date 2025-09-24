@@ -256,10 +256,10 @@ export class VSCodeFileSystem implements FileSystemProvider {
     return vscode.workspace.findFiles(include, exclude, maxResults, token);
   }
   async readDirectory(folder: RemoteScriptFolder): Promise<[string, vscode.FileType][]> {
-    return vscode.workspace.fs.readDirectory(folder.getUri());
+    return vscode.workspace.fs.readDirectory(folder.uri());
   }
   async delete(element: PathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
-    return vscode.workspace.fs.delete(element.getUri(), { recursive: options?.recursive ?? true, useTrash: options?.useTrash ?? false });
+    return vscode.workspace.fs.delete(element.uri(), { recursive: options?.recursive ?? true, useTrash: options?.useTrash ?? false });
   }
   async createDirectory(uri: vscode.Uri): Promise<void> {
     return vscode.workspace.fs.createDirectory(uri);
@@ -600,11 +600,11 @@ export class MockFileSystem implements FileSystemProvider {
     return results;
   }
   async readDirectory(folder: RemoteScriptFolder): Promise<[string, vscode.FileType][]> {
-    const key = folder.getUri().toString();
+    const key = folder.uri().toString();
     const stat = this.stats.get(key);
     
     if (!stat || stat instanceof Error || stat.type !== vscode.FileType.Directory) {
-      throw new Error(`Directory not found: ${folder.getUri().toString()}`);
+      throw new Error(`Directory not found: ${folder.uri().toString()}`);
     }
     
     // Simple mock implementation - in real tests you'd set up specific files/directories
@@ -612,8 +612,8 @@ export class MockFileSystem implements FileSystemProvider {
     
     for (const [fileUriStr, _fileContent] of this.files) {
       const fileUri = vscode.Uri.parse(fileUriStr);
-      if (fileUri.path.startsWith(folder.getUri().path) && fileUri.path !== folder.getUri().path) {
-        const relativePath = fileUri.path.slice(folder.getUri().path.length + 1).split('/')[0];
+      if (fileUri.path.startsWith(folder.uri().path) && fileUri.path !== folder.uri().path) {
+        const relativePath = fileUri.path.slice(folder.uri().path.length + 1).split('/')[0];
         if (!entries.find(entry => entry[0] === relativePath)) {
           const fileStat = this.stats.get(fileUriStr);
           entries.push([relativePath, fileStat ? (fileStat as vscode.FileStat).type : vscode.FileType.File]);
@@ -625,7 +625,7 @@ export class MockFileSystem implements FileSystemProvider {
   }
 
   async delete(element: PathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
-    const key = element.getUri().toString();
+    const key = element.uri().toString();
 
     // In a more sophisticated mock, we could handle recursive deletion of directories
     // and simulate trash behavior, but for now we'll just acknowledge the options exist
@@ -638,7 +638,7 @@ export class MockFileSystem implements FileSystemProvider {
       
       // If recursive, we could delete all files under this path
       if (recursive) {
-        const pathToDelete = element.getUri().path;
+        const pathToDelete = element.uri().path;
         const keysToDelete: string[] = [];
         
         for (const [fileKey] of this.files) {
@@ -654,7 +654,7 @@ export class MockFileSystem implements FileSystemProvider {
         });
       }
     } else {
-      throw new Error(`File not found: ${element.getUri().toString()}`);
+      throw new Error(`File not found: ${element.uri().toString()}`);
     }
   }
 

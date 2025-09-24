@@ -102,11 +102,11 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * Gets the downstairs (local) {@link vscode.Uri} for this file
    * @lastreviewed 2025-09-15
    */
-  public getUri() {
+  public uri() {
     return this.parser.rawUri;
   }
   public fsPath() {
-    return this.getUri().fsPath;
+    return this.uri().fsPath;
   }
 
   /**
@@ -165,7 +165,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   public async getHash(): Promise<string> {
-    const bufferSource = await fs().readFile(this.getUri());
+    const bufferSource = await fs().readFile(this.uri());
     const localHashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
     if (hexArray.length !== 64) {
@@ -232,7 +232,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   public async getDownstairsContent(): Promise<string> {
-    const downstairsUri = this.getUri();
+    const downstairsUri = this.uri();
     try {
       const fileData = await fs().readFile(downstairsUri);
       return Buffer.from(fileData).toString('utf8');
@@ -270,7 +270,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   private async deleteFromMetadata() {
     await this.getScriptRoot().modifyMetaData((md) => {
-      const index = md.pushPullRecords.findIndex(record => record.downstairsPath === this.getUri().fsPath);
+      const index = md.pushPullRecords.findIndex(record => record.downstairsPath === this.uri().fsPath);
       if (index !== -1) {
         md.pushPullRecords.splice(index, 1);
       }
@@ -343,7 +343,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   public async writeContent(buffer: ArrayBuffer) {
-    await fs().writeFile(this.getUri(), Buffer.from(buffer));
+    await fs().writeFile(this.uri(), Buffer.from(buffer));
   }
 
   /**
@@ -353,7 +353,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   public async exists(): Promise<boolean> {
     try {
-      const stat = await fs().stat(this.getUri());
+      const stat = await fs().stat(this.uri());
       if (stat.type === vscode.FileType.Directory) {
         return false;
       }
@@ -377,7 +377,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   public async fileStat(): Promise<vscode.FileStat | null> {
     try {
-      return await fs().stat(this.getUri());
+      return await fs().stat(this.uri());
     } catch (e) {
       return null;
     }
@@ -411,7 +411,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   public async getLastPulledTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
-    return md.pushPullRecords.find(record => record.downstairsPath === this.getUri().fsPath)?.lastPulled || null;
+    return md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath)?.lastPulled || null;
   }
 
   /**
@@ -434,7 +434,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   public async getLastPushedTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
-    return md.pushPullRecords.find(record => record.downstairsPath === this.getUri().fsPath)?.lastPushed || null;
+    return md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath)?.lastPushed || null;
   }
 
   /**
@@ -547,7 +547,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed 2025-09-15
    */
   public getFileName(): string {
-    return path.parse(this.getUri().fsPath).base;
+    return path.parse(this.uri().fsPath).base;
   }
 
   /**
@@ -568,7 +568,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   public async isInInfo(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolderContents();
-    return infoFolder.some(file => file.fsPath === this.getUri().fsPath);
+    return infoFolder.some(file => file.fsPath === this.uri().fsPath);
   }
 
   /**
@@ -577,7 +577,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   public async isInObjects(): Promise<boolean> {
     const objectsFolder = await this.getScriptRoot().getObjectsFolderContents();
-    return objectsFolder.some(file => file.fsPath === this.getUri().fsPath);
+    return objectsFolder.some(file => file.fsPath === this.uri().fsPath);
   }
 
   /**
@@ -602,7 +602,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    */
   public async isInInfoFolder(): Promise<boolean> {
     const infoFolder = await this.getScriptRoot().getInfoFolderContents();
-    return infoFolder.some(file => file.fsPath === this.getUri().fsPath);
+    return infoFolder.some(file => file.fsPath === this.uri().fsPath);
   }
 
   /**
@@ -622,7 +622,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
     const scriptRoot = this.getScriptRoot();
     const gitIgnorePatterns = await scriptRoot.getGitIgnore();
     const globMatcher = new GlobMatcher(scriptRoot.getRootUri(), gitIgnorePatterns);
-    return globMatcher.matches(this.getUri());
+    return globMatcher.matches(this.uri());
   }
 
   /**
@@ -653,7 +653,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @lastreviewed null
    */
   public folder(): RemoteScriptFolder {
-    const fileUri = this.getUri();
+    const fileUri = this.uri();
     return new RemoteScriptFolder(vscode.Uri.joinPath(fileUri, '..'));
   }
 
@@ -676,7 +676,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
    * @returns The {@link vscode.Uri} of the closest tsconfig.json file
    */
   public async getClosestTsConfigUri() {
-    return await fs().closest(this.getUri(), PathElement.TS_CONFIG_JSON);
+    return await fs().closest(this.uri(), PathElement.TS_CONFIG_JSON);
   }
 
   public async getClosestTsConfig() {
@@ -693,14 +693,14 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
   }
 
   public copyToSnapshot() {
-    console.log("copying file over", this.getUri().fsPath);
+    console.log("copying file over", this.uri().fsPath);
   }
 
   public closest(fileName: string) {
-    return fs().closest(this.getUri(), fileName);
+    return fs().closest(this.uri(), fileName);
   }
   public isInBuildFolder() {
-    return this.getUri().fsPath.includes(`${path.sep}/.build${path.sep}`);
+    return this.uri().fsPath.includes(`${path.sep}/.build${path.sep}`);
   }
 
   public get extension() {
@@ -708,7 +708,7 @@ export class RemoteScriptFile extends PathElement implements TerminalElement {
   }
 
   public pathWithRespectToDraftRoot() {
-    return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), "draft").fsPath, this.getUri().fsPath);
+    return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), "draft").fsPath, this.uri().fsPath);
   }
 
   create(vsCodeUri: vscode.Uri) {

@@ -48,7 +48,7 @@ export class RemoteScriptRoot implements PathElement {
   fsPath(): string {
     throw new Error('Method not implemented.');
   }
-  getUri(): vscode.Uri {
+  uri(): vscode.Uri {
     throw new Error('Method not implemented.');
   }
 
@@ -81,7 +81,7 @@ export class RemoteScriptRoot implements PathElement {
   async touchFile(file: RemoteScriptFile, touchType: "lastPulled" | "lastPushed"): Promise<void> {
     const lastHash = await file.getHash();
     const metaData = await this.modifyMetaData(md => {
-      const downstairsPath = file.getUri().fsPath;
+      const downstairsPath = file.uri().fsPath;
       const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
       if (existingEntryIndex !== -1) {
         const newDateString = new Date().toUTCString();
@@ -271,7 +271,7 @@ export class RemoteScriptRoot implements PathElement {
    * @lastreviewed 2025-09-15
    */
   public getRootUri() {
-    return this.folder.getUri();
+    return this.folder.uri();
   }
 
   /**
@@ -342,7 +342,7 @@ export class RemoteScriptRoot implements PathElement {
   private async getDraftFolderContents(folderName: typeof RemoteScriptRoot.ScriptContentFolders[number]): Promise<vscode.Uri[]> {
     const folder = this.getDraftFolder().getChildFolder(folderName);
     const dirContents = await fs().readDirectory(folder);
-    return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folder.getUri(), name));
+    return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folder.uri(), name));
   }
 
   /**

@@ -35,8 +35,8 @@ export class TsConfigFile extends PathElement implements TerminalElement {
     return this.sf.fsPath();
   }
 
-  public getUri(): vscode.Uri {
-    return this.sf.getUri();
+  public uri(): vscode.Uri {
+    return this.sf.uri();
   }
 
   public folder() {
@@ -45,5 +45,11 @@ export class TsConfigFile extends PathElement implements TerminalElement {
 
   public async isCopacetic(): Promise<boolean> {
     return this.sf.isCopacetic();
+  }
+  public async getClosestTsConfigFile(): Promise<TsConfigFile> {
+    return this;
+  }
+  public getScriptRoot() {
+    return this.sf.getScriptRoot();
   }
 }

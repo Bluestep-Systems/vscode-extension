@@ -207,7 +207,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
       const dsurlp = new DownstairsUriParser(downstairsRootFolderUri);
       const sf = RemoteScriptFile.fromUri(vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath));
       if (!(await sf.isCopacetic())) {
-        throw new Error("File is not copacetic: " + sf.getUri().toString());        
+        throw new Error("File is not copacetic: " + sf.uri().toString());        
       }
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);

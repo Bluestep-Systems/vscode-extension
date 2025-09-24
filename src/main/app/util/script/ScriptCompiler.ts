@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 import { App } from "../../App";
 import { FileSystem } from "../fs/FileSystemFactory";
 import { RemoteScriptFile } from "./RemoteScriptFile";
+import { TerminalElement } from "./TerminalElement";
 const fs = FileSystem.getInstance;
 
 export class ScriptCompiler {
@@ -26,7 +27,7 @@ export class ScriptCompiler {
   constructor() {
   }
 
-  private getDefaultOptions(sf: RemoteScriptFile): ts.CompilerOptions {
+  private getDefaultOptions(sf: TerminalElement): ts.CompilerOptions {
     throw new Error("we probably don't want to be using this");
     const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().fsPath();
@@ -34,14 +35,14 @@ export class ScriptCompiler {
   }
 
   //TODO this really needs to be check to confirm that we are using this right and not redundantly
-  private async getCompilerOptions(sf: RemoteScriptFile): Promise<ts.CompilerOptions> {
+  private async getCompilerOptions(sf: TerminalElement): Promise<ts.CompilerOptions> {
     const tsConfigFile = await sf.getClosestTsConfigFile();
     if (!tsConfigFile) {
       App.logger.info("No tsconfig.json found, using default compiler options.");
       return this.getDefaultOptions(sf);
     }
 
-    const tsconfigTextArray = await fs().readFile(tsConfigFile.getUri());
+    const tsconfigTextArray = await fs().readFile(tsConfigFile.uri());
     const pseudoParsedConfig = ts.parseConfigFileTextToJson(tsConfigFile.fsPath(), Buffer.from(tsconfigTextArray).toString('utf-8'));
     pseudoParsedConfig.config.compilerOptions.rootDir = tsConfigFile.folder().fsPath();
     if (pseudoParsedConfig.error) {
@@ -81,7 +82,7 @@ export class ScriptCompiler {
         return;
       }
       const compilerOptions = await this.getCompilerOptions(RemoteScriptFile.fromPath(tsConfigPath));
-      const program = ts.createProgram(sfList.map(sf => sf.getUri().fsPath), compilerOptions);
+      const program = ts.createProgram(sfList.map(sf => sf.uri().fsPath), compilerOptions);
       const emitResult = program.emit();
 
       // Handle diagnostics
