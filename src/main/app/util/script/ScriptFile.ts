@@ -12,7 +12,7 @@ import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TerminalElement } from './TerminalElement';
-import { TsConfigFile } from './TsConfigFile';
+import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
 
 /**
@@ -666,7 +666,7 @@ export class ScriptFile implements TerminalElement {
     if (!tsConfigUri) {
       throw new Error("Could not find a tsconfig.json file");
     }
-    return new TsConfigFile(ScriptFile.fromUri(tsConfigUri));
+    return new TsConfig(ScriptFile.fromUri(tsConfigUri));
   }
   
   /**
@@ -674,7 +674,7 @@ export class ScriptFile implements TerminalElement {
    * @returns The {@link vscode.Uri} of the closest tsconfig.json file
    */
   public async getClosestTsConfigUri() {
-    return await fs().closest(this.uri(), TsConfigFile.NAME);
+    return await fs().closest(this.uri(), TsConfig.NAME);
   }
 
   public async getClosestTsConfig() {

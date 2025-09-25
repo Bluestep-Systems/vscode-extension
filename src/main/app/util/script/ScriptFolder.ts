@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { flattenDirectory } from '../data/flattenDirectory';
 import { PathElement } from './PathElement';
 import { ScriptFile } from './ScriptFile';
-import { TsConfigFile } from './TsConfigFile';
+import { TsConfig } from './TsConfig';
 export class ScriptFolder implements PathElement {
   constructor(private readonly folderUri: vscode.Uri) { }
   public static async fromUri(uri: vscode.Uri): Promise<ScriptFolder> {
@@ -18,9 +18,9 @@ export class ScriptFolder implements PathElement {
     }
     return new ScriptFolder(uri);
   }
-  public async findAllTsConfigFiles(): Promise<TsConfigFile[]> {
+  public async findAllTsConfigFiles(): Promise<TsConfig[]> {
     const files = await vscode.workspace.findFiles(new vscode.RelativePattern(this.uri(), '**/tsconfig.json'));
-    return files.map(file => TsConfigFile.fromUri(file));
+    return files.map(file => TsConfig.fromUri(file));
   }
   public equals(other: ScriptFolder): boolean {
     if (!(other instanceof ScriptFolder)) {

@@ -1,10 +1,10 @@
 import { PathElement } from "./PathElement";
 import { ScriptFolder } from "./ScriptFolder";
 import { ScriptRoot } from "./ScriptRoot";
-import { TsConfigFile } from "./TsConfigFile";
+import { TsConfig } from "./TsConfig";
 
 export interface TerminalElement extends PathElement {
   folder(): ScriptFolder;
-  getClosestTsConfigFile(): Promise<TsConfigFile>;
+  getClosestTsConfigFile(): Promise<TsConfig>;
   getScriptRoot(): ScriptRoot;
 }
