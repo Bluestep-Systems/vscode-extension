@@ -8,7 +8,7 @@ import { DownstairsUriParser } from './DownstairsUrIParser';
 import { FileDoesNotExistError, FileReadError } from './Errors';
 import { ScriptFolder } from './ScriptFolder';
 import { ScriptFile } from './ScriptFile';
-import { ScriptCompiler } from './ScriptCompiler';
+import { Compiler } from './Compiler';
 import { PathElement } from './PathElement';
 const fs = FileSystem.getInstance;
 
@@ -440,7 +440,7 @@ export class ScriptRoot implements PathElement {
     await this.deleteBuildFolder();
     const draftFolder = this.getDraftFolder();
     const allFiles = await draftFolder.flatten();
-    const compiler = new ScriptCompiler();
+    const compiler = new Compiler();
     for (const file of allFiles) {
       if (file.path().endsWith(".ts") || file.path().endsWith(".tsx")) {
         await compiler.addFile(file);

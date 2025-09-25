@@ -6,7 +6,7 @@ import { ScriptFile } from "./ScriptFile";
 import { TerminalElement } from "./TerminalElement";
 const fs = FileSystem.getInstance;
 
-export class ScriptCompiler {
+export class Compiler {
   private programs: Map<string, ScriptFile[]> = new Map();
   private static DEFAULT_TS_CONFIG: ts.CompilerOptions = {
     module: ts.ModuleKind.ESNext,
@@ -29,7 +29,7 @@ export class ScriptCompiler {
 
   private getDefaultOptions(sf: TerminalElement): ts.CompilerOptions {
     throw new Error("we probably don't want to be using this");
-    const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
+    const LOCAL_CONFIG = Compiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
     return LOCAL_CONFIG;
   }
