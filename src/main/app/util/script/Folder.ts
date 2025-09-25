@@ -3,6 +3,7 @@ import { flattenDirectory } from '../data/flattenDirectory';
 import { PathElement } from './PathElement';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
+import path from 'path';
 export class Folder implements PathElement {
   /**
    * Creates a new Folder instance with the specified URI.
@@ -112,6 +113,10 @@ export class Folder implements PathElement {
    */
   public async flattenRaw(): Promise<vscode.Uri[]> {
     return flattenDirectory(this);
+  }
+
+  public folderName(): string {
+    return path.basename(this.path());
   }
 
 }

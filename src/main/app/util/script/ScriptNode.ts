@@ -1,20 +1,19 @@
 import * as path from 'path';
-import ts from 'typescript';
 import * as vscode from 'vscode';
 import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
 import { App } from '../../App';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
+import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
 import { readFileText } from '../data/readFile';
+import { UpstairsUrlParser } from '../data/UpstairsUrlParser';
 import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
-import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { Folder } from './Folder';
-import { ScriptRoot } from './ScriptRoot';
 import { Node } from './Node';
-import { TsConfig } from './TsConfig';
-import { UpstairsUrlParser } from '../data/UpstairsUrlParser';
 import { PathElement } from './PathElement';
+import { ScriptRoot } from './ScriptRoot';
+import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
 
 /**
@@ -681,8 +680,20 @@ export class ScriptNode implements Node {
   }
 
   /**
+   * We are essentially banking on the idea that the closest tsconfig.json file is
+   * always the matching one for the current file (be it in the respective build folder or not).
    * 
-   * @returns The closest tsconfig.json file as a TsConfigFile instance
+   * This can definitely have issues if anyone intends to employ a non-normative build location
+   * // ex: `"outDir": "../some-other-folder"`
+   * @returns The matching tsconfig.json file as a TsConfig instance
+   */
+  public async getMatchingTsConfigFile() {
+    return await this.getClosestTsConfigFile();
+  }
+
+  /**
+   * 
+   * @returns The matching tsconfig.json file as a TsConfigFile instance
    * @throws {Error} When no tsconfig.json file is found
    * @lastreviewed null
    */
@@ -698,18 +709,10 @@ export class ScriptNode implements Node {
    * 
    * @returns The {@link vscode.Uri} of the closest tsconfig.json file
    */
-  public async getClosestTsConfigUri() {
+  private async getClosestTsConfigUri() {
     return await fs().closest(this.uri(), TsConfig.NAME);
   }
 
-  public async getClosestTsConfig() {
-    const tsConfigUri = await this.getClosestTsConfigUri();
-    if (!tsConfigUri) {
-      return null;
-    }
-    const tsConfigContent = await readFileText(tsConfigUri);
-    return JSON.parse(tsConfigContent) as ts.ParsedTsconfig;
-  }
 
   public shouldCopyRaw() {
     return path.extname(this.getFileName()).toLowerCase() !== '.ts';
@@ -722,10 +725,14 @@ export class ScriptNode implements Node {
   public closest(fileName: string) {
     return fs().closest(this.uri(), fileName);
   }
-  public isInBuildFolder() {
-    //TODO there must be a better way to determine if this is in a build folder
-    // because this precludes there being a legitimate folder name of .build anywhere in the path
-    return this.path().includes(`${path.sep}/.build${path.sep}`);
+  public async isInItsRespectiveBuildFolder() {
+    const buildFolder = await this.getBuildFolder();
+    return buildFolder.contains(this);
+  }
+
+  public async getBuildFolder() {
+    const tsConfig = await this.getMatchingTsConfigFile();
+    return await tsConfig.getBuildFolder();
   }
 
   public get extension() {
@@ -857,6 +864,43 @@ text: ${await resp.text()}
     });
     App.isDebugMode() && console.log("Updated metadata:", metaData);
     return void 0;
+  }
+
+  public async copyDraftFileToBuild() {
+    if (await this.isInItsRespectiveBuildFolder()) {
+      throw new Error("Cannot copy a file that is already in a build folder");
+    }
+    if (!(await this.isCopacetic())) {
+      throw new Error("Cannot copy a file that is not copacetic");
+    }
+    const buildUri = vscode.Uri.joinPath(
+      (await this.getClosestTsConfigFile()).folder().uri(),
+      (await this.getBuildFolder()).folderName(),
+      this.pathWithRespectToDraftRoot()
+    );
+    await this.copyTo(buildUri);
+  }
+
+  public async readContents(): Promise<Uint8Array<ArrayBufferLike>> {
+    return await fs().readFile(this.uri());
+  }
+
+  public async copyTo(uri: vscode.Uri): Promise<void> {
+    if (await this.isInItsRespectiveBuildFolder()) {
+      throw new Error("Cannot copy a file that is already in a build folder");
+    }
+    if (!(await this.isCopacetic())) {
+      throw new Error("Cannot copy a file that is not copacetic");
+    }
+    await fs().copy(this.uri(), uri, { overwrite: true });
+  }
+
+  public isTsConfig(): boolean {
+    return this.getFileName() === TsConfig.NAME;
+  }
+
+  public isMarkdown(): boolean {
+    return this.extension === '.md';
   }
 }
 

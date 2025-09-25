@@ -395,13 +395,14 @@ export class ScriptRoot implements PathElement {
    */
   public async snapshot() {
     //TODO do a safety check on the hash to prevent deleted files needlessly
-    await this.deleteBuildFolder();
+    //await this.deleteBuildFolder();
     await this.compileDraftFolder();
   }
 
 
 
-  private async deleteBuildFolder() {
+
+  public async deleteBuildFolder() {
     try {
       return await fs().delete(this.getDraftBuildFolder(), { recursive: true });
     } catch (error) {
@@ -416,16 +417,46 @@ export class ScriptRoot implements PathElement {
   }
 
   public async compileDraftFolder(): Promise<void> {
-
+    //TODO see if we can optimize this to only compile changed files
+    await this.deleteBuildFolder();
     const draftFolder = this.getDraftFolder();
-    const allFiles = await draftFolder.flatten();
+    const allDraftFiles = await draftFolder.flatten();
     const compiler = new ScriptCompiler();
-    for (const file of allFiles) {
+    const copiedFiles: string[] = [];
+    for (const file of allDraftFiles) {
+      if (file.isMarkdown() || 
+        await file.isInItsRespectiveBuildFolder() || 
+        await file.isInInfoOrObjects() || // TODO delete this after these folders are obviated
+        await file.isFolder()) {
+        continue;
+      }
+
       if (file.path().endsWith(".ts") || file.path().endsWith(".tsx")) {
         await compiler.addFile(file);
+      } else if (!file.isTsConfig()) {
+        copiedFiles.push(file.path());
+        await file.copyDraftFileToBuild();
       }
     }
-    await compiler.compile();
+    const emittedEntries = await compiler.compile();
+    const emittedSFs = emittedEntries.map(e => ScriptNode.fromPath(e));
+
+    // now we need to delete any files in the build folder(s) that were not emitted by the compiler
+    // or copied (like JSON files, js files, etc).
+    //TODO at this time (2024-09-25) this is really only serving as a safety check until
+    // we stop starting by wholesale deleting the build folder.
+    for (const buildFile of emittedSFs) {
+      if (await buildFile.isFolder()) {
+        continue;
+      }
+      if (
+        !emittedEntries.includes(buildFile.path()) &&
+        !copiedFiles.includes(buildFile.path()
+          .replace(path.sep + (await buildFile.getBuildFolder()).folderName() + path.sep, path.sep))) {
+        App.logger.warn("file detected for deletion" + buildFile.path());
+        await buildFile.delete();
+      }
+    }
   }
 
   /**
@@ -482,9 +513,13 @@ export class ScriptRoot implements PathElement {
   }
   public async getPushableDraftNodes(): Promise<ScriptNode[]> {
     const flattened = await this.getDraftFolder().flatten();
-    return flattened
-      .filter(f => !f.isInBuildFolder())
-      .map(f => ScriptNode.fromPath(f.path()));
+    const filtered = [];
+    for (const f of flattened) {
+      if (!(await f.isInItsRespectiveBuildFolder())) {
+        filtered.push(f);
+      }
+    }
+    return filtered.map(f => ScriptNode.fromPath(f.path()));
   }
   public async preflightCheck(): Promise<string> {
     if (!(await this.isCopacetic())) {

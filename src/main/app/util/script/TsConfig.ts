@@ -1,7 +1,9 @@
 import * as vscode from "vscode";
-import { ScriptNode } from "./ScriptNode";
-import { Node } from "./Node";
+import { readFileText } from "../data/readFile";
 import { FileSystem } from "../fs/FileSystem";
+import { Folder } from "./Folder";
+import { Node } from "./Node";
+import { ScriptNode } from "./ScriptNode";
 const fs = FileSystem.getInstance;
 /**
  * A specialized ScriptFile representing a tsconfig.json file.
@@ -132,5 +134,12 @@ export class TsConfig implements Node {
    */
   public getScriptRoot() {
     return this.sf.getScriptRoot();
+  }
+
+  public async getBuildFolder(): Promise<Folder> {
+    const fileContents = await readFileText(this.uri());
+    const config = JSON.parse(fileContents);
+    const outDir = config.compilerOptions?.outDir || (() => { throw new Error("outDir not specified"); })();
+    return new Folder(vscode.Uri.joinPath(this.folder().uri(), outDir));
   }
 }

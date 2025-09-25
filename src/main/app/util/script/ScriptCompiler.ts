@@ -2,8 +2,8 @@ import ts from "typescript";
 import * as vscode from "vscode";
 import { App } from "../../App";
 import { FileSystem } from "../fs/FileSystem";
-import { ScriptNode } from "./ScriptNode";
 import { Node } from "./Node";
+import { ScriptNode } from "./ScriptNode";
 const fs = FileSystem.getInstance;
 
 /**
@@ -28,6 +28,7 @@ export class ScriptCompiler {
     suppressOutputPathCheck: true,
     declarationDir: undefined,
     declaration: false,
+    listEmittedFiles: true,
   };
   
   /**
@@ -85,6 +86,9 @@ export class ScriptCompiler {
       tsConfigFile.path()
     );
     App.logger.info("Using tsconfig.json compiler options from:", tsConfigFile.path);
+    // Ensure listEmittedFiles is always enabled so we can track emitted files
+    parsedConfig.options.listEmittedFiles = true;
+    // Ensure output files are overwritten if they already exist
     return parsedConfig.options;
   }
 
@@ -110,14 +114,16 @@ export class ScriptCompiler {
    * @lastreviewed null
    */
   public async compile() {
-    this.projects.forEach(async (sfList, tsConfigPath) => {
+    const emittedFiles: string[] = [];
+    for (const [tsConfigPath, sfList] of this.projects.entries()) {
       if (sfList.length === 0) {
-        App.logger.info("No files to compile for tsconfig at:", tsConfigPath);
-        return;
+        throw new Error("No files to compile for tsconfig at: " + tsConfigPath);
       }
       const compilerOptions = await this.getCompilerOptions(ScriptNode.fromPath(tsConfigPath));
-      const program = ts.createProgram(sfList.map(sf => sf.uri().fsPath), compilerOptions);
+      const sfUris = sfList.map(sf => sf.uri());
+      const program = ts.createProgram(sfUris.map(uri => uri.fsPath), compilerOptions);
       const emitResult = program.emit();
+      emittedFiles.push(...(emitResult.emittedFiles || []));
 
       // Handle diagnostics
       const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
@@ -137,7 +143,7 @@ export class ScriptCompiler {
       } else {
         vscode.window.showInformationMessage('TypeScript compiled successfully.');
       }
-    });
-
+    };
+    return emittedFiles;
   }
 }
