@@ -12,7 +12,7 @@ export class DownstairsUriParser {
   /**
    * Regex to match and extract components from a downstairs URI.
    */
-  private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)[\/\\](\d+)[\/\\](draft|declarations|\.b6p_metadata\.json|\.gitignore)?(?:[\/\\](.*))?$/;
+  private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)[\/\\](\d+)[\/\\]?(draft|declarations|\.b6p_metadata\.json|\.gitignore)?(?:[\/\\](.*))?$/;
 
   /**
    * The type of the downstairs file: "draft", "declarations", or "metadata" (for .b6p_metadata.json files)

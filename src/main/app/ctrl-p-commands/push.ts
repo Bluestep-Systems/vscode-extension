@@ -13,6 +13,7 @@ import { ScriptNode } from '../util/script/ScriptNode';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
+
 /**
  * Pushes a script to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -66,7 +67,7 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
       cleanupMessage: "Cleaning up the upstairs draft folder..."
     });
 
-    cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaOverride);
+    await cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaOverride);
 
     if (!sourceOps?.skipMessage) {
       Alert.info('Push complete!');
@@ -123,11 +124,8 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     const downstairsPath = flattenedDownstairs.find(dp => dp.fsPath === curPath.fsPath);
     if (!downstairsPath) {
       // we don't want to delete stuff that is in gitignore
-      const dsurlp = new DownstairsUriParser(downstairsRootFolderUri);
-      const sf = ScriptNode.fromUri(vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath));
-      if (!(await sf.isCopacetic())) {
-        throw new Error("File is not copacetic: " + sf.uri().toString());        
-      }
+      const parser = new DownstairsUriParser(downstairsRootFolderUri);
+      const sf = ScriptNode.fromUri(vscode.Uri.joinPath(parser.prependingPathUri(), rawFilePath.downstairsPath));
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
