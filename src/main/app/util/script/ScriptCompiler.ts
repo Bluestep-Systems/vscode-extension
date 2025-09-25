@@ -6,6 +6,11 @@ import { ScriptFile } from "./ScriptFile";
 import { File } from "./File";
 const fs = FileSystem.getInstance;
 
+/**
+ * Compiler for TypeScript files in script projects.
+ * Manages compilation of multiple TypeScript files organized by their tsconfig.json files.
+ * @lastreviewed null
+ */
 export class ScriptCompiler {
   private projects: Map<string, ScriptFile[]> = new Map();
   private static DEFAULT_TS_CONFIG: ts.CompilerOptions = {
@@ -24,11 +29,20 @@ export class ScriptCompiler {
     declarationDir: undefined,
     declaration: false,
   };
+  
   /**
-   * This is technically unnecessary 
+   * Creates a new ScriptCompiler instance.
+   * @lastreviewed null
    */
   constructor() { }
 
+  /**
+   * Gets default TypeScript compiler options for a file.
+   * @param sf The file to get default options for
+   * @returns Default TypeScript compiler options
+   * @throws {Error} Always throws as this method is deprecated
+   * @lastreviewed null
+   */
   private getDefaultOptions(sf: File): ts.CompilerOptions {
     throw new Error("we probably don't want to be using this");
     const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
@@ -36,7 +50,13 @@ export class ScriptCompiler {
     return LOCAL_CONFIG;
   }
 
-  //TODO this really needs to be check to confirm that we are using this right and not redundantly
+  /**
+   * Gets TypeScript compiler options from the closest tsconfig.json file.
+   * @param sf The file to get compiler options for
+   * @returns A Promise that resolves to TypeScript compiler options
+   * @throws {Error} When tsconfig.json parsing fails
+   * @lastreviewed null
+   */
   private async getCompilerOptions(sf: File): Promise<ts.CompilerOptions> {
     const tsConfigFile = await sf.getClosestTsConfigFile();
     if (!tsConfigFile) {
@@ -68,6 +88,13 @@ export class ScriptCompiler {
     return parsedConfig.options;
   }
 
+  /**
+   * Adds a script file to the compilation queue.
+   * Files are grouped by their associated tsconfig.json file.
+   * @param sf The ScriptFile to add for compilation
+   * @throws {Error} When the file is not copacetic and cannot be compiled
+   * @lastreviewed null
+   */
   public async addFile(sf: ScriptFile) {
     if (!(await sf.isCopacetic())) {
       throw new Error("File is not copacetic, cannot compile.");
@@ -77,6 +104,11 @@ export class ScriptCompiler {
     this.projects.set(newTsConfigFile.path(), [...existingVals, sf]);
   }
 
+  /**
+   * Compiles all added TypeScript files grouped by their tsconfig.json configurations.
+   * Shows compilation results and diagnostics to the user.
+   * @lastreviewed null
+   */
   public async compile() {
     this.projects.forEach(async (sfList, tsConfigPath) => {
       if (sfList.length === 0) {

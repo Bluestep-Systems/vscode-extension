@@ -61,10 +61,22 @@ export class ScriptFile implements File {
     this._scriptRoot = new ScriptRoot({ childUri: downstairsUri });
   }
 
+  /**
+   * Creates a ScriptFile instance from a VS Code URI.
+   * @param uri The URI to create the ScriptFile from
+   * @returns A new ScriptFile instance
+   * @lastreviewed null
+   */
   public static fromUri(uri: vscode.Uri): ScriptFile {
     return new ScriptFile({ downstairsUri: uri });
   }
 
+  /**
+   * Creates a ScriptFile instance from a file system path.
+   * @param fsPath The file system path to create the ScriptFile from
+   * @returns A new ScriptFile instance
+   * @lastreviewed null
+   */
   public static fromPath(fsPath: string): ScriptFile {
     const uri = vscode.Uri.file(fsPath);
     return new ScriptFile({ downstairsUri: uri });
@@ -100,9 +112,20 @@ export class ScriptFile implements File {
    * Gets the downstairs (local) {@link vscode.Uri} for this file
    * @lastreviewed 2025-09-15
    */
+  /**
+   * Gets the URI of this script file.
+   * @returns The VS Code URI of this file
+   * @lastreviewed null
+   */
   public uri() {
     return this._parser.rawUri;
   }
+  
+  /**
+   * Gets the file system path of this script file.
+   * @returns The file system path as a string
+   * @lastreviewed null
+   */
   public path() {
     return this.uri().fsPath;
   }

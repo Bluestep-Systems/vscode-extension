@@ -453,18 +453,38 @@ export class ScriptRoot implements PathElement {
     await compiler.compile();
   }
 
+  /**
+   * Gets the draft folder within the script root.
+   * @returns A Folder instance representing the draft folder
+   * @lastreviewed null
+   */
   public getDraftFolder() {
     return this.folder.getChildFolder("draft");
   }
 
+  /**
+   * Gets the build folder within the draft folder.
+   * @returns A Folder instance representing the .build folder inside draft
+   * @lastreviewed null
+   */
   public getDraftBuildFolder() {
     return this.getDraftFolder().getChildFolder(".build");
   }
 
+  /**
+   * Gets the snapshot folder within the script root.
+   * @returns A Folder instance representing the snapshot folder
+   * @lastreviewed null
+   */
   public getSnapshotFolder() {
     return this.folder.getChildFolder("snapshot");
   }
   
+  /**
+   * Gets the declarations folder within the script root.
+   * @returns A Folder instance representing the declarations folder
+   * @lastreviewed null
+   */
   public getDeclarationsFolder() {
     return this.folder.getChildFolder("declarations");
   }
