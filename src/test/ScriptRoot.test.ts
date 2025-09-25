@@ -10,7 +10,7 @@ import { App } from '../main/app/App';
 
 suite('RemoteScriptRoot Tests', () => {
     let mockFileSystem: MockFileSystem;
-    let remoteScriptRoot: ScriptRoot;
+    let scriptRoot: ScriptRoot;
     let testChildUri: vscode.Uri;
     let originalLogger: any;
 
@@ -51,7 +51,7 @@ suite('RemoteScriptRoot Tests', () => {
         testChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
         
         // Create RemoteScriptRoot instance
-        remoteScriptRoot = new ScriptRoot({ childUri: testChildUri });
+        scriptRoot = new ScriptRoot({ childUri: testChildUri });
 
         // Set up basic mock metadata file
         const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
@@ -96,7 +96,7 @@ suite('RemoteScriptRoot Tests', () => {
 
     suite('URI Generation', () => {
         test('should generate correct downstairs root URI', () => {
-            const rootUri = remoteScriptRoot.getRootUri();
+            const rootUri = scriptRoot.getRootUri();
             const expectedPath = path.normalize('/test/workspace/configbeh.bluestep.net/1466960');
             
             assert.strictEqual(
@@ -106,7 +106,7 @@ suite('RemoteScriptRoot Tests', () => {
         });
 
         test('should generate correct org URI', () => {
-            const orgUri = remoteScriptRoot.getOrgUri();
+            const orgUri = scriptRoot.getOrgUri();
             const expectedPath = path.normalize('/test/workspace/configbeh.bluestep.net');
             
             assert.strictEqual(
@@ -116,13 +116,13 @@ suite('RemoteScriptRoot Tests', () => {
         });
 
         test('should generate correct upstairs base URL string', () => {
-            const baseUrl = remoteScriptRoot.toBaseUpstairsString();
+            const baseUrl = scriptRoot.toBaseUpstairsString();
             
             assert.strictEqual(baseUrl, 'https://configbeh.bluestep.net/files/1466960/');
         });
 
         test('should generate correct upstairs base URL object', () => {
-            const baseUrl = remoteScriptRoot.toBaseUpstairsUrl();
+            const baseUrl = scriptRoot.toBaseUpstairsUrl();
             
             assert.ok(baseUrl instanceof URL);
             assert.strictEqual(baseUrl.toString(), 'https://configbeh.bluestep.net/files/1466960/');
@@ -175,7 +175,7 @@ suite('RemoteScriptRoot Tests', () => {
 
     suite('Metadata Operations', () => {
         test('should read existing metadata file', async () => {
-            const metadata = await remoteScriptRoot.getMetaData();
+            const metadata = await scriptRoot.getMetaData();
             
             assert.strictEqual(metadata.scriptName, 'Test Script');
             assert.strictEqual(metadata.webdavId, '1466960');
@@ -188,7 +188,7 @@ suite('RemoteScriptRoot Tests', () => {
             // Remove the mock file to simulate non-existence
             mockFileSystem.setMockError(metadataUri, new Error('File not found'));
             
-            const metadata = await remoteScriptRoot.getMetaData();
+            const metadata = await scriptRoot.getMetaData();
             
             assert.strictEqual(metadata.scriptName, '');
             assert.strictEqual(metadata.webdavId, '1466960');
@@ -197,7 +197,7 @@ suite('RemoteScriptRoot Tests', () => {
         });
 
         test('should modify metadata with callback', async () => {
-            const modifiedMetadata = await remoteScriptRoot.modifyMetaData((meta) => {
+            const modifiedMetadata = await scriptRoot.modifyMetaData((meta) => {
                 meta.scriptName = 'Modified Script Name';
             });
             
@@ -206,7 +206,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should not modify metadata without changes', async () => {
             // Call modifyMetaData without making changes
-            await remoteScriptRoot.modifyMetaData((_meta) => {
+            await scriptRoot.modifyMetaData((_meta) => {
                 // Don't change anything - just demonstrating the callback
             });
             
@@ -231,9 +231,9 @@ suite('RemoteScriptRoot Tests', () => {
                 size: 100
             });
             
-            await remoteScriptRoot.touchFile(scriptFile, 'lastPulled');
+            await scriptRoot.touchFile(scriptFile, 'lastPulled');
             
-            const metadata = await remoteScriptRoot.getMetaData();
+            const metadata = await scriptRoot.getMetaData();
             assert.strictEqual(metadata.pushPullRecords.length, 1);
             assert.ok(metadata.pushPullRecords[0].lastPulled);
             assert.strictEqual(metadata.pushPullRecords[0].lastPushed, null);
@@ -252,9 +252,9 @@ suite('RemoteScriptRoot Tests', () => {
                 size: 100
             });
             
-            await remoteScriptRoot.touchFile(scriptFile, 'lastPushed');
+            await scriptRoot.touchFile(scriptFile, 'lastPushed');
             
-            const metadata = await remoteScriptRoot.getMetaData();
+            const metadata = await scriptRoot.getMetaData();
             assert.strictEqual(metadata.pushPullRecords.length, 1);
             assert.ok(metadata.pushPullRecords[0].lastPushed);
             assert.strictEqual(metadata.pushPullRecords[0].lastPulled, null);
@@ -274,12 +274,12 @@ suite('RemoteScriptRoot Tests', () => {
             });
             
             // Touch first time
-            await remoteScriptRoot.touchFile(scriptFile, 'lastPulled');
+            await scriptRoot.touchFile(scriptFile, 'lastPulled');
             
             // Touch second time with different type
-            await remoteScriptRoot.touchFile(scriptFile, 'lastPushed');
+            await scriptRoot.touchFile(scriptFile, 'lastPushed');
             
-            const metadata = await remoteScriptRoot.getMetaData();
+            const metadata = await scriptRoot.getMetaData();
             assert.strictEqual(metadata.pushPullRecords.length, 1);
             assert.ok(metadata.pushPullRecords[0].lastPulled);
             assert.ok(metadata.pushPullRecords[0].lastPushed);
@@ -299,9 +299,9 @@ suite('RemoteScriptRoot Tests', () => {
                 size: testContent.length
             });
             
-            await remoteScriptRoot.touchFile(scriptFile, 'lastPulled');
+            await scriptRoot.touchFile(scriptFile, 'lastPulled');
             
-            const metadata = await remoteScriptRoot.getMetaData();
+            const metadata = await scriptRoot.getMetaData();
             assert.strictEqual(metadata.pushPullRecords.length, 1);
             assert.ok(metadata.pushPullRecords[0].lastVerifiedHash);
             assert.strictEqual(metadata.pushPullRecords[0].lastVerifiedHash.length, 128); // SHA-512 is 128 hex chars
@@ -324,7 +324,7 @@ suite('RemoteScriptRoot Tests', () => {
             mockFileSystem.setMockFile(permissionsFile, '{}');
             mockFileSystem.setMockFile(configFile, '{}');
             
-            const infoContents = await remoteScriptRoot.getInfoFolderContents();
+            const infoContents = await scriptRoot.getInfoFolderContents();
             
             assert.strictEqual(infoContents.length, 3);
             assert.ok(infoContents.some(uri => uri.fsPath.endsWith('metadata.json')));
@@ -345,7 +345,7 @@ suite('RemoteScriptRoot Tests', () => {
             mockFileSystem.setMockFile(mainFile, 'console.log("main");');
             mockFileSystem.setMockFile(helperFile, 'console.log("helper");');
             
-            const scriptsContents = await remoteScriptRoot.getScriptsFolderContents();
+            const scriptsContents = await scriptRoot.getScriptsFolderContents();
             
             assert.strictEqual(scriptsContents.length, 2);
             assert.ok(scriptsContents.some(uri => uri.fsPath.endsWith('main.js')));
@@ -362,7 +362,7 @@ suite('RemoteScriptRoot Tests', () => {
             const importsFile = vscode.Uri.joinPath(objectsFolderUri, 'imports.ts');
             mockFileSystem.setMockFile(importsFile, 'export {};');
             
-            const objectsContents = await remoteScriptRoot.getObjectsFolderContents();
+            const objectsContents = await scriptRoot.getObjectsFolderContents();
             
             assert.strictEqual(objectsContents.length, 1);
             assert.ok(objectsContents[0].fsPath.endsWith('imports.ts'));
@@ -387,7 +387,7 @@ suite('RemoteScriptRoot Tests', () => {
             // Set up objects folder file
             mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'imports.ts'), 'export {};');
             
-            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            const isCopacetic = await scriptRoot.isCopacetic();
             
             assert.strictEqual(isCopacetic, true);
         });
@@ -407,7 +407,7 @@ suite('RemoteScriptRoot Tests', () => {
             // Set up objects folder file
             mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'imports.ts'), 'export {};');
             
-            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            const isCopacetic = await scriptRoot.isCopacetic();
             
             assert.strictEqual(isCopacetic, false);
         });
@@ -428,7 +428,7 @@ suite('RemoteScriptRoot Tests', () => {
             // Set up objects folder file
             mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'imports.ts'), 'export {};');
             
-            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            const isCopacetic = await scriptRoot.isCopacetic();
             
             assert.strictEqual(isCopacetic, false);
         });
@@ -450,7 +450,7 @@ suite('RemoteScriptRoot Tests', () => {
             mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'imports.ts'), 'export {};');
             mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'extra.ts'), 'export {};');
             
-            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            const isCopacetic = await scriptRoot.isCopacetic();
             
             assert.strictEqual(isCopacetic, false);
         });
@@ -471,7 +471,7 @@ suite('RemoteScriptRoot Tests', () => {
             // Wrong file in objects folder
             mockFileSystem.setMockFile(vscode.Uri.joinPath(objectsFolderUri, 'wrong.ts'), 'export {};');
             
-            const isCopacetic = await remoteScriptRoot.isCopacetic();
+            const isCopacetic = await scriptRoot.isCopacetic();
             
             assert.strictEqual(isCopacetic, false);
         });
@@ -484,7 +484,7 @@ suite('RemoteScriptRoot Tests', () => {
             
             mockFileSystem.setMockFile(gitIgnoreUri, gitIgnoreContent);
             
-            const gitIgnoreContents = await remoteScriptRoot.getGitIgnore();
+            const gitIgnoreContents = await scriptRoot.getGitIgnore();
             
             assert.strictEqual(gitIgnoreContents.length, 3);
             assert.ok(gitIgnoreContents.includes('node_modules/'));
@@ -498,7 +498,7 @@ suite('RemoteScriptRoot Tests', () => {
             // Remove the mock file to simulate non-existence
             mockFileSystem.setMockError(gitIgnoreUri, new Error('File not found'));
             
-            const gitIgnoreContents = await remoteScriptRoot.getGitIgnore();
+            const gitIgnoreContents = await scriptRoot.getGitIgnore();
             
             assert.strictEqual(gitIgnoreContents.length, 1);
             assert.ok(gitIgnoreContents.includes('**/.DS_Store'));
@@ -510,7 +510,7 @@ suite('RemoteScriptRoot Tests', () => {
             
             mockFileSystem.setMockFile(gitIgnoreUri, initialContent);
             
-            const modifiedGitIgnore = await remoteScriptRoot.modifyGitIgnore((contents) => {
+            const modifiedGitIgnore = await scriptRoot.modifyGitIgnore((contents) => {
                 contents.push('.env');
                 contents.push('dist/');
             });
@@ -528,7 +528,7 @@ suite('RemoteScriptRoot Tests', () => {
             
             mockFileSystem.setMockFile(gitIgnoreUri, gitIgnoreContent);
             
-            const gitIgnoreContents = await remoteScriptRoot.getGitIgnore();
+            const gitIgnoreContents = await scriptRoot.getGitIgnore();
             
             // Should filter out empty lines and whitespace-only lines
             assert.strictEqual(gitIgnoreContents.length, 3);
@@ -555,7 +555,7 @@ suite('RemoteScriptRoot Tests', () => {
             // Set up malformed JSON
             mockFileSystem.setMockFile(metadataUri, Buffer.from('{ invalid json'));
             
-            const metadata = await remoteScriptRoot.getMetaData();
+            const metadata = await scriptRoot.getMetaData();
             
             // Should create new metadata
             assert.strictEqual(metadata.scriptName, '');
@@ -569,7 +569,7 @@ suite('RemoteScriptRoot Tests', () => {
             // Set up empty file
             mockFileSystem.setMockFile(metadataUri, Buffer.from(''));
             
-            const metadata = await remoteScriptRoot.getMetaData();
+            const metadata = await scriptRoot.getMetaData();
             
             // Should create new metadata
             assert.strictEqual(metadata.scriptName, '');
