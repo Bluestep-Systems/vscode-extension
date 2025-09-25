@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { DownstairsUriParser } from '../main/app/util/script/DownstairsUrIParser';
+import { DownstairsUriParser } from '../main/app/util/data/DownstairsUrIParser';
 import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
 
 suite('DownstairsUriParser Tests', () => {

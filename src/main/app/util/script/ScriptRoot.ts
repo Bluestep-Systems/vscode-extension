@@ -4,7 +4,7 @@ import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
 import { FileSystem } from '../fs/FileSystemFactory';
-import { DownstairsUriParser } from './DownstairsUrIParser';
+import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { FileDoesNotExistError, FileReadError } from './Errors';
 import { ScriptFolder } from './ScriptFolder';
 import { ScriptFile } from './ScriptFile';

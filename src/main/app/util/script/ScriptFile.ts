@@ -8,7 +8,7 @@ import { GlobMatcher } from '../data/GlobMatcher';
 import { readFileText } from '../data/readFile';
 import { FileSystem } from '../fs/FileSystemFactory';
 import { ResponseCodes } from '../network/StatusCodes';
-import { DownstairsUriParser } from './DownstairsUrIParser';
+import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TerminalElement } from './TerminalElement';

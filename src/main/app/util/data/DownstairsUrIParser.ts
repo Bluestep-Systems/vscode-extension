@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ScriptRoot } from './ScriptRoot';
+import { ScriptRoot } from '../script/ScriptRoot';
 
 
 /**
