@@ -6,7 +6,7 @@ import { App } from '../../App';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { GlobMatcher } from '../data/GlobMatcher';
 import { readFileText } from '../data/readFile';
-import { FileSystem } from '../fs/FileSystemFactory';
+import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { ScriptFolder } from './ScriptFolder';

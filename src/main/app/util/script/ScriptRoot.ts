@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
-import { FileSystem } from '../fs/FileSystemFactory';
+import { FileSystem } from '../fs/FileSystem';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { FileDoesNotExistError, FileReadError } from './Errors';
 import { ScriptFolder } from './ScriptFolder';

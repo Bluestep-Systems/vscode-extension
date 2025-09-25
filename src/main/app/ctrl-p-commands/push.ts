@@ -7,7 +7,7 @@ import { Util } from '../util';
 import { flattenDirectory } from '../util/data/flattenDirectory';
 import { getScript } from '../util/data/getScript';
 import { parseUpstairsUrl } from '../util/data/URLParser';
-import { FileSystem } from '../util/fs/FileSystemFactory';
+import { FileSystem } from '../util/fs/FileSystem';
 import { DownstairsUriParser } from '../util/data/DownstairsUrIParser';
 import { ScriptFile } from '../util/script/ScriptFile';
 import { Alert } from '../util/ui/Alert';

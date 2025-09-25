@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from "vscode";
 import { PrimitiveNestedObject, Serializable, SourceOps } from "../../../../types";
 import { IdUtility } from "./data/IdUtility";
-import { FileSystem } from "./fs/FileSystemFactory";
+import { FileSystem } from "./fs/FileSystem";
 import { ScriptFolder } from './script/ScriptFolder';
 
 const fs = FileSystem.getInstance;

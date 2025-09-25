@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
 import type { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
-import { FileSystem } from '../util/fs/FileSystemFactory';
+import { FileSystem } from '../util/fs/FileSystem';
 import { PrivateKeys, TypedPersistable } from '../util/PseudoMaps';
 import { TypedPrivatePersistable } from '../util/PseudoMaps/TypedPrivatePersistable';
 const fs = FileSystem.getInstance;

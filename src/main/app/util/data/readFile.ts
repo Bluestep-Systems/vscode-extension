@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { FileSystem } from "../fs/FileSystemFactory";
+import { FileSystem } from "../fs/FileSystem";
 const fs = FileSystem.getInstance;
 /**
  * Reads the text content of a file.

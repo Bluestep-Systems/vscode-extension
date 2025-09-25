@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
 import { ScriptFile } from '../main/app/util/script/ScriptFile';
-import { FileSystem } from '../main/app/util/fs/FileSystemFactory';
+import { FileSystem } from '../main/app/util/fs/FileSystem';
 import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
 import { ScriptMetaData } from '../../types';
 import { App } from '../main/app/App';

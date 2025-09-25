@@ -1,7 +1,7 @@
 import ts from "typescript";
 import * as vscode from "vscode";
 import { App } from "../../App";
-import { FileSystem } from "../fs/FileSystemFactory";
+import { FileSystem } from "../fs/FileSystem";
 import { ScriptFile } from "./ScriptFile";
 import { TerminalElement } from "./TerminalElement";
 const fs = FileSystem.getInstance;
