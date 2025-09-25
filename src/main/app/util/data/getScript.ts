@@ -7,7 +7,7 @@ import { UpstairsUrlParser } from "./UpstairsUrlParser";
 
 type GetScriptArg = { url: URL; curLayer?: PrimitiveNestedObject; webDavId: string; }
 type GetScriptRet = { upstairsPath: string; downstairsPath: string; trailing?: string }[] | null;
-type RawFilesObj = { upstairsPath: string; downstairsPath: string; trailing?: string }[];
+type RawFiles = { upstairsPath: string; downstairsPath: string; trailing?: string }[];
 /**
  * Fetches the script from the specified URL.
  * @returns The structure and raw file paths of the fetched script, or undefined if not found.
@@ -23,7 +23,7 @@ export async function getScript({ url, webDavId }: GetScriptArg): Promise<GetScr
   }
 }
 
-async function getSubScript(url: URL, repository: RawFilesObj = []): Promise<RawFilesObj | null> {
+async function getSubScript(url: URL, repository: RawFiles = []): Promise<RawFiles | null> {
   try {
     const response = await SM.fetch(url, {
       //TODO review these
@@ -47,28 +47,24 @@ async function getSubScript(url: URL, repository: RawFilesObj = []): Promise<Raw
       //this happens when we call for a folder and there are no files in it, so we just short-circuit.
       return repository;
     }
-    const firstLayer: RawFilesObj = dResponses
-      .filter(terminal => {
-        // TODO examine this for fragility
-        let { trailing } = new UpstairsUrlParser(terminal["D:href"]);
+    const firstLayer: RawFiles = dResponses
+      .map(terminal => new UpstairsUrlParser(terminal["D:href"]))
+      .filter(parser => {
+        let { trailing, trailingFolder } = parser;
+        // this is the folder itself, not a file or subfolder so it is meaningless to us
         if (trailing === undefined) {
-          return false; // not pulling the root itself
+          return false; 
         }
-        const trailingParts = trailing.split("/");
-        // skip shapshot folder
-        if (trailingParts[0] === "snapshot") {
-          return false;
-        }
-        // skip our .build folder. The user for some reason may still want one in subsequent paths
-        if (trailingParts[1] === ".build") {
-          return false;
+        // don't pull snapshot elements
+        if (trailingFolder === "snapshot") {
+          return false; 
         }
         return true;
       })
-      .map(terminal => {
-        const { webDavId, trailing } = new UpstairsUrlParser(terminal["D:href"]);
+      .map(parser => {
+        const { webDavId, trailing, rawUrlString } = parser;
         const newPath = `${webDavId}/${trailing}`;
-        return { upstairsPath: terminal["D:href"], downstairsPath: newPath, trailing };
+        return { upstairsPath: rawUrlString, downstairsPath: newPath, trailing };
       });
     
     for (const rawFile of firstLayer) {
@@ -84,16 +80,7 @@ async function getSubScript(url: URL, repository: RawFilesObj = []): Promise<Raw
           repository.push(rawFile);
           continue;
         }
-        const subLayer = await getSubScript(subUrl, repository);
-        if (subLayer) {
-          for (const subFile of subLayer) {
-            if (repository.find(rf => rf.upstairsPath === subFile.upstairsPath)) {
-              // Prevent duplicates
-              continue;
-            }
-            repository.push(subFile);
-          }
-        }
+        await getSubScript(subUrl, repository);
       } else {
         repository.push(rawFile);
       }

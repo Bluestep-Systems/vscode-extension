@@ -12,9 +12,22 @@ class URLParseError extends Error {
 export class UpstairsUrlParser {
   static readonly URL_TYPES = ['files', 'public'] as const;
   url: URL;
-  type: typeof UpstairsUrlParser.URL_TYPES[number];
+  filesOrPublic: typeof UpstairsUrlParser.URL_TYPES[number];
   webDavId: string;
-  trailing?: string;
+  /**
+   * The part of the path after the WebDAV ID, if any. will be something like `.gitignore` or `draft/objects/`, `declarations/scriptlibrary.d.ts` etc.
+   * 
+   * specifically, this does NOT include the leading slash.
+   */
+  trailing?: string; 
+
+  /**
+   * If the trailing path includes a folder (i.e. has a slash in it), this is the first folder name.
+   * For example, if the trailing path is `draft/objects/`, this will be `draft`.
+   * If the trailing path is `declarations/scriptlibrary.d.ts`, this will be `declarations`.
+   * If the trailing path is a file in the root (i.e. no slash), this will be `undefined`.
+   */
+  trailingFolder?: string;
   constructor(public readonly rawUrlString: string) {
     if (!rawUrlString || !rawUrlString.trim()) {
       throw new URLParseError("URL string cannot be empty");
@@ -42,9 +55,10 @@ export class UpstairsUrlParser {
     if (!this.isValidType(type)) {
       throw new URLParseError(`Invalid path type: ${type}. Expected: ${UpstairsUrlParser.URL_TYPES.join(', ')}`);
     }
-    this.type = type as typeof UpstairsUrlParser.URL_TYPES[number];
+    this.filesOrPublic = type as typeof UpstairsUrlParser.URL_TYPES[number];
     this.webDavId = webDavId;
     this.trailing = trailing;
+    this.trailingFolder = trailing?.includes('/') ? trailing.split('/')[0] : undefined;
   }
   private isValidType(type: string): type is typeof UpstairsUrlParser.URL_TYPES[number] {
     return UpstairsUrlParser.URL_TYPES.includes(type as typeof UpstairsUrlParser.URL_TYPES[number]);
