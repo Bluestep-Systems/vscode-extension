@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { RemoteScriptFolder } from '../script/RemoteScriptFolder';
+import { ScriptFolder } from '../script/ScriptFolder';
 
-export async function flattenDirectory(dir: RemoteScriptFolder): Promise<vscode.Uri[]> {
+export async function flattenDirectory(dir: ScriptFolder): Promise<vscode.Uri[]> {
   const result: vscode.Uri[] = [];
   const items = await vscode.workspace.fs.readDirectory(dir.uri());
 
@@ -9,7 +9,7 @@ export async function flattenDirectory(dir: RemoteScriptFolder): Promise<vscode.
   for (const [name, type] of items) {
     const fullPath = vscode.Uri.joinPath(dir.uri(), name);
     if (type === vscode.FileType.Directory) {
-      result.push(...(await flattenDirectory(new RemoteScriptFolder(fullPath))));
+      result.push(...(await flattenDirectory(new ScriptFolder(fullPath))));
     } else {
       result.push(fullPath);
     }

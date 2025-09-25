@@ -9,10 +9,10 @@ import { getScript } from '../util/data/getScript';
 import { parseUpstairsUrl } from '../util/data/URLParser';
 import { FileSystem } from '../util/fs/FileSystemFactory';
 import { DownstairsUriParser } from '../util/script/DownstairsUrIParser';
-import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
+import { ScriptFile } from '../util/script/ScriptFile';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
-import { RemoteScriptFolder } from '../util/script/RemoteScriptFolder';
+import { ScriptFolder } from '../util/script/ScriptFolder';
 const fs = FileSystem.getInstance;
 /**
  * Pushes a script to a WebDAV location.
@@ -48,7 +48,7 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
     const downstairsRootFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
     App.logger.info("Reading directory:", downstairsRootFolderUri.toString());
     const fileList = await fs()
-      .readDirectory(new RemoteScriptFolder(downstairsRootFolderUri))
+      .readDirectory(new ScriptFolder(downstairsRootFolderUri))
       .then(async node => await tunnelNode(node, { nodeURI: uriStringToFilePath(sourceFolder) }));
 
     // Create tasks for progress helper
@@ -88,7 +88,7 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   await Promise.all(node.map(async ([name, type]) => {
     const newNodeUri = nodeURI + "/" + name;
     if (type === vscode.FileType.Directory) {
-      const nestedNode = await fs().readDirectory(new RemoteScriptFolder(vscode.Uri.file(newNodeUri)));
+      const nestedNode = await fs().readDirectory(new ScriptFolder(vscode.Uri.file(newNodeUri)));
       await tunnelNode(nestedNode, { pathList, nodeURI: newNodeUri });
     } else {
       pathList.push(newNodeUri);
@@ -109,7 +109,7 @@ async function sendFile({ localFile, upstairsRootUrlString }: { localFile: strin
   const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
   const upstairsOverride = new URL(upstairsUrl);
   const downstairsUri = vscode.Uri.file(localFile);
-  const scriptFile = RemoteScriptFile.fromUri(downstairsUri);
+  const scriptFile = ScriptFile.fromUri(downstairsUri);
 
   const desto = localFile
     .split(upstairsUrl.host + "/" + webDavId)[1];
@@ -192,7 +192,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   }
   const rawFilePaths = getScriptRet;
 
-  const flattenedDownstairs = await flattenDirectory(new RemoteScriptFolder(downstairsRootFolderUri));
+  const flattenedDownstairs = await flattenDirectory(new ScriptFolder(downstairsRootFolderUri));
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
   // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for
@@ -205,7 +205,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     if (!downstairsPath) {
       // we don't want to delete stuff that is in gitignore
       const dsurlp = new DownstairsUriParser(downstairsRootFolderUri);
-      const sf = RemoteScriptFile.fromUri(vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath));
+      const sf = ScriptFile.fromUri(vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath));
       if (!(await sf.isCopacetic())) {
         throw new Error("File is not copacetic: " + sf.uri().toString());        
       }

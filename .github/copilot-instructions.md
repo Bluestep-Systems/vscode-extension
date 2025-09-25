@@ -46,7 +46,7 @@ npm run package-extension  # Create .vsix package
 
 ### Testing
 - Use VS Code's "Run Test Environment" from Run panel
-- Tests in `src/test/` directory (e.g., `extension.test.ts`, `RemoteScriptFile.test.ts`)
+- Tests in `src/test/` directory (e.g., `extension.test.ts`, `ScriptFile.test.ts`)
 - `npm run pretest` builds and lints before testing
 - Test framework: Mocha with VS Code's built-in test runner
 - **Mocking limitations**: VS Code file system APIs are read-only and cannot be directly mocked

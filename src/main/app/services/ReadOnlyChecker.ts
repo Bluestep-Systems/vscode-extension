@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { App } from "../App";
 import { getActiveEditorUri } from "../util/data/getActiveEditorUri";
-import { RemoteScriptFile } from "../util/script/RemoteScriptFile";
-import { RemoteScriptRoot } from "../util/script/RemoteScriptRoot";
+import { ScriptFile } from "../util/script/ScriptFile";
+import { ScriptRoot } from "../util/script/ScriptRoot";
 
 export default async function () {
   try {
@@ -13,7 +13,7 @@ export default async function () {
     if (!activeEditorUri) {
       return; // if there's no active editor, just return. not our problem
     }
-    const sf = RemoteScriptFile.fromUri(activeEditorUri);
+    const sf = ScriptFile.fromUri(activeEditorUri);
     if (!(await sf.exists())) {
       return; // if the active editor is not part of a script, just return. not our problem
     }
@@ -35,9 +35,9 @@ export default async function () {
  * //TODO improve this logic to be more efficient
  * @param sf 
  */
-async function determine(sf: RemoteScriptFile) {
+async function determine(sf: ScriptFile) {
   const curFileName = sf.getFileName();
-  const specialFileNames = [RemoteScriptRoot.METADATA_FILE];
+  const specialFileNames = [ScriptRoot.METADATA_FILE];
   if (specialFileNames.includes(curFileName)) {
     return true;
   }

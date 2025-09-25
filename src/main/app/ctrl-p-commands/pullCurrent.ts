@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { RemoteScriptFile } from '../util/script/RemoteScriptFile';
+import { ScriptFile } from '../util/script/ScriptFile';
 import pullScript from './pull';
 export default async function (): Promise<void> {
   try {
@@ -9,7 +9,7 @@ export default async function (): Promise<void> {
       vscode.window.showErrorMessage('No source path provided');
       return;
     }
-    const fileMetaData = RemoteScriptFile.fromUri(activeEditorUri);
+    const fileMetaData = ScriptFile.fromUri(activeEditorUri);
     await pullScript(fileMetaData.getScriptRoot().toBaseUpstairsString());
   } catch (e) {
     if (e instanceof Error) {

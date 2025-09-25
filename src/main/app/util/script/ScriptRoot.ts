@@ -6,8 +6,8 @@ import { App } from '../../App';
 import { FileSystem } from '../fs/FileSystemFactory';
 import { DownstairsUriParser } from './DownstairsUrIParser';
 import { FileDoesNotExistError, FileReadError } from './Errors';
-import { RemoteScriptFolder } from './RemoteScriptFolder';
-import { RemoteScriptFile } from './RemoteScriptFile';
+import { ScriptFolder } from './ScriptFolder';
+import { ScriptFile } from './ScriptFile';
 import { ScriptCompiler } from './ScriptCompiler';
 import { PathElement } from './PathElement';
 const fs = FileSystem.getInstance;
@@ -18,8 +18,8 @@ const fs = FileSystem.getInstance;
  * This originally was the webdavid root file.
  * @lastreviewed null
  */
-export class RemoteScriptRoot implements PathElement {
-  private folder: RemoteScriptFolder;
+export class ScriptRoot implements PathElement {
+  private folder: ScriptFolder;
   private static readonly ScriptContentFolders = ["info", "scripts", "objects"] as const;
   public static readonly METADATA_FILE = ".b6p_metadata.json";
   public static readonly GITIGNORE_FILE = ".gitignore";
@@ -41,7 +41,7 @@ export class RemoteScriptRoot implements PathElement {
     const shavedName = parser.getShavedName();
     const scriptPath = path.parse(shavedName);                  // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
     const parentDirBase = path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
-    this.folder = new RemoteScriptFolder(vscode.Uri.file(scriptPath.dir + path.sep + scriptPath.base));
+    this.folder = new ScriptFolder(vscode.Uri.file(scriptPath.dir + path.sep + scriptPath.base));
     this.downstairsRootPath = scriptPath;
     this.downstairsRootOrgPath = parentDirBase;
   }
@@ -58,7 +58,7 @@ export class RemoteScriptRoot implements PathElement {
    */
   private getMetadataFileUri() {
     const downstairsRoot = this.getRootUri();
-    return vscode.Uri.joinPath(downstairsRoot, RemoteScriptRoot.METADATA_FILE);
+    return vscode.Uri.joinPath(downstairsRoot, ScriptRoot.METADATA_FILE);
   }
 
   /**
@@ -78,7 +78,7 @@ export class RemoteScriptRoot implements PathElement {
    * @param touchType The type of touch to perform - either "lastPulled" or "lastPushed"
    * @lastreviewed 2025-09-15
    */
-  async touchFile(file: RemoteScriptFile, touchType: "lastPulled" | "lastPushed"): Promise<void> {
+  async touchFile(file: ScriptFile, touchType: "lastPulled" | "lastPushed"): Promise<void> {
     const lastHash = await file.getHash();
     const metaData = await this.modifyMetaData(md => {
       const downstairsPath = file.uri().fsPath;
@@ -329,7 +329,7 @@ export class RemoteScriptRoot implements PathElement {
    * @lastreviewed 2025-09-15
    */
   static fromRootUri(rootUri: vscode.Uri) {
-    return new RemoteScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, "/") });
+    return new ScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, "/") });
   }
 
 
@@ -339,7 +339,7 @@ export class RemoteScriptRoot implements PathElement {
    * @returns Array of URIs for files and folders within the specified folder
    * @lastreviewed 2025-09-15
    */
-  private async getDraftFolderContents(folderName: typeof RemoteScriptRoot.ScriptContentFolders[number]): Promise<vscode.Uri[]> {
+  private async getDraftFolderContents(folderName: typeof ScriptRoot.ScriptContentFolders[number]): Promise<vscode.Uri[]> {
     const folder = this.getDraftFolder().getChildFolder(folderName);
     const dirContents = await fs().readDirectory(folder);
     return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folder.uri(), name));
@@ -407,7 +407,7 @@ export class RemoteScriptRoot implements PathElement {
    * @param b The other ScriptRoot to compare against
    * @lastreviewed 2025-09-15
    */
-  equals(b: RemoteScriptRoot) {
+  equals(b: ScriptRoot) {
     return (
       this.folder.equals(b.folder) &&
       this.origin === b.origin &&

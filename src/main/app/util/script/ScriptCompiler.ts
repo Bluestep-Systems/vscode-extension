@@ -2,12 +2,12 @@ import ts from "typescript";
 import * as vscode from "vscode";
 import { App } from "../../App";
 import { FileSystem } from "../fs/FileSystemFactory";
-import { RemoteScriptFile } from "./RemoteScriptFile";
+import { ScriptFile } from "./ScriptFile";
 import { TerminalElement } from "./TerminalElement";
 const fs = FileSystem.getInstance;
 
 export class ScriptCompiler {
-  private programs: Map<string, RemoteScriptFile[]> = new Map();
+  private programs: Map<string, ScriptFile[]> = new Map();
   private static DEFAULT_TS_CONFIG: ts.CompilerOptions = {
     module: ts.ModuleKind.ESNext,
     target: ts.ScriptTarget.ES2022,
@@ -66,7 +66,7 @@ export class ScriptCompiler {
     return parsedConfig.options;
   }
 
-  public async addFile(sf: RemoteScriptFile) {
+  public async addFile(sf: ScriptFile) {
     if (!(await sf.isCopacetic())) {
       throw new Error("File is not copacetic, cannot compile.");
     }
@@ -81,7 +81,7 @@ export class ScriptCompiler {
         App.logger.info("No files to compile for tsconfig at:", tsConfigPath);
         return;
       }
-      const compilerOptions = await this.getCompilerOptions(RemoteScriptFile.fromPath(tsConfigPath));
+      const compilerOptions = await this.getCompilerOptions(ScriptFile.fromPath(tsConfigPath));
       const program = ts.createProgram(sfList.map(sf => sf.uri().fsPath), compilerOptions);
       const emitResult = program.emit();
 

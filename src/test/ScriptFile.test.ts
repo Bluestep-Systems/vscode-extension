@@ -1,15 +1,15 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { RemoteScriptFile } from '../main/app/util/script/RemoteScriptFile';
-import { RemoteScriptRoot } from '../main/app/util/script/RemoteScriptRoot';
+import { ScriptFile } from '../main/app/util/script/ScriptFile';
+import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
 import { FileSystem } from '../main/app/util/fs/FileSystemFactory';
 import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
 import { App } from '../main/app/App';
 
-suite('RemoteScriptFile Tests', () => {
+suite('ScriptFile Tests', () => {
     let mockFileSystemProvider: MockFileSystem;
-    let remoteScriptFile: RemoteScriptFile;
+    let remoteScriptFile: ScriptFile;
     let originalLogger: any;
 
     suiteSetup(() => {
@@ -49,8 +49,8 @@ suite('RemoteScriptFile Tests', () => {
         // This must match the expected structure: /path/webdavid/(draft|declarations|.b6p_metadata.json)/filename
         const mockChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
 
-        // Create test RemoteScriptFile
-        remoteScriptFile = new RemoteScriptFile({
+        // Create test ScriptFile
+        remoteScriptFile = new ScriptFile({
             downstairsUri: mockChildUri
         });
 
@@ -68,7 +68,7 @@ suite('RemoteScriptFile Tests', () => {
   suite('File Type Detection', () => {
     test('should identify draft files correctly', () => {
       const draftUri = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
-      const scriptFile = RemoteScriptFile.fromUri(draftUri);
+      const scriptFile = ScriptFile.fromUri(draftUri);
       
       assert.strictEqual(scriptFile.isInDraft(), true);
       assert.strictEqual(scriptFile.isInDeclarations(), false);
@@ -76,7 +76,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should identify declarations files correctly', () => {
       const declarationsUri = vscode.Uri.file('/test/workspace/123/declarations/test-script.js');
-      const scriptFile = RemoteScriptFile.fromUri(declarationsUri);
+      const scriptFile = ScriptFile.fromUri(declarationsUri);
       
       assert.strictEqual(scriptFile.isInDeclarations(), true);
       assert.strictEqual(scriptFile.isInDraft(), false);
@@ -103,7 +103,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should throw error for metadata files when converting to upstairs URL', () => {
       const metadataUri = vscode.Uri.file('/test/workspace/123/.b6p_metadata.json');
-      const scriptFile = RemoteScriptFile.fromUri(metadataUri);
+      const scriptFile = ScriptFile.fromUri(metadataUri);
       
       assert.throws(() => {
         scriptFile.toUpstairsURL();
@@ -231,8 +231,8 @@ suite('RemoteScriptFile Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
 
-      const scriptFile1 = RemoteScriptFile.fromUri(uri1);
-      const scriptFile2 = RemoteScriptFile.fromUri(uri2);
+      const scriptFile1 = ScriptFile.fromUri(uri1);
+      const scriptFile2 = ScriptFile.fromUri(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, true);
@@ -242,8 +242,8 @@ suite('RemoteScriptFile Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/456/draft/other-script.js');
 
-      const scriptFile1 = RemoteScriptFile.fromUri(uri1);
-      const scriptFile2 = RemoteScriptFile.fromUri(uri2);
+      const scriptFile1 = ScriptFile.fromUri(uri1);
+      const scriptFile2 = ScriptFile.fromUri(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
@@ -253,8 +253,8 @@ suite('RemoteScriptFile Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/123/declarations/test-script.js');
 
-      const scriptFile1 = RemoteScriptFile.fromUri(uri1);
-      const scriptFile2 = RemoteScriptFile.fromUri(uri2);
+      const scriptFile1 = ScriptFile.fromUri(uri1);
+      const scriptFile2 = ScriptFile.fromUri(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
@@ -265,12 +265,12 @@ suite('RemoteScriptFile Tests', () => {
     test('should get script root', () => {
       const scriptRoot = remoteScriptFile.getScriptRoot();
       
-      assert.ok(scriptRoot instanceof RemoteScriptRoot);
+      assert.ok(scriptRoot instanceof ScriptRoot);
     });
 
     test('should allow overwriting script root for non-metadata files', () => {
       const newUri = vscode.Uri.file('/test/workspace/456/draft/new-script.js');
-      const newRoot = new RemoteScriptRoot({ childUri: newUri });
+      const newRoot = new ScriptRoot({ childUri: newUri });
       
       const result = remoteScriptFile.withScriptRoot(newRoot);
       
@@ -280,9 +280,9 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should throw error when trying to overwrite script root of metadata file', () => {
       const metadataUri = vscode.Uri.file('/test/workspace/configbeh.bluestep.net/123/.b6p_metadata.json');
-      const metadataFile = RemoteScriptFile.fromUri(metadataUri);
+      const metadataFile = ScriptFile.fromUri(metadataUri);
       const newChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/other.js');
-      const newRoot = new RemoteScriptRoot({ childUri: newChildUri });
+      const newRoot = new ScriptRoot({ childUri: newChildUri });
       
       assert.throws(() => {
         metadataFile.withScriptRoot(newRoot);
@@ -299,7 +299,7 @@ suite('RemoteScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
 
-      const scriptFile = RemoteScriptFile.fromUri(infoUri);
+      const scriptFile = ScriptFile.fromUri(infoUri);
 
       const isInInfo = await scriptFile.isInInfo();
       const isInInfoFolder = await scriptFile.isInInfoFolder();
@@ -316,7 +316,7 @@ suite('RemoteScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(objectsFolderUri);
       mockFileSystemProvider.setMockFile(objectsUri, 'export {};');
 
-      const scriptFile = RemoteScriptFile.fromUri(objectsUri);
+      const scriptFile = ScriptFile.fromUri(objectsUri);
 
       const isInObjects = await scriptFile.isInObjects();
       
@@ -331,7 +331,7 @@ suite('RemoteScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
 
-      const scriptFile = RemoteScriptFile.fromUri(infoUri);
+      const scriptFile = ScriptFile.fromUri(infoUri);
 
       const isInInfoOrObjects = await scriptFile.isInInfoOrObjects();
       
@@ -340,7 +340,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should return false for files not in info or objects', async () => {
       const scriptUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/scripts/main.js');
-      const scriptFile = RemoteScriptFile.fromUri(scriptUri);
+      const scriptFile = ScriptFile.fromUri(scriptUri);
       
       // Set up empty folders so the file isn't found in them
       const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
@@ -585,7 +585,7 @@ suite('RemoteScriptFile Tests', () => {
       // REASON-FOR-ANY: Accessing private property for test verification
       const originalParser = (remoteScriptFile as any).parser;
       const newUri = vscode.Uri.parse('file:///test/workspace/different.domain.com/9999/draft/different.js');
-      const newScriptFile = RemoteScriptFile.fromUri(newUri);
+      const newScriptFile = ScriptFile.fromUri(newUri);
       // REASON-FOR-ANY: Accessing private property for test verification
       const newParser = (newScriptFile as any).parser;
       
@@ -627,7 +627,7 @@ suite('RemoteScriptFile Tests', () => {
   suite('Push Validation', () => {
     test('should return reason for metadata files', async () => {
       const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
-      const metadataFile = RemoteScriptFile.fromUri(metadataUri);
+      const metadataFile = ScriptFile.fromUri(metadataUri);
       
       const reason = await metadataFile.getReasonToNotPush();
       
@@ -636,7 +636,7 @@ suite('RemoteScriptFile Tests', () => {
 
     test('should return reason for declarations files', async () => {
       const declarationsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/test.js');
-      const declarationsFile = RemoteScriptFile.fromUri(declarationsUri);
+      const declarationsFile = ScriptFile.fromUri(declarationsUri);
       
       const reason = await declarationsFile.getReasonToNotPush();
       
@@ -684,7 +684,7 @@ suite('RemoteScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
       
-      const scriptFile = RemoteScriptFile.fromUri(infoUri);
+      const scriptFile = ScriptFile.fromUri(infoUri);
       const reason = await scriptFile.getReasonToNotPush();
       
       assert.strictEqual(reason, 'File is in info or objects');

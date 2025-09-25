@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { RemoteScriptRoot } from './RemoteScriptRoot';
+import { ScriptRoot } from './ScriptRoot';
 
 
 /**
@@ -59,7 +59,7 @@ export class DownstairsUriParser {
       this.type = "root";
     } else if (typeStr === "draft" || typeStr === "declarations") {
       this.type = typeStr;
-    } else if (typeStr === RemoteScriptRoot.METADATA_FILE || typeStr === RemoteScriptRoot.GITIGNORE_FILE) {
+    } else if (typeStr === ScriptRoot.METADATA_FILE || typeStr === ScriptRoot.GITIGNORE_FILE) {
       // both of these are considered "metadata" files
       this.type = "metadata";
     } else if (typeStr === "snapshot") {

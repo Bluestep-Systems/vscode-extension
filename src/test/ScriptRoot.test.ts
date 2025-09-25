@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { RemoteScriptRoot } from '../main/app/util/script/RemoteScriptRoot';
-import { RemoteScriptFile } from '../main/app/util/script/RemoteScriptFile';
+import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
+import { ScriptFile } from '../main/app/util/script/ScriptFile';
 import { FileSystem } from '../main/app/util/fs/FileSystemFactory';
 import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
 import { ScriptMetaData } from '../../types';
@@ -10,7 +10,7 @@ import { App } from '../main/app/App';
 
 suite('RemoteScriptRoot Tests', () => {
     let mockFileSystem: MockFileSystem;
-    let remoteScriptRoot: RemoteScriptRoot;
+    let remoteScriptRoot: ScriptRoot;
     let testChildUri: vscode.Uri;
     let originalLogger: any;
 
@@ -51,7 +51,7 @@ suite('RemoteScriptRoot Tests', () => {
         testChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
         
         // Create RemoteScriptRoot instance
-        remoteScriptRoot = new RemoteScriptRoot({ childUri: testChildUri });
+        remoteScriptRoot = new ScriptRoot({ childUri: testChildUri });
 
         // Set up basic mock metadata file
         const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
@@ -71,7 +71,7 @@ suite('RemoteScriptRoot Tests', () => {
 
     suite('Constructor and Path Parsing', () => {
         test('should parse child URI correctly', () => {
-            const scriptRoot = new RemoteScriptRoot({ childUri: testChildUri });
+            const scriptRoot = new ScriptRoot({ childUri: testChildUri });
             
             assert.strictEqual(scriptRoot.webDavId, '1466960');
             assert.strictEqual(scriptRoot.origin, 'configbeh.bluestep.net');
@@ -79,7 +79,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should handle different file types in same directory', () => {
             const declarationsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/script.js');
-            const scriptRoot = new RemoteScriptRoot({ childUri: declarationsUri });
+            const scriptRoot = new ScriptRoot({ childUri: declarationsUri });
             
             assert.strictEqual(scriptRoot.webDavId, '1466960');
             assert.strictEqual(scriptRoot.origin, 'configbeh.bluestep.net');
@@ -87,7 +87,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should handle metadata file as child URI', () => {
             const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
-            const scriptRoot = new RemoteScriptRoot({ childUri: metadataUri });
+            const scriptRoot = new ScriptRoot({ childUri: metadataUri });
             
             assert.strictEqual(scriptRoot.webDavId, '1466960');
             assert.strictEqual(scriptRoot.origin, 'configbeh.bluestep.net');
@@ -134,7 +134,7 @@ suite('RemoteScriptRoot Tests', () => {
     suite('Static Methods', () => {
         test('should create RemoteScriptRoot from root URI', () => {
             const rootUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960');
-            const scriptRoot = RemoteScriptRoot.fromRootUri(rootUri);
+            const scriptRoot = ScriptRoot.fromRootUri(rootUri);
             
             assert.strictEqual(scriptRoot.webDavId, '1466960');
             assert.strictEqual(scriptRoot.origin, 'configbeh.bluestep.net');
@@ -146,8 +146,8 @@ suite('RemoteScriptRoot Tests', () => {
             const uri1 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/file1.js');
             const uri2 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/file2.js');
             
-            const root1 = new RemoteScriptRoot({ childUri: uri1 });
-            const root2 = new RemoteScriptRoot({ childUri: uri2 });
+            const root1 = new ScriptRoot({ childUri: uri1 });
+            const root2 = new ScriptRoot({ childUri: uri2 });
             
             assert.strictEqual(root1.equals(root2), true);
         });
@@ -156,8 +156,8 @@ suite('RemoteScriptRoot Tests', () => {
             const uri1 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/file1.js');
             const uri2 = vscode.Uri.parse('file:///test/workspace/different.domain.com/1466960/draft/file2.js');
             
-            const root1 = new RemoteScriptRoot({ childUri: uri1 });
-            const root2 = new RemoteScriptRoot({ childUri: uri2 });
+            const root1 = new ScriptRoot({ childUri: uri1 });
+            const root2 = new ScriptRoot({ childUri: uri2 });
             
             assert.strictEqual(root1.equals(root2), false);
         });
@@ -166,8 +166,8 @@ suite('RemoteScriptRoot Tests', () => {
             const uri1 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/file1.js');
             const uri2 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/9999999/draft/file2.js');
             
-            const root1 = new RemoteScriptRoot({ childUri: uri1 });
-            const root2 = new RemoteScriptRoot({ childUri: uri2 });
+            const root1 = new ScriptRoot({ childUri: uri1 });
+            const root2 = new ScriptRoot({ childUri: uri2 });
             
             assert.strictEqual(root1.equals(root2), false);
         });
@@ -220,7 +220,7 @@ suite('RemoteScriptRoot Tests', () => {
     suite('Touch File Operations', () => {
         test('should touch file with lastPulled timestamp', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = RemoteScriptFile.fromUri(fileUri);
+            const scriptFile = ScriptFile.fromUri(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -241,7 +241,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should touch file with lastPushed timestamp', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = RemoteScriptFile.fromUri(fileUri);
+            const scriptFile = ScriptFile.fromUri(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -262,7 +262,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should update existing record when touching same file again', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = RemoteScriptFile.fromUri(fileUri);
+            const scriptFile = ScriptFile.fromUri(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -287,7 +287,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should store hash when touching file', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = RemoteScriptFile.fromUri(fileUri);
+            const scriptFile = ScriptFile.fromUri(fileUri);
             const testContent = 'console.log("test");';
             
             // Set up mock file content for hash calculation
@@ -540,11 +540,11 @@ suite('RemoteScriptRoot Tests', () => {
 
     suite('Constants', () => {
         test('should have correct metadata file constant', () => {
-            assert.strictEqual(RemoteScriptRoot.METADATA_FILE, '.b6p_metadata.json');
+            assert.strictEqual(ScriptRoot.METADATA_FILE, '.b6p_metadata.json');
         });
 
         test('should have correct gitignore file constant', () => {
-            assert.strictEqual(RemoteScriptRoot.GITIGNORE_FILE, '.gitignore');
+            assert.strictEqual(ScriptRoot.GITIGNORE_FILE, '.gitignore');
         });
     });
 

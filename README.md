@@ -76,11 +76,11 @@ export default defineConfig({
 ```
 src/test/
 ├── extension.test.ts          # Basic extension tests
-└── RemoteScriptFile.test.ts   # Comprehensive unit tests (22 tests)
+└── ScriptFile.test.ts   # Comprehensive unit tests (22 tests)
 
 out/test/                      # Compiled test files (generated)
 ├── extension.test.js
-└── RemoteScriptFile.test.js
+└── ScriptFile.test.js
 ```
 
 ---
@@ -92,7 +92,7 @@ out/test/                      # Compiled test files (generated)
 - **Tests basic extension loading**
 - **Sample test for framework verification**
 
-### **2. Unit Tests** (`RemoteScriptFile.test.ts`)
+### **2. Unit Tests** (`ScriptFile.test.ts`)
 - **22 comprehensive tests**
 - **Mock file system** using our custom `FileSystemFactory`
 - **Tests core business logic** without VS Code API dependencies
@@ -170,7 +170,7 @@ Our `build-vsix.sh` script now includes:
 
 ---
 
-## **🎪 Test Categories (RemoteScriptFile.test.ts)**
+## **🎪 Test Categories (ScriptFile.test.ts)**
 
 1. **File Type Detection** - Draft, declarations, metadata files
 2. **URI Operations** - Path conversions and validations  

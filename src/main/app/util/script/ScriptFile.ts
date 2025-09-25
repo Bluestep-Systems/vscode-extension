@@ -9,8 +9,8 @@ import { readFileText } from '../data/readFile';
 import { FileSystem } from '../fs/FileSystemFactory';
 import { ResponseCodes } from '../network/StatusCodes';
 import { DownstairsUriParser } from './DownstairsUrIParser';
-import { RemoteScriptFolder } from './RemoteScriptFolder';
-import { RemoteScriptRoot } from './RemoteScriptRoot';
+import { ScriptFolder } from './ScriptFolder';
+import { ScriptRoot } from './ScriptRoot';
 import { TerminalElement } from './TerminalElement';
 import { TsConfigFile } from './TsConfigFile';
 const fs = FileSystem.getInstance;
@@ -22,7 +22,7 @@ const fs = FileSystem.getInstance;
  * to extract the WebDAV ID and domain associated with that formula.
  * @lastreviewed 2025-09-15
  */
-export class RemoteScriptFile implements TerminalElement {
+export class ScriptFile implements TerminalElement {
 
   /**
    * The downstairs URI (local file system path).
@@ -32,7 +32,7 @@ export class RemoteScriptFile implements TerminalElement {
   /**
    * The downstairs root object.
    */
-  private _scriptRoot: RemoteScriptRoot;
+  private _scriptRoot: ScriptRoot;
 
   /**
    * Regex specifically for myassn document key patterns:
@@ -50,7 +50,7 @@ export class RemoteScriptFile implements TerminalElement {
   private static WeakEtagPattern = /^W\/"[a-f0-9]{128}"$/;
 
   /**
-   * Creates a {@link RemoteScriptFile} instance in addition to its associated {@link RemoteScriptRoot} object.
+   * Creates a {@link ScriptFile} instance in addition to its associated {@link ScriptRoot} object.
    * 
    * @param param0 Object containing the downstairs URI (local file system path)
    * @param param0.downstairsUri The local file system URI for this script file
@@ -58,16 +58,16 @@ export class RemoteScriptFile implements TerminalElement {
    */
   constructor({ downstairsUri }: { downstairsUri: vscode.Uri, }) {
     this._parser = new DownstairsUriParser(downstairsUri);
-    this._scriptRoot = new RemoteScriptRoot({ childUri: downstairsUri });
+    this._scriptRoot = new ScriptRoot({ childUri: downstairsUri });
   }
 
-  public static fromUri(uri: vscode.Uri): RemoteScriptFile {
-    return new RemoteScriptFile({ downstairsUri: uri });
+  public static fromUri(uri: vscode.Uri): ScriptFile {
+    return new ScriptFile({ downstairsUri: uri });
   }
 
-  public static fromPath(fsPath: string): RemoteScriptFile {
+  public static fromPath(fsPath: string): ScriptFile {
     const uri = vscode.Uri.file(fsPath);
-    return new RemoteScriptFile({ downstairsUri: uri });
+    return new ScriptFile({ downstairsUri: uri });
   }
 
   /**
@@ -83,8 +83,8 @@ export class RemoteScriptFile implements TerminalElement {
       return newUrl;
     } else if (this._parser.type === "metadata") {
       const fileName = this.getFileName();
-      if (fileName === RemoteScriptRoot.METADATA_FILE) {
-        throw new Error(`should never try to convert ${RemoteScriptRoot.METADATA_FILE} file to upstairs URL. Review logic on how you got here.`);
+      if (fileName === ScriptRoot.METADATA_FILE) {
+        throw new Error(`should never try to convert ${ScriptRoot.METADATA_FILE} file to upstairs URL. Review logic on how you got here.`);
       }
       newUrl.pathname = upstairsBaseUrl.pathname + fileName;
     } else if (this._parser.isDeclarationsOrDraft()) {
@@ -137,7 +137,7 @@ export class RemoteScriptFile implements TerminalElement {
     if (this._parser.type === "root") {
       return "File is the root folder";
     }
-    if (this.getFileName() === RemoteScriptRoot.METADATA_FILE) {
+    if (this.getFileName() === ScriptRoot.METADATA_FILE) {
       return "File is a metadata file";
     }
     if (this.isInDeclarations()) {
@@ -205,9 +205,9 @@ export class RemoteScriptFile implements TerminalElement {
 
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
     let etag: string | null = null;
-    if (RemoteScriptFile.EtagPattern.test(etagHeader || "")) {
+    if (ScriptFile.EtagPattern.test(etagHeader || "")) {
       etag = JSON.parse(etagHeader?.toLowerCase() || "null");
-    } else if (RemoteScriptFile.WeakEtagPattern.test(etagHeader || "")) {
+    } else if (ScriptFile.WeakEtagPattern.test(etagHeader || "")) {
       // weak etags are prefixed with W/ and we ignore the weakness for our purposes
       App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
       etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
@@ -309,13 +309,13 @@ export class RemoteScriptFile implements TerminalElement {
 
     //TODO merge this with the other etag parsing code elsewhere in this class
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
-    if (RemoteScriptFile.EtagPattern.test(etagHeader || "")) {
+    if (ScriptFile.EtagPattern.test(etagHeader || "")) {
       const etag = JSON.parse(etagHeader?.toLowerCase() || "null");
       const hash = await this.getHash();
       if (hash !== etag) {
         throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
       }
-    } else if (RemoteScriptFile.WeakEtagPattern.test(etagHeader || "")) {
+    } else if (ScriptFile.WeakEtagPattern.test(etagHeader || "")) {
       // weak etags are prefixed with W/ and we ignore the weakness for our purposes
       App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
       const etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
@@ -323,7 +323,7 @@ export class RemoteScriptFile implements TerminalElement {
       if (hash !== etag) {
         throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
       }
-    } else if (RemoteScriptFile.ComplexEtagPattern.test(etagHeader || "")) {
+    } else if (ScriptFile.ComplexEtagPattern.test(etagHeader || "")) {
       App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
       // complex etags are from the illusory document files and we skip the integrity check on them
     } else {
@@ -395,7 +395,7 @@ export class RemoteScriptFile implements TerminalElement {
   }
 
   /**
-   * Get the {@link RemoteScriptRoot} object for this file.
+   * Get the {@link ScriptRoot} object for this file.
    * @lastreviewed 2025-09-15
    */
   public getScriptRoot() {
@@ -457,7 +457,7 @@ export class RemoteScriptFile implements TerminalElement {
    * @throws {Error} When attempting to overwrite script root of a metadata file
    * @lastreviewed 2025-09-15
    */
-  withScriptRoot(root: RemoteScriptRoot): RemoteScriptFile {
+  withScriptRoot(root: ScriptRoot): ScriptFile {
     this._scriptRoot = root;
     //TODO determine if this if-check is even neccessary
     if (this._parser.type === "metadata") {
@@ -474,7 +474,7 @@ export class RemoteScriptFile implements TerminalElement {
    * @returns The updated script file
    * @lastreviewed 2025-09-15
    */
-  withParser(parser: DownstairsUriParser): RemoteScriptFile {
+  withParser(parser: DownstairsUriParser): ScriptFile {
     this._parser = parser;
     return this;
   }
@@ -484,8 +484,8 @@ export class RemoteScriptFile implements TerminalElement {
    * @param other The other script file to compare against
    * @lastreviewed 2025-09-15
    */
-  public equals(other: RemoteScriptFile): boolean {
-    if (!(other instanceof RemoteScriptFile)) {
+  public equals(other: ScriptFile): boolean {
+    if (!(other instanceof ScriptFile)) {
       return false;
     }
     return this._scriptRoot.equals(other._scriptRoot) &&
@@ -650,9 +650,9 @@ export class RemoteScriptFile implements TerminalElement {
    * @returns The URI of the parent directory
    * @lastreviewed null
    */
-  public folder(): RemoteScriptFolder {
+  public folder(): ScriptFolder {
     const fileUri = this.uri();
-    return new RemoteScriptFolder(vscode.Uri.joinPath(fileUri, '..'));
+    return new ScriptFolder(vscode.Uri.joinPath(fileUri, '..'));
   }
 
   /**
@@ -666,7 +666,7 @@ export class RemoteScriptFile implements TerminalElement {
     if (!tsConfigUri) {
       throw new Error("Could not find a tsconfig.json file");
     }
-    return new TsConfigFile(RemoteScriptFile.fromUri(tsConfigUri));
+    return new TsConfigFile(ScriptFile.fromUri(tsConfigUri));
   }
   
   /**
@@ -710,7 +710,7 @@ export class RemoteScriptFile implements TerminalElement {
   }
 
   create(vsCodeUri: vscode.Uri) {
-    return new RemoteScriptFile({ downstairsUri: vsCodeUri });
+    return new ScriptFile({ downstairsUri: vsCodeUri });
   }
 
 }
