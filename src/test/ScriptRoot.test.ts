@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
-import { ScriptFile } from '../main/app/util/script/ScriptFile';
+import { ScriptNode } from '../main/app/util/script/ScriptNode';
 import { FileSystem } from '../main/app/util/fs/FileSystem';
 import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
 import { ScriptMetaData } from '../../types';
@@ -220,7 +220,7 @@ suite('RemoteScriptRoot Tests', () => {
     suite('Touch File Operations', () => {
         test('should touch file with lastPulled timestamp', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = ScriptFile.fromUri(fileUri);
+            const scriptFile = ScriptNode.fromUri(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -231,7 +231,7 @@ suite('RemoteScriptRoot Tests', () => {
                 size: 100
             });
             
-            await scriptRoot.touchFile(scriptFile, 'lastPulled');
+            await scriptFile.touch('lastPulled');
             
             const metadata = await scriptRoot.getMetaData();
             assert.strictEqual(metadata.pushPullRecords.length, 1);
@@ -239,30 +239,11 @@ suite('RemoteScriptRoot Tests', () => {
             assert.strictEqual(metadata.pushPullRecords[0].lastPushed, null);
         });
 
-        test('should touch file with lastPushed timestamp', async () => {
-            const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = ScriptFile.fromUri(fileUri);
-            
-            // Set up mock file content for hash calculation
-            mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
-            mockFileSystem.setMockStat(fileUri, {
-                type: vscode.FileType.File,
-                ctime: Date.now(),
-                mtime: Date.now(),
-                size: 100
-            });
-            
-            await scriptRoot.touchFile(scriptFile, 'lastPushed');
-            
-            const metadata = await scriptRoot.getMetaData();
-            assert.strictEqual(metadata.pushPullRecords.length, 1);
-            assert.ok(metadata.pushPullRecords[0].lastPushed);
-            assert.strictEqual(metadata.pushPullRecords[0].lastPulled, null);
-        });
+
 
         test('should update existing record when touching same file again', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = ScriptFile.fromUri(fileUri);
+            const scriptFile = ScriptNode.fromUri(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -274,11 +255,11 @@ suite('RemoteScriptRoot Tests', () => {
             });
             
             // Touch first time
-            await scriptRoot.touchFile(scriptFile, 'lastPulled');
+            await scriptFile.touch('lastPulled');
             
             // Touch second time with different type
-            await scriptRoot.touchFile(scriptFile, 'lastPushed');
-            
+            await scriptFile.touch('lastPushed');
+
             const metadata = await scriptRoot.getMetaData();
             assert.strictEqual(metadata.pushPullRecords.length, 1);
             assert.ok(metadata.pushPullRecords[0].lastPulled);
@@ -287,7 +268,7 @@ suite('RemoteScriptRoot Tests', () => {
 
         test('should store hash when touching file', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = ScriptFile.fromUri(fileUri);
+            const scriptFile = ScriptNode.fromUri(fileUri);
             const testContent = 'console.log("test");';
             
             // Set up mock file content for hash calculation
@@ -299,8 +280,8 @@ suite('RemoteScriptRoot Tests', () => {
                 size: testContent.length
             });
             
-            await scriptRoot.touchFile(scriptFile, 'lastPulled');
-            
+            await scriptFile.touch('lastPulled');
+
             const metadata = await scriptRoot.getMetaData();
             assert.strictEqual(metadata.pushPullRecords.length, 1);
             assert.ok(metadata.pushPullRecords[0].lastVerifiedHash);

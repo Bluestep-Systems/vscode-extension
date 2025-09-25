@@ -3,7 +3,7 @@ import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
 import { Alert } from "../ui/Alert";
-import { parseUpstairsUrl } from "./URLParser";
+import { UpstairsUrlParser } from "./UpstairsUrlParser";
 
 type GetScriptArg = { url: URL; curLayer?: PrimitiveNestedObject; webDavId: string; }
 type GetScriptRet = { upstairsPath: string; downstairsPath: string; trailing?: string }[] | null;
@@ -50,7 +50,7 @@ async function getSubScript(url: URL, repository: RawFilesObj = []): Promise<Raw
     const firstLayer: RawFilesObj = dResponses
       .filter(terminal => {
         // TODO examine this for fragility
-        let { trailing } = parseUpstairsUrl(terminal["D:href"]);
+        let { trailing } = new UpstairsUrlParser(terminal["D:href"]);
         if (trailing === undefined) {
           return false; // not pulling the root itself
         }
@@ -66,7 +66,7 @@ async function getSubScript(url: URL, repository: RawFilesObj = []): Promise<Raw
         return true;
       })
       .map(terminal => {
-        const { webDavId, trailing } = parseUpstairsUrl(terminal["D:href"]);
+        const { webDavId, trailing } = new UpstairsUrlParser(terminal["D:href"]);
         const newPath = `${webDavId}/${trailing}`;
         return { upstairsPath: terminal["D:href"], downstairsPath: newPath, trailing };
       });

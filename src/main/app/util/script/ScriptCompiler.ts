@@ -2,8 +2,8 @@ import ts from "typescript";
 import * as vscode from "vscode";
 import { App } from "../../App";
 import { FileSystem } from "../fs/FileSystem";
-import { ScriptFile } from "./ScriptFile";
-import { File } from "./File";
+import { ScriptNode } from "./ScriptNode";
+import { Node } from "./Node";
 const fs = FileSystem.getInstance;
 
 /**
@@ -12,7 +12,7 @@ const fs = FileSystem.getInstance;
  * @lastreviewed null
  */
 export class ScriptCompiler {
-  private projects: Map<string, ScriptFile[]> = new Map();
+  private projects: Map<string, ScriptNode[]> = new Map();
   private static DEFAULT_TS_CONFIG: ts.CompilerOptions = {
     module: ts.ModuleKind.ESNext,
     target: ts.ScriptTarget.ES2022,
@@ -43,7 +43,7 @@ export class ScriptCompiler {
    * @throws {Error} Always throws as this method is deprecated
    * @lastreviewed null
    */
-  private getDefaultOptions(sf: File): ts.CompilerOptions {
+  private getDefaultOptions(sf: Node): ts.CompilerOptions {
     throw new Error("we probably don't want to be using this");
     const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
@@ -57,7 +57,7 @@ export class ScriptCompiler {
    * @throws {Error} When tsconfig.json parsing fails
    * @lastreviewed null
    */
-  private async getCompilerOptions(sf: File): Promise<ts.CompilerOptions> {
+  private async getCompilerOptions(sf: Node): Promise<ts.CompilerOptions> {
     const tsConfigFile = await sf.getClosestTsConfigFile();
     if (!tsConfigFile) {
       App.logger.info("No tsconfig.json found, using default compiler options.");
@@ -95,7 +95,7 @@ export class ScriptCompiler {
    * @throws {Error} When the file is not copacetic and cannot be compiled
    * @lastreviewed null
    */
-  public async addFile(sf: ScriptFile) {
+  public async addFile(sf: ScriptNode) {
     if (!(await sf.isCopacetic())) {
       throw new Error("File is not copacetic, cannot compile.");
     }
@@ -115,7 +115,7 @@ export class ScriptCompiler {
         App.logger.info("No files to compile for tsconfig at:", tsConfigPath);
         return;
       }
-      const compilerOptions = await this.getCompilerOptions(ScriptFile.fromPath(tsConfigPath));
+      const compilerOptions = await this.getCompilerOptions(ScriptNode.fromPath(tsConfigPath));
       const program = ts.createProgram(sfList.map(sf => sf.uri().fsPath), compilerOptions);
       const emitResult = program.emit();
 

@@ -4,16 +4,15 @@ import type { SourceOps } from '../../../../types';
 import { App } from '../App';
 import { SESSION_MANAGER as SM } from '../b6p_session/SessionManager';
 import { Util } from '../util';
+import { DownstairsUriParser } from '../util/data/DownstairsUrIParser';
 import { flattenDirectory } from '../util/data/flattenDirectory';
 import { getScript } from '../util/data/getScript';
-import { parseUpstairsUrl } from '../util/data/URLParser';
-import { FileSystem } from '../util/fs/FileSystem';
-import { DownstairsUriParser } from '../util/data/DownstairsUrIParser';
-import { ScriptFile } from '../util/script/ScriptFile';
+import { UpstairsUrlParser } from '../util/data/UpstairsUrlParser';
+import { Folder } from '../util/script/Folder';
+import { ScriptNode } from '../util/script/ScriptNode';
+import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
-import { Folder } from '../util/script/Folder';
-const fs = FileSystem.getInstance;
 /**
  * Pushes a script to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -28,8 +27,8 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
       return;
     }
     App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
-    const targetFormulaUri = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
-    if (targetFormulaUri === undefined) {
+    const targetFormulaOverride = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
+    if (targetFormulaOverride === undefined) {
       Alert.error('No target formula URI provided');
       return;
     }
@@ -47,13 +46,18 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
     App.logger.info("Source folder URI:", sourceFolder);
     const downstairsRootFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
     App.logger.info("Reading directory:", downstairsRootFolderUri.toString());
-    const fileList = await fs()
-      .readDirectory(new Folder(downstairsRootFolderUri))
-      .then(async node => await tunnelNode(node, { nodeURI: uriStringToFilePath(sourceFolder) }));
+    const sr = ScriptRoot.fromRootUri(downstairsRootFolderUri);
+
+    const detectedIssues = await sr.preflightCheck();
+    if (detectedIssues) {
+      Alert.error(detectedIssues);
+      return;
+    }
+    const snList = await sr.getPushableDraftNodes();
 
     // Create tasks for progress helper
-    const pushTasks = fileList.map(file => ({
-      execute: () => sendFile({ localFile: file, upstairsRootUrlString: targetFormulaUri }),
+    const pushTasks = snList.map(sn => ({
+      execute: () => sn.upload(targetFormulaOverride),
       description: `scripts`
     }));
 
@@ -62,7 +66,7 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
       cleanupMessage: "Cleaning up the upstairs draft folder..."
     });
 
-    cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaUri);
+    cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaOverride);
 
     if (!sourceOps?.skipMessage) {
       Alert.info('Push complete!');
@@ -71,91 +75,6 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
     Alert.error(`Error pushing files: ${e}`);
     throw e;
   }
-}
-/**
- * //TODO
- * @param node 
- * @param param1 
- * @returns 
- */
-async function tunnelNode(node: [string, vscode.FileType][], {
-  nodeURI,
-  pathList = []
-}: {
-  nodeURI: string;
-  pathList?: string[]
-}) {
-  await Promise.all(node.map(async ([name, type]) => {
-    const newNodeUri = nodeURI + "/" + name;
-    if (type === vscode.FileType.Directory) {
-      const nestedNode = await fs().readDirectory(new Folder(vscode.Uri.file(newNodeUri)));
-      await tunnelNode(nestedNode, { pathList, nodeURI: newNodeUri });
-    } else {
-      pathList.push(newNodeUri);
-    }
-  }));
-  return pathList;
-}
-
-/**
- * Sends a specific file to a WebDAV location.
- * @param param0 The parameters for sending the file.
- * @returns A promise that resolves when the file has been sent.
- */
-async function sendFile({ localFile, upstairsRootUrlString }: { localFile: string; upstairsRootUrlString: string; }) {
-
-  App.logger.info("Preparing to send file:", localFile);
-  App.logger.info("To target formula URI:", upstairsRootUrlString);
-  const { webDavId, url: upstairsUrl } = parseUpstairsUrl(upstairsRootUrlString);
-  const upstairsOverride = new URL(upstairsUrl);
-  const downstairsUri = vscode.Uri.file(localFile);
-  const scriptFile = ScriptFile.fromUri(downstairsUri);
-
-  const desto = localFile
-    .split(upstairsUrl.host + "/" + webDavId)[1];
-  if (typeof desto === 'undefined') {
-    throw new Error('Failed to determine destination path for file: ' + localFile);
-  }
-  upstairsOverride.pathname = `/files/${webDavId}${desto}`;
-  const reason = await scriptFile.getReasonToNotPush({ upstairsOverride });
-  if (reason) {
-    App.logger.info(`${reason}; not pushing file:`, localFile);
-    return;
-  }
-  App.logger.info("Destination:", upstairsUrl.toString());
-
-  
-  //TODO investigate if this can be done via streaming
-  const fileContents = await fs().readFile(downstairsUri);
-  const resp = await SM.fetch(upstairsOverride, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: fileContents
-  });
-  if (!resp.ok) {
-    const details = await getDetails(resp);
-    throw new Error('Failed to send file' + details);
-  }
-  await scriptFile.getScriptRoot().touchFile(scriptFile, "lastPushed");
-  App.logger.info("File sent successfully:", localFile);
-  return resp;
-
-
-}
-
-async function getDetails(resp: Response) {
-  return `
-========
-========
-status: ${resp.status}
-statusText: ${resp.statusText}
-========
-========
-text: ${await resp.text()}
-========
-========`;
 }
 
 /**
@@ -182,7 +101,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   if (!downstairsRootFolderUri || !upstairsRootUrlString) {
     throw new Error("Both downstairsRootFolderUri and upstairsRootUrlString are required for cleanup");
   }
-  const upstairsObj = parseUpstairsUrl(upstairsRootUrlString);
+  const upstairsObj = new UpstairsUrlParser(upstairsRootUrlString);
   /**
    * this will give us a list of that are currently present upstairs
    */
@@ -205,7 +124,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     if (!downstairsPath) {
       // we don't want to delete stuff that is in gitignore
       const dsurlp = new DownstairsUriParser(downstairsRootFolderUri);
-      const sf = ScriptFile.fromUri(vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath));
+      const sf = ScriptNode.fromUri(vscode.Uri.joinPath(dsurlp.prependingPathUri(), rawFilePath.downstairsPath));
       if (!(await sf.isCopacetic())) {
         throw new Error("File is not copacetic: " + sf.uri().toString());        
       }

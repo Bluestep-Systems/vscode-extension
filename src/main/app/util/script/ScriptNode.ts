@@ -11,8 +11,10 @@ import { ResponseCodes } from '../network/StatusCodes';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { Folder } from './Folder';
 import { ScriptRoot } from './ScriptRoot';
-import { File } from './File';
+import { Node } from './Node';
 import { TsConfig } from './TsConfig';
+import { UpstairsUrlParser } from '../data/UpstairsUrlParser';
+import { PathElement } from './PathElement';
 const fs = FileSystem.getInstance;
 
 /**
@@ -22,7 +24,7 @@ const fs = FileSystem.getInstance;
  * to extract the WebDAV ID and domain associated with that formula.
  * @lastreviewed 2025-09-15
  */
-export class ScriptFile implements File {
+export class ScriptNode implements Node {
 
   /**
    * The downstairs URI (local file system path).
@@ -50,7 +52,7 @@ export class ScriptFile implements File {
   private static WeakEtagPattern = /^W\/"[a-f0-9]{128}"$/;
 
   /**
-   * Creates a {@link ScriptFile} instance in addition to its associated {@link ScriptRoot} object.
+   * Creates a {@link ScriptNode} instance in addition to its associated {@link ScriptRoot} object.
    * 
    * @param param0 Object containing the downstairs URI (local file system path)
    * @param param0.downstairsUri The local file system URI for this script file
@@ -67,8 +69,8 @@ export class ScriptFile implements File {
    * @returns A new ScriptFile instance
    * @lastreviewed null
    */
-  public static fromUri(uri: vscode.Uri): ScriptFile {
-    return new ScriptFile({ downstairsUri: uri });
+  public static fromUri(uri: vscode.Uri): ScriptNode {
+    return new ScriptNode({ downstairsUri: uri });
   }
 
   /**
@@ -77,9 +79,9 @@ export class ScriptFile implements File {
    * @returns A new ScriptFile instance
    * @lastreviewed null
    */
-  public static fromPath(fsPath: string): ScriptFile {
+  public static fromPath(fsPath: string): ScriptNode {
     const uri = vscode.Uri.file(fsPath);
-    return new ScriptFile({ downstairsUri: uri });
+    return new ScriptNode({ downstairsUri: uri });
   }
 
   /**
@@ -120,7 +122,7 @@ export class ScriptFile implements File {
   public uri() {
     return this._parser.rawUri;
   }
-  
+
   /**
    * Gets the file system path of this script file.
    * @returns The file system path as a string
@@ -158,24 +160,28 @@ export class ScriptFile implements File {
   public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string> {
 
     if (this._parser.type === "root") {
-      return "File is the root folder";
+      return "Node is the root folder";
     }
     if (this.getFileName() === ScriptRoot.METADATA_FILENAME) {
-      return "File is a metadata file";
+      return "Node is a metadata file";
     }
     if (this.isInDeclarations()) {
-      return "File is in declarations";
+      return "Node is in declarations";
     }
     if (await this.isExternalModel()) {
-      return "File is an external model";
+      return "Node is an external model";
     }
     if (await this.isInGitIgnore()) {
-      return "File is ignored by .gitignore";
+      return "Node is ignored by .gitignore";
     }
     if (await this.isInInfoOrObjects()) {
-      return "File is in info or objects";
+      return "Node is in info or objects";
     }
-    if (await this.integrityMatches(ops)) {
+    if (await this.isFolder()) {
+      //TODO determine if we want to allow pushing empty folders
+      return "Node is a folder";
+    }
+    if ((await this.isFile()) && await this.integrityMatches(ops)) {
       return "File integrity matches";
     }
     return "";
@@ -185,7 +191,10 @@ export class ScriptFile implements File {
    * Gets the lowercased SHA-512 hash of the local file.
    * @lastreviewed 2025-09-15
    */
-  public async getHash(): Promise<string> {
+  public async getHash(): Promise<string | null> {
+    if (await this.isFolder()) {
+      return null;
+    }
     const bufferSource = await fs().readFile(this.uri());
     const localHashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
@@ -228,9 +237,9 @@ export class ScriptFile implements File {
 
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
     let etag: string | null = null;
-    if (ScriptFile.EtagPattern.test(etagHeader || "")) {
+    if (ScriptNode.EtagPattern.test(etagHeader || "")) {
       etag = JSON.parse(etagHeader?.toLowerCase() || "null");
-    } else if (ScriptFile.WeakEtagPattern.test(etagHeader || "")) {
+    } else if (ScriptNode.WeakEtagPattern.test(etagHeader || "")) {
       // weak etags are prefixed with W/ and we ignore the weakness for our purposes
       App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
       etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
@@ -332,13 +341,13 @@ export class ScriptFile implements File {
 
     //TODO merge this with the other etag parsing code elsewhere in this class
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
-    if (ScriptFile.EtagPattern.test(etagHeader || "")) {
+    if (ScriptNode.EtagPattern.test(etagHeader || "")) {
       const etag = JSON.parse(etagHeader?.toLowerCase() || "null");
       const hash = await this.getHash();
       if (hash !== etag) {
         throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
       }
-    } else if (ScriptFile.WeakEtagPattern.test(etagHeader || "")) {
+    } else if (ScriptNode.WeakEtagPattern.test(etagHeader || "")) {
       // weak etags are prefixed with W/ and we ignore the weakness for our purposes
       App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
       const etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
@@ -346,7 +355,7 @@ export class ScriptFile implements File {
       if (hash !== etag) {
         throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
       }
-    } else if (ScriptFile.ComplexEtagPattern.test(etagHeader || "")) {
+    } else if (ScriptNode.ComplexEtagPattern.test(etagHeader || "")) {
       App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
       // complex etags are from the illusory document files and we skip the integrity check on them
     } else {
@@ -354,7 +363,7 @@ export class ScriptFile implements File {
     }
 
     // touch the lastPulled time
-    await this.getScriptRoot().touchFile(this, "lastPulled");
+    await this.touch("lastPulled");
     return response;
   }
 
@@ -374,10 +383,7 @@ export class ScriptFile implements File {
    */
   public async exists(): Promise<boolean> {
     try {
-      const stat = await fs().stat(this.uri());
-      if (stat.type === vscode.FileType.Directory) {
-        return false;
-      }
+      await fs().stat(this.uri());
       return true;
     } catch (e) {
       return false;
@@ -389,14 +395,14 @@ export class ScriptFile implements File {
    * @lastreviewed 2025-09-15
    */
   public async fileDoesNotExist(): Promise<boolean> {
-    return !(await this.exists());
+    return !(await this.exists() && await this.isFile());
   }
 
   /**
    * Produces the file stat, or `null` if it doesn't exist.
    * @lastreviewed 2025-09-15
    */
-  public async fileStat(): Promise<vscode.FileStat | null> {
+  public async stat(): Promise<vscode.FileStat | null> {
     try {
       return await fs().stat(this.uri());
     } catch (e) {
@@ -410,9 +416,9 @@ export class ScriptFile implements File {
    * @lastreviewed 2025-09-15
    */
   public async lastModifiedTime(): Promise<Date> {
-    const stat = await this.fileStat();
+    const stat = await this.stat();
     if (!stat) {
-      throw new Error("File does not exist");
+      throw new Error("Node does not exist");
     }
     return new Date(stat.mtime);
   }
@@ -480,7 +486,7 @@ export class ScriptFile implements File {
    * @throws {Error} When attempting to overwrite script root of a metadata file
    * @lastreviewed 2025-09-15
    */
-  withScriptRoot(root: ScriptRoot): ScriptFile {
+  withScriptRoot(root: ScriptRoot): ScriptNode {
     this._scriptRoot = root;
     //TODO determine if this if-check is even neccessary
     if (this._parser.type === "metadata") {
@@ -497,7 +503,7 @@ export class ScriptFile implements File {
    * @returns The updated script file
    * @lastreviewed 2025-09-15
    */
-  withParser(parser: DownstairsUriParser): ScriptFile {
+  withParser(parser: DownstairsUriParser): ScriptNode {
     this._parser = parser;
     return this;
   }
@@ -507,12 +513,8 @@ export class ScriptFile implements File {
    * @param other The other script file to compare against
    * @lastreviewed 2025-09-15
    */
-  public equals(other: ScriptFile): boolean {
-    if (!(other instanceof ScriptFile)) {
-      return false;
-    }
-    return this._scriptRoot.equals(other._scriptRoot) &&
-      this._parser.equals(other._parser);
+  public equals(other: PathElement): boolean {
+    return this.path() === other.path();
   }
 
   /**
@@ -684,14 +686,14 @@ export class ScriptFile implements File {
    * @throws {Error} When no tsconfig.json file is found
    * @lastreviewed null
    */
-  public async getClosestTsConfigFile(){
+  public async getClosestTsConfigFile() {
     const tsConfigUri = await this.getClosestTsConfigUri();
     if (!tsConfigUri) {
       throw new Error("Could not find a tsconfig.json file");
     }
-    return new TsConfig(ScriptFile.fromUri(tsConfigUri));
+    return new TsConfig(ScriptNode.fromUri(tsConfigUri));
   }
-  
+
   /**
    * 
    * @returns The {@link vscode.Uri} of the closest tsconfig.json file
@@ -721,7 +723,9 @@ export class ScriptFile implements File {
     return fs().closest(this.uri(), fileName);
   }
   public isInBuildFolder() {
-    return this.uri().fsPath.includes(`${path.sep}/.build${path.sep}`);
+    //TODO there must be a better way to determine if this is in a build folder
+    // because this precludes there being a legitimate folder name of .build anywhere in the path
+    return this.path().includes(`${path.sep}/.build${path.sep}`);
   }
 
   public get extension() {
@@ -733,9 +737,127 @@ export class ScriptFile implements File {
   }
 
   create(vsCodeUri: vscode.Uri) {
-    return new ScriptFile({ downstairsUri: vsCodeUri });
+    return new ScriptNode({ downstairsUri: vsCodeUri });
   }
 
+  async upload(upstairsUrlOverrideString: string | null = null): Promise<Response | void> {
+    App.logger.info("Preparing to send file:", this.uri().fsPath);
+    App.logger.info("To target formula URI:", upstairsUrlOverrideString);
+    const upstairsUrlParser = new UpstairsUrlParser(upstairsUrlOverrideString || this.toUpstairsURL().toString());
+    const { webDavId, url: upstairsUrl } = upstairsUrlParser;
+    const upstairsOverride = new URL(upstairsUrl);
+    const downstairsUri = this.uri();
+    const scriptFile = ScriptNode.fromUri(downstairsUri);
+
+    const desto = downstairsUri.fsPath
+      .split(upstairsUrl.host + "/" + webDavId)[1];
+    if (typeof desto === 'undefined') {
+      throw new Error('Failed to determine destination path for file: ' + downstairsUri.fsPath);
+    }
+    upstairsOverride.pathname = `/files/${webDavId}${desto}`;
+    const reason = await scriptFile.getReasonToNotPush({ upstairsOverride });
+    if (reason) {
+      App.logger.info(`${reason}; not pushing file:`, downstairsUri.fsPath);
+      return;
+    }
+    App.logger.info("Destination:", upstairsUrl.toString());
+
+
+    //TODO investigate if this can be done via streaming
+    const fileContents = await fs().readFile(downstairsUri);
+    const resp = await SM.fetch(upstairsOverride, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: fileContents
+    });
+    if (!resp.ok) {
+      const details = await getDetails(resp);
+      throw new Error('Failed to send file' + details);
+    }
+    await scriptFile.touch("lastPushed");
+    App.logger.info("File sent successfully:", downstairsUri.fsPath);
+    return resp;
+    async function getDetails(resp: Response) {
+      return `
+========
+========
+status: ${resp.status}
+statusText: ${resp.statusText}
+========
+========
+text: ${await resp.text()}
+========
+========`;
+    }
+  }
+
+  /**
+   * 
+   * @returns Whether the current node is a folder
+   */
+  public async isFolder() {
+    try {
+      await fs().readFile(this.uri());
+      return false;
+    } catch (e) {
+      if (e instanceof vscode.FileSystemError && e.code === 'FileIsADirectory') {
+        return true;
+      } else {
+        throw new Error(`Error determining if path is folder: ${e}`);
+      }
+    }
+  }
+
+  public async isFile() {
+    return !(await this.isFolder());
+  }
+
+  /**
+   * Converts the current node to a Folder instance if can be represented by one
+   * @returns 
+   */
+  public async toFolder(): Promise<Folder> {
+    if (await this.isFolder()) {
+      return new Folder(this.uri());
+    } else {
+      throw new Error("Cannot convert to folder, not a folder");
+    }
+  }
+
+  /**
+   * Touches a file by updating its last pulled or pushed timestamp.
+   * Updates the metadata to track when the file was last synchronized and its hash.
+   * 
+   * @param file The file to touch
+   * @param touchType The type of touch to perform - either "lastPulled" or "lastPushed"
+   * @lastreviewed 2025-09-15
+   */
+  async touch(touchType: "lastPulled" | "lastPushed"): Promise<void> {
+    const lastHash = await this.getHash();
+    const metaData = await this.getScriptRoot().modifyMetaData(md => {
+      const downstairsPath = this.uri().fsPath;
+      const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
+      if (existingEntryIndex !== -1) {
+        const newDateString = new Date().toUTCString();
+
+        md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
+        md.pushPullRecords[existingEntryIndex].lastVerifiedHash = lastHash;
+      } else {
+
+        const now = new Date().toUTCString();
+        md.pushPullRecords.push({
+          downstairsPath,
+          lastPushed: touchType === "lastPushed" ? now : null,
+          lastPulled: touchType === "lastPulled" ? now : null,
+          lastVerifiedHash: lastHash
+        });
+      }
+    });
+    App.isDebugMode() && console.log("Updated metadata:", metaData);
+    return void 0;
+  }
 }
 
 

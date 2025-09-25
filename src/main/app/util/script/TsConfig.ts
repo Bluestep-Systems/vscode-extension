@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
-import { ScriptFile } from "./ScriptFile";
-import { File } from "./File";
-
+import { ScriptNode } from "./ScriptNode";
+import { Node } from "./Node";
+import { FileSystem } from "../fs/FileSystem";
+const fs = FileSystem.getInstance;
 /**
  * A specialized ScriptFile representing a tsconfig.json file.
  * 
@@ -11,7 +12,7 @@ import { File } from "./File";
  * 
  * Instead, TsConfig merely wraps a ScriptFile and delegates relevant methods to it.
  */
-export class TsConfig implements File {
+export class TsConfig implements Node {
   static NAME = "tsconfig.json";
   
   /**
@@ -20,7 +21,7 @@ export class TsConfig implements File {
    * @throws {Error} When the ScriptFile does not point to a tsconfig.json file
    * @lastreviewed null
    */
-  constructor(private readonly sf: ScriptFile) {
+  constructor(private readonly sf: ScriptNode) {
     if (!this.sf.path().endsWith(TsConfig.NAME)) {
       throw new Error("Provided ScriptFile is not a tsconfig.json file: " + this.sf.path());
     }
@@ -37,7 +38,7 @@ export class TsConfig implements File {
     if (!uri.fsPath.endsWith(TsConfig.NAME)) {
       throw new Error("Provided URI does not point to a tsconfig.json file.");
     }
-    return new TsConfig(ScriptFile.fromUri(uri));
+    return new TsConfig(ScriptNode.fromUri(uri));
   }
   
   /**
@@ -96,7 +97,23 @@ export class TsConfig implements File {
    * @lastreviewed null
    */
   public async isCopacetic(): Promise<boolean> {
-    return this.sf.isCopacetic();
+    const exists = await this.sf.exists();
+    if (!exists) {
+      return false;
+    }
+    const fileContents = await fs().readFile(this.uri());
+    const fileString = Buffer.from(fileContents).toString('utf-8');
+    try {
+      const parsed = JSON.parse(fileString);
+      // Basic validation: check for compilerOptions and include fields
+      // TODO determine if this is overkill.
+      if (parsed.compilerOptions && parsed.include) {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
   }
   
   /**

@@ -7,7 +7,7 @@ import { TsConfig } from "./TsConfig";
  * Interface representing a file with additional script-related functionality.
  * @lastreviewed null
  */
-export interface File extends PathElement {
+export interface Node extends PathElement {
   /**
    * Gets the folder containing this file.
    * @returns The parent folder

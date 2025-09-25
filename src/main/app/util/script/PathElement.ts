@@ -25,6 +25,7 @@ export interface PathElement {
    * @returns True if the elements are equal, false otherwise
    * @lastreviewed null
    */
-  equals(other: this): boolean;
+  equals(other: PathElement): boolean;
+  
 }
 

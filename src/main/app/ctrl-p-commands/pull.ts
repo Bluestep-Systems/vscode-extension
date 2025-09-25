@@ -3,8 +3,8 @@ import { App } from '../App';
 import { flattenDirectory } from '../util/data/flattenDirectory';
 import { getHostFolderUri } from '../util/data/getHostFolderUri';
 import { getScript } from "../util/data/getScript";
-import { parseUpstairsUrl } from "../util/data/URLParser";
-import { ScriptFile } from '../util/script/ScriptFile';
+import { UpstairsUrlParser } from "../util/data/UpstairsUrlParser";
+import { ScriptNode } from '../util/script/ScriptNode';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
 import { ScriptRoot } from '../util/script/ScriptRoot';
@@ -62,7 +62,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
   const toDelete: vscode.Uri[] = [];
   for (const ep of existingPaths) {
     //ignore special files
-    if (await ScriptFile.fromUri(ep).isInGitIgnore()) {
+    if (await ScriptNode.fromUri(ep).isInGitIgnore()) {
       continue;
     }
     if ([ScriptRoot.METADATA_FILENAME, ScriptRoot.GITIGNORE_FILENAME].some(special => ep.fsPath.endsWith(special))) {
@@ -90,7 +90,7 @@ async function getStartingURL(overrideFormulaUri?: string) {
     vscode.window.showErrorMessage('No formula URI provided');
     return;
   }
-  return parseUpstairsUrl(formulaURI);
+  return new UpstairsUrlParser(formulaURI);
 }
 
 async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sourceUrl: URL): Promise<vscode.Uri> {
@@ -118,10 +118,10 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const sf = ScriptFile.fromUri(ultimatePath);
+    const sf = ScriptNode.fromUri(ultimatePath);
     if (await sf.exists() && await sf.integrityMatches()) {
       App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
-      await sf.getScriptRoot().touchFile(sf, "lastPulled");
+      await sf.touch("lastPulled");
       return sf.uri();
     }
     await sf.download();

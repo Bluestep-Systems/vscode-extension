@@ -2,7 +2,7 @@ import { SourceOps } from "../../../../types";
 import { App } from "../App";
 import { Util } from "../util";
 //import { FileSystem } from "../util/fs/FileSystemFactory";
-import { ScriptFile } from "../util/script/ScriptFile";
+import { ScriptNode } from "../util/script/ScriptNode";
 import { Alert } from "../util/ui/Alert";
 
 //const fs = FileSystem.getInstance;
@@ -14,8 +14,9 @@ export default async function snapshot({ overrideFormulaUri, sourceOps }: { over
     if (overrideFormulaUri === undefined && sourceOps === undefined) {
       App.logger.info("Snapshot command called with no arguments, assuming current context");
     }
-    const activeEditor = await Util.getDownstairsFileUri(sourceOps);
-    const sf = ScriptFile.fromUri(activeEditor!);
+    // "contextual" meaning currently open or determined from sourceOps
+    const contextualUri = await Util.getDownstairsFileUri(sourceOps);
+    const sf = ScriptNode.fromUri(contextualUri!);
     sf.getScriptRoot().snapshot();
     // console.log("sf.getScriptRoot().getDraftBuildFolderUri())", sf.getScriptRoot().getDraftBuildFolderUri());
     // await fs().delete(sf.getScriptRoot().getDraftBuildFolderUri()).catch(e => {console.error(e);});

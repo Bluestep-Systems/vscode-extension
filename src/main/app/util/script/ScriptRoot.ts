@@ -3,13 +3,14 @@ import * as vscode from 'vscode';
 import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
-import { FileSystem } from '../fs/FileSystem';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
+import { FileSystem } from '../fs/FileSystem';
 import { FileDoesNotExistError, FileReadError } from './Errors';
 import { Folder } from './Folder';
-import { ScriptFile } from './ScriptFile';
-import { ScriptCompiler } from './ScriptCompiler';
 import { PathElement } from './PathElement';
+import { ScriptCompiler } from './ScriptCompiler';
+import { ScriptNode } from './ScriptNode';
+import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
 
 /**
@@ -50,10 +51,10 @@ export class ScriptRoot implements PathElement {
     this.downstairsRootOrgPath = parentDirBase;
   }
   path(): string {
-    throw new Error('Method not implemented.');
+    return this.folder.path();
   }
   uri(): vscode.Uri {
-    throw new Error('Method not implemented.');
+    return this.folder.uri();
   }
 
   /**
@@ -74,38 +75,7 @@ export class ScriptRoot implements PathElement {
     return vscode.Uri.joinPath(downstairsRoot, ".gitignore");
   }
 
-  /**
-   * Touches a file by updating its last pulled or pushed timestamp.
-   * Updates the metadata to track when the file was last synchronized and its hash.
-   * 
-   * @param file The file to touch
-   * @param touchType The type of touch to perform - either "lastPulled" or "lastPushed"
-   * @lastreviewed 2025-09-15
-   */
-  async touchFile(file: ScriptFile, touchType: "lastPulled" | "lastPushed"): Promise<void> {
-    const lastHash = await file.getHash();
-    const metaData = await this.modifyMetaData(md => {
-      const downstairsPath = file.uri().fsPath;
-      const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
-      if (existingEntryIndex !== -1) {
-        const newDateString = new Date().toUTCString();
 
-        md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
-        md.pushPullRecords[existingEntryIndex].lastVerifiedHash = lastHash;
-      } else {
-
-        const now = new Date().toUTCString();
-        md.pushPullRecords.push({
-          downstairsPath,
-          lastPushed: touchType === "lastPushed" ? now : null,
-          lastPulled: touchType === "lastPulled" ? now : null,
-          lastVerifiedHash: lastHash
-        });
-      }
-    });
-    App.isDebugMode() && console.log("Updated metadata:", metaData);
-    return void 0;
-  }
 
 
 
@@ -349,7 +319,7 @@ export class ScriptRoot implements PathElement {
     return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folder.uri(), name));
   }
 
-  /**
+  /**n
    * Gets the contents of the info folder.
    * @lastreviewed 2025-09-15
    */
@@ -401,7 +371,11 @@ export class ScriptRoot implements PathElement {
       App.logger.warn(`Script at ${this.getRootUri().fsPath} is not copacetic:`);
       reasonsWhyBad.forEach(reason => App.logger.warn(` - ${reason}`));
     }
-    return reasonsWhyBad.length === 0;
+    if (reasonsWhyBad.length === 0) {
+      return true;
+    }
+    App.logger.warn("Script is not copacetic" + reasonsWhyBad.join("; "));
+    return false;
   }
 
   /**
@@ -411,20 +385,21 @@ export class ScriptRoot implements PathElement {
    * @param b The other ScriptRoot to compare against
    * @lastreviewed 2025-09-15
    */
-  equals(b: ScriptRoot) {
-    return (
-      this.folder.equals(b.folder) &&
-      this.origin === b.origin &&
-      this.webDavId === b.webDavId &&
-      this.toBaseUpstairsString() === b.toBaseUpstairsString()
-    );
+  equals(b: PathElement) {
+    return this.path() === b.path();
   }
 
+  /**
+   * Does the BSJS "snapshot" process, involves a clean, build, preloads a
+   * copy of the results and pushes upstairs.
+   */
   public async snapshot() {
     //TODO do a safety check on the hash to prevent deleted files needlessly
     await this.deleteBuildFolder();
-    await this.compileTypeScriptInScriptsFolder();
+    await this.compileDraftFolder();
   }
+
+
 
   private async deleteBuildFolder() {
     try {
@@ -440,8 +415,8 @@ export class ScriptRoot implements PathElement {
     }
   }
 
-  public async compileTypeScriptInScriptsFolder(): Promise<void> {
-    
+  public async compileDraftFolder(): Promise<void> {
+
     const draftFolder = this.getDraftFolder();
     const allFiles = await draftFolder.flatten();
     const compiler = new ScriptCompiler();
@@ -479,7 +454,7 @@ export class ScriptRoot implements PathElement {
   public getSnapshotFolder() {
     return this.folder.getChildFolder("snapshot");
   }
-  
+
   /**
    * Gets the declarations folder within the script root.
    * @returns A Folder instance representing the declarations folder
@@ -487,5 +462,40 @@ export class ScriptRoot implements PathElement {
    */
   public getDeclarationsFolder() {
     return this.folder.getChildFolder("declarations");
+  }
+
+  public async findTsConfigFiles(): Promise<TsConfig[]> {
+    const tsConfigFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.getDraftFolder().uri(), '**/' + TsConfig.NAME));
+    return tsConfigFiles.map(f => TsConfig.fromUri(f));
+  }
+
+  public async getBadTsFiles(): Promise<string[]> {
+
+    const tsConfigFiles = this.findTsConfigFiles();
+    const badFiles: string[] = [];
+    for (const tsConfig of await tsConfigFiles) {
+      if (!(await tsConfig.isCopacetic())) {
+        badFiles.push(`${tsConfig.path()}`);
+      }
+    }
+    return badFiles;
+  }
+  public async getPushableDraftNodes(): Promise<ScriptNode[]> {
+    const flattened = await this.getDraftFolder().flatten();
+    return flattened
+      .filter(f => !f.isInBuildFolder())
+      .map(f => ScriptNode.fromPath(f.path()));
+  }
+  public async preflightCheck(): Promise<string> {
+    if (!(await this.isCopacetic())) {
+      throw new Error("Script is not in a copacetic state");
+    }
+    const badTsFiles = await this.getBadTsFiles();
+    if (badTsFiles.length > 0) {
+      return `The following tsconfig files are invalid:\n\n${badTsFiles.join("\n")}\n\n
+      SPECIFICALLY: ensure that there are no trailing commas in the JSON files; the IDE does not flag this with
+      red squigglies, but it renders the JSON invalid for the BlueStep servers.`;
+    }
+    return "";
   }
 }

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { flattenDirectory } from '../data/flattenDirectory';
 import { PathElement } from './PathElement';
-import { ScriptFile } from './ScriptFile';
+import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
 export class Folder implements PathElement {
   /**
@@ -101,8 +101,8 @@ export class Folder implements PathElement {
    * @returns A Promise that resolves to an array of ScriptFile instances for all files in the folder tree
    * @lastreviewed null
    */
-  public async flatten(): Promise<ScriptFile[]> {
-    return (await this.flattenRaw()).map(uri => ScriptFile.fromUri(uri));
+  public async flatten(): Promise<ScriptNode[]> {
+    return (await this.flattenRaw()).map(uri => ScriptNode.fromUri(uri));
   }
   
   /**

@@ -198,7 +198,7 @@ type ScriptMetaData = {
     /**
      * the hash of the file when it was last verified (after a push or pull)
      */
-    lastVerifiedHash: string;
+    lastVerifiedHash: string | null;
   }[];
 
 }
