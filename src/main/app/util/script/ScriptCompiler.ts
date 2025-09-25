@@ -6,8 +6,8 @@ import { ScriptFile } from "./ScriptFile";
 import { TerminalElement } from "./TerminalElement";
 const fs = FileSystem.getInstance;
 
-export class Compiler {
-  private programs: Map<string, ScriptFile[]> = new Map();
+export class ScriptCompiler {
+  private projects: Map<string, ScriptFile[]> = new Map();
   private static DEFAULT_TS_CONFIG: ts.CompilerOptions = {
     module: ts.ModuleKind.ESNext,
     target: ts.ScriptTarget.ES2022,
@@ -24,12 +24,14 @@ export class Compiler {
     declarationDir: undefined,
     declaration: false,
   };
-  constructor() {
-  }
+  /**
+   * This is technically unnecessary 
+   */
+  constructor() { }
 
   private getDefaultOptions(sf: TerminalElement): ts.CompilerOptions {
     throw new Error("we probably don't want to be using this");
-    const LOCAL_CONFIG = Compiler.DEFAULT_TS_CONFIG;
+    const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
     return LOCAL_CONFIG;
   }
@@ -71,12 +73,12 @@ export class Compiler {
       throw new Error("File is not copacetic, cannot compile.");
     }
     const newTsConfigFile = await sf.getClosestTsConfigFile();
-    const existingVals = this.programs.get(newTsConfigFile.path()) || [];
-    this.programs.set(newTsConfigFile.path(), [...existingVals, sf]);
+    const existingVals = this.projects.get(newTsConfigFile.path()) || [];
+    this.projects.set(newTsConfigFile.path(), [...existingVals, sf]);
   }
 
   public async compile() {
-    this.programs.forEach(async (sfList, tsConfigPath) => {
+    this.projects.forEach(async (sfList, tsConfigPath) => {
       if (sfList.length === 0) {
         App.logger.info("No files to compile for tsconfig at:", tsConfigPath);
         return;

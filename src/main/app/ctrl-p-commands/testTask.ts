@@ -1,6 +1,6 @@
 import { Util } from '../util';
 //@ts-ignore
-import { Compiler } from '../util/script/Compiler';
+import { ScriptCompiler } from '../util/script/ScriptCompiler';
 import { ScriptFile } from '../util/script/ScriptFile';
 //import { FileSystem } from "../util/fs/FileSystemFactory";
 /**
