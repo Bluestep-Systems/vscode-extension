@@ -540,11 +540,11 @@ suite('RemoteScriptRoot Tests', () => {
 
     suite('Constants', () => {
         test('should have correct metadata file constant', () => {
-            assert.strictEqual(ScriptRoot.METADATA_FILE, '.b6p_metadata.json');
+            assert.strictEqual(ScriptRoot.METADATA_FILENAME, '.b6p_metadata.json');
         });
 
         test('should have correct gitignore file constant', () => {
-            assert.strictEqual(ScriptRoot.GITIGNORE_FILE, '.gitignore');
+            assert.strictEqual(ScriptRoot.GITIGNORE_FILENAME, '.gitignore');
         });
     });
 

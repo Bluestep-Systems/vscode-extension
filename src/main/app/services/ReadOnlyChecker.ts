@@ -37,7 +37,7 @@ export default async function () {
  */
 async function determine(sf: ScriptFile) {
   const curFileName = sf.getFileName();
-  const specialFileNames = [ScriptRoot.METADATA_FILE];
+  const specialFileNames = [ScriptRoot.METADATA_FILENAME];
   if (specialFileNames.includes(curFileName)) {
     return true;
   }

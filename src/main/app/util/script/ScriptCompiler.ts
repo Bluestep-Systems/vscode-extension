@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { App } from "../../App";
 import { FileSystem } from "../fs/FileSystem";
 import { ScriptFile } from "./ScriptFile";
-import { TerminalElement } from "./TerminalElement";
+import { File } from "./File";
 const fs = FileSystem.getInstance;
 
 export class ScriptCompiler {
@@ -29,7 +29,7 @@ export class ScriptCompiler {
    */
   constructor() { }
 
-  private getDefaultOptions(sf: TerminalElement): ts.CompilerOptions {
+  private getDefaultOptions(sf: File): ts.CompilerOptions {
     throw new Error("we probably don't want to be using this");
     const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
@@ -37,7 +37,7 @@ export class ScriptCompiler {
   }
 
   //TODO this really needs to be check to confirm that we are using this right and not redundantly
-  private async getCompilerOptions(sf: TerminalElement): Promise<ts.CompilerOptions> {
+  private async getCompilerOptions(sf: File): Promise<ts.CompilerOptions> {
     const tsConfigFile = await sf.getClosestTsConfigFile();
     if (!tsConfigFile) {
       App.logger.info("No tsconfig.json found, using default compiler options.");

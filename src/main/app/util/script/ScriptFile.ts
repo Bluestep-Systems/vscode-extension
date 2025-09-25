@@ -9,9 +9,9 @@ import { readFileText } from '../data/readFile';
 import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
-import { ScriptFolder } from './ScriptFolder';
+import { Folder } from './Folder';
 import { ScriptRoot } from './ScriptRoot';
-import { TerminalElement } from './TerminalElement';
+import { File } from './File';
 import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
 
@@ -22,7 +22,7 @@ const fs = FileSystem.getInstance;
  * to extract the WebDAV ID and domain associated with that formula.
  * @lastreviewed 2025-09-15
  */
-export class ScriptFile implements TerminalElement {
+export class ScriptFile implements File {
 
   /**
    * The downstairs URI (local file system path).
@@ -83,8 +83,8 @@ export class ScriptFile implements TerminalElement {
       return newUrl;
     } else if (this._parser.type === "metadata") {
       const fileName = this.getFileName();
-      if (fileName === ScriptRoot.METADATA_FILE) {
-        throw new Error(`should never try to convert ${ScriptRoot.METADATA_FILE} file to upstairs URL. Review logic on how you got here.`);
+      if (fileName === ScriptRoot.METADATA_FILENAME) {
+        throw new Error(`should never try to convert ${ScriptRoot.METADATA_FILENAME} file to upstairs URL. Review logic on how you got here.`);
       }
       newUrl.pathname = upstairsBaseUrl.pathname + fileName;
     } else if (this._parser.isDeclarationsOrDraft()) {
@@ -137,7 +137,7 @@ export class ScriptFile implements TerminalElement {
     if (this._parser.type === "root") {
       return "File is the root folder";
     }
-    if (this.getFileName() === ScriptRoot.METADATA_FILE) {
+    if (this.getFileName() === ScriptRoot.METADATA_FILENAME) {
       return "File is a metadata file";
     }
     if (this.isInDeclarations()) {
@@ -650,9 +650,9 @@ export class ScriptFile implements TerminalElement {
    * @returns The URI of the parent directory
    * @lastreviewed null
    */
-  public folder(): ScriptFolder {
+  public folder(): Folder {
     const fileUri = this.uri();
-    return new ScriptFolder(vscode.Uri.joinPath(fileUri, '..'));
+    return new Folder(vscode.Uri.joinPath(fileUri, '..'));
   }
 
   /**

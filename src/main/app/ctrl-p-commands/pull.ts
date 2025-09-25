@@ -8,7 +8,7 @@ import { ScriptFile } from '../util/script/ScriptFile';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
 import { ScriptRoot } from '../util/script/ScriptRoot';
-import { ScriptFolder } from '../util/script/ScriptFolder';
+import { Folder } from '../util/script/Folder';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -42,7 +42,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       cleanupMessage: "Cleaning up the downstairs folder..."
     });
 
-    const flattenedDirectory = await flattenDirectory(new ScriptFolder(vscode.Uri.joinPath(getHostFolderUri(url), webDavId)));
+    const flattenedDirectory = await flattenDirectory(new Folder(vscode.Uri.joinPath(getHostFolderUri(url), webDavId)));
     await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
     Alert.info('Pull complete!');
@@ -65,7 +65,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
     if (await ScriptFile.fromUri(ep).isInGitIgnore()) {
       continue;
     }
-    if ([ScriptRoot.METADATA_FILE, ScriptRoot.GITIGNORE_FILE].some(special => ep.fsPath.endsWith(special))) {
+    if ([ScriptRoot.METADATA_FILENAME, ScriptRoot.GITIGNORE_FILENAME].some(special => ep.fsPath.endsWith(special))) {
       continue;
     }
     if (!validPaths.find(vp => vp.fsPath === ep.fsPath)) {

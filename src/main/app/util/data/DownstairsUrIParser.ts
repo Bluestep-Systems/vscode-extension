@@ -59,7 +59,7 @@ export class DownstairsUriParser {
       this.type = "root";
     } else if (typeStr === "draft" || typeStr === "declarations") {
       this.type = typeStr;
-    } else if (typeStr === ScriptRoot.METADATA_FILE || typeStr === ScriptRoot.GITIGNORE_FILE) {
+    } else if (typeStr === ScriptRoot.METADATA_FILENAME || typeStr === ScriptRoot.GITIGNORE_FILENAME) {
       // both of these are considered "metadata" files
       this.type = "metadata";
     } else if (typeStr === "snapshot") {

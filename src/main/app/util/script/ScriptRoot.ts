@@ -6,7 +6,7 @@ import { App } from '../../App';
 import { FileSystem } from '../fs/FileSystem';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { FileDoesNotExistError, FileReadError } from './Errors';
-import { ScriptFolder } from './ScriptFolder';
+import { Folder } from './Folder';
 import { ScriptFile } from './ScriptFile';
 import { ScriptCompiler } from './ScriptCompiler';
 import { PathElement } from './PathElement';
@@ -14,15 +14,19 @@ const fs = FileSystem.getInstance;
 
 /**
  * Object representing the root of an individual script on the filesystem.
+ * 
+ * We originally wanted this to extend Folder, however there were some Typescript circular
+ * dependency issues in that were difficult to resolve. If at some point in the future
+ * Folder is refactored such that it isn't an issue, we can revisit this.
  *
  * This originally was the webdavid root file.
  * @lastreviewed null
  */
 export class ScriptRoot implements PathElement {
-  private folder: ScriptFolder;
+  private folder: Folder;
   private static readonly ScriptContentFolders = ["info", "scripts", "objects"] as const;
-  public static readonly METADATA_FILE = ".b6p_metadata.json";
-  public static readonly GITIGNORE_FILE = ".gitignore";
+  public static readonly METADATA_FILENAME = ".b6p_metadata.json";
+  public static readonly GITIGNORE_FILENAME = ".gitignore";
   readonly downstairsRootPath: path.ParsedPath;
   readonly downstairsRootOrgPath: path.ParsedPath;
 
@@ -41,7 +45,7 @@ export class ScriptRoot implements PathElement {
     const shavedName = parser.getShavedName();
     const scriptPath = path.parse(shavedName);                  // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
     const parentDirBase = path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
-    this.folder = new ScriptFolder(vscode.Uri.file(scriptPath.dir + path.sep + scriptPath.base));
+    this.folder = new Folder(vscode.Uri.file(scriptPath.dir + path.sep + scriptPath.base));
     this.downstairsRootPath = scriptPath;
     this.downstairsRootOrgPath = parentDirBase;
   }
@@ -58,7 +62,7 @@ export class ScriptRoot implements PathElement {
    */
   private getMetadataFileUri() {
     const downstairsRoot = this.getRootUri();
-    return vscode.Uri.joinPath(downstairsRoot, ScriptRoot.METADATA_FILE);
+    return vscode.Uri.joinPath(downstairsRoot, ScriptRoot.METADATA_FILENAME);
   }
 
   /**

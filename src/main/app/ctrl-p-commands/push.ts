@@ -12,7 +12,7 @@ import { DownstairsUriParser } from '../util/data/DownstairsUrIParser';
 import { ScriptFile } from '../util/script/ScriptFile';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
-import { ScriptFolder } from '../util/script/ScriptFolder';
+import { Folder } from '../util/script/Folder';
 const fs = FileSystem.getInstance;
 /**
  * Pushes a script to a WebDAV location.
@@ -48,7 +48,7 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
     const downstairsRootFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
     App.logger.info("Reading directory:", downstairsRootFolderUri.toString());
     const fileList = await fs()
-      .readDirectory(new ScriptFolder(downstairsRootFolderUri))
+      .readDirectory(new Folder(downstairsRootFolderUri))
       .then(async node => await tunnelNode(node, { nodeURI: uriStringToFilePath(sourceFolder) }));
 
     // Create tasks for progress helper
@@ -88,7 +88,7 @@ async function tunnelNode(node: [string, vscode.FileType][], {
   await Promise.all(node.map(async ([name, type]) => {
     const newNodeUri = nodeURI + "/" + name;
     if (type === vscode.FileType.Directory) {
-      const nestedNode = await fs().readDirectory(new ScriptFolder(vscode.Uri.file(newNodeUri)));
+      const nestedNode = await fs().readDirectory(new Folder(vscode.Uri.file(newNodeUri)));
       await tunnelNode(nestedNode, { pathList, nodeURI: newNodeUri });
     } else {
       pathList.push(newNodeUri);
@@ -192,7 +192,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   }
   const rawFilePaths = getScriptRet;
 
-  const flattenedDownstairs = await flattenDirectory(new ScriptFolder(downstairsRootFolderUri));
+  const flattenedDownstairs = await flattenDirectory(new Folder(downstairsRootFolderUri));
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
   // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for

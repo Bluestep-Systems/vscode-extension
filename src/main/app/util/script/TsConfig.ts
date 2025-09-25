@@ -1,11 +1,17 @@
 import * as vscode from "vscode";
 import { ScriptFile } from "./ScriptFile";
-import { TerminalElement } from "./TerminalElement";
+import { File } from "./File";
 
 /**
  * A specialized ScriptFile representing a tsconfig.json file.
+ * 
+ * I wanted this to extend ScriptFile for cleanliness (since they truly are the same thing),
+ * but there were some circular dependency issues that were difficult to resolve. If at some point
+ * in the future ScriptFile is refactored such that it isn't an issue, we can revisit this.
+ * 
+ * Instead, TsConfig merely wraps a ScriptFile and delegates relevant methods to it.
  */
-export class TsConfig implements TerminalElement {
+export class TsConfig implements File {
   static NAME = "tsconfig.json";
   constructor(private readonly sf: ScriptFile) {
     if (!this.sf.path().endsWith(TsConfig.NAME)) {
