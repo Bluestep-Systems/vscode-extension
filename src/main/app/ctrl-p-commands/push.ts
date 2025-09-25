@@ -48,7 +48,7 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
     const downstairsRootFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
     App.logger.info("Reading directory:", downstairsRootFolderUri.toString());
     const sr = ScriptRoot.fromRootUri(downstairsRootFolderUri);
-
+    await sr.compileDraftFolder();
     const detectedIssues = await sr.preflightCheck();
     if (detectedIssues) {
       Alert.error(detectedIssues);
