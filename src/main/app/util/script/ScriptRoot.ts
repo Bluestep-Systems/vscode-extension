@@ -5,7 +5,6 @@ import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { FileSystem } from '../fs/FileSystem';
-import { FileDoesNotExistError, FileReadError } from './Errors';
 import { Folder } from './Folder';
 import { PathElement } from './PathElement';
 import { ScriptCompiler } from './ScriptCompiler';
@@ -99,7 +98,7 @@ export class ScriptRoot implements PathElement {
       try {
         await fs().stat(metadataFileUri);
       } catch (e) {
-        throw new FileDoesNotExistError("Metadata file does not exist");
+        throw new Err.FileNotFoundError("Metadata file does not exist");
       }
       // Retry mechanism for file reading
       let fileContents: Uint8Array;
@@ -122,21 +121,21 @@ export class ScriptRoot implements PathElement {
               } catch (jsonError) {
                 // JSON parsing error - don't retry, treat as malformed file
                 App.logger.warn("Malformed JSON in metadata file, creating new metadata");
-                throw new FileReadError("Malformed JSON in metadata file");
+                throw new Err.FileReadError("Malformed JSON in metadata file");
               }
             } else {
               // Empty string content - treat as malformed file
               App.logger.warn("Empty content in metadata file, creating new metadata");
-              throw new FileReadError("Empty content in metadata file");
+              throw new Err.FileReadError("Empty content in metadata file");
             }
           } else {
             // Empty file - treat as malformed file 
             App.logger.warn("Empty metadata file, creating new metadata");
-            throw new FileReadError("Empty metadata file");
+            throw new Err.FileReadError("Empty metadata file");
           }
         } catch (readError) {
           // Check if this is a JSON parsing error or file content error
-          if (readError instanceof FileReadError) {
+          if (readError instanceof Err.FileReadError) {
             // Don't retry content/parsing errors, fall through to create new metadata
             throw readError;
           }
@@ -153,12 +152,12 @@ export class ScriptRoot implements PathElement {
 
       // If we get here without contentObj, we exhausted retries on file system errors
       if (!contentObj) {
-        throw new FileReadError("Failed to read file after multiple attempts");
+        throw new Err.FileReadError("Failed to read file after multiple attempts");
       }
 
     } catch (e) {
       App.logger.error("Error reading metadata file: " + e);
-      if (!(e instanceof FileDoesNotExistError) && !(e instanceof FileReadError)) {
+      if (!(e instanceof Err.FileNotFoundError) && !(e instanceof Err.FileReadError)) {
         throw e;
       }
       App.logger.warn("Metadata file does not exist or is invalid; creating a new one.");
@@ -205,14 +204,14 @@ export class ScriptRoot implements PathElement {
         await fs().stat(gitIgnoreUri);
       } catch (e) {
         console.trace("downstairs root path:", this.downstairsRootPath);
-        throw new FileDoesNotExistError("Gitignore file does not exist at: `" + gitIgnoreUri.fsPath + "`");
+        throw new Err.FileNotFoundError("Gitignore file does not exist at: `" + gitIgnoreUri.fsPath + "`");
       }
       const fileContents = await fs().readFile(gitIgnoreUri);
       const fileString = Buffer.from(fileContents).toString('utf-8');
       currentContents = fileString.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
     } catch (e) {
       App.logger.error("Error reading .gitignore file: " + e);
-      if (!(e instanceof FileDoesNotExistError)) {
+      if (!(e instanceof Err.FileNotFoundError)) {
         throw e;
       }
       App.logger.warn(".gitignore file does not exist; creating a new one.");
