@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import type { PathElement } from '../script/PathElement';
 import type { Folder } from '../script/Folder';
+import { Err } from '../Err';
 
 /**
  * Interface defining the file system operations we need.
@@ -514,7 +515,7 @@ export class MockFileSystem implements FileSystemProvider {
     const content = this.files.get(key);
     
     if (!content) {
-      throw new Error(`File not found: ${uri.toString()}`);
+      throw new Err.FileNotFoundError(uri.toString());
     }
     
     if (content instanceof Error) {
@@ -551,7 +552,7 @@ export class MockFileSystem implements FileSystemProvider {
     const stat = this.stats.get(key);
     
     if (!stat) {
-      throw new Error(`File not found: ${uri.toString()}`);
+      throw new Err.FileNotFoundError(uri.toString());
     }
     
     if (stat instanceof Error) {
@@ -604,7 +605,7 @@ export class MockFileSystem implements FileSystemProvider {
     const stat = this.stats.get(key);
     
     if (!stat || stat instanceof Error || stat.type !== vscode.FileType.Directory) {
-      throw new Error(`Directory not found: ${folder.uri().toString()}`);
+      throw new Err.DirectoryNotFoundError(folder.uri().toString());
     }
     
     // Simple mock implementation - in real tests you'd set up specific files/directories
@@ -654,7 +655,7 @@ export class MockFileSystem implements FileSystemProvider {
         });
       }
     } else {
-      throw new Error(`File not found: ${element.uri().toString()}`);
+      throw new Err.FileNotFoundError(element.uri().toString());
     }
   }
 
@@ -671,12 +672,12 @@ export class MockFileSystem implements FileSystemProvider {
     const sourceStat = this.stats.get(sourceKey);
     
     if (!sourceContent || !sourceStat) {
-      throw new Error(`Source file not found: ${source.toString()}`);
+      throw new Err.FileNotFoundError(source.toString());
     }
     
     // Check if target exists and overwrite is not allowed
     if (!options?.overwrite && (this.files.has(targetKey) || this.stats.has(targetKey))) {
-      throw new Error(`Target file already exists: ${target.toString()}`);
+      throw new Err.FileAlreadyExistsError(target.toString());
     }
     
     // Move the file
@@ -699,12 +700,12 @@ export class MockFileSystem implements FileSystemProvider {
     const sourceStat = this.stats.get(sourceKey);
     
     if (!sourceContent || !sourceStat) {
-      throw new Error(`Source file not found: ${source.toString()}`);
+      throw new Err.FileNotFoundError(source.toString());
     }
     
     // Check if target exists and overwrite is not allowed
     if (!options?.overwrite && (this.files.has(targetKey) || this.stats.has(targetKey))) {
-      throw new Error(`Target file already exists: ${target.toString()}`);
+      throw new Err.FileAlreadyExistsError(target.toString());
     }
     
     // Copy the file

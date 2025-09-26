@@ -1,5 +1,6 @@
 import type { Serializable } from "../../../../../types";
 import { PseudoMap } from "./PseudoMap";
+import { Err } from "../Err";
 
 /**
  * A typed map that ensures type safety for object property access with string keys.
@@ -60,7 +61,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
     if (key in this.obj) {
       delete this.obj[key];
     } else {
-      throw new Error(`Key ${key} does not exist in TypedMap and cannot be deleted.`);
+      throw new Err.KeyNotFoundInMapError(key);
     }
   }
 

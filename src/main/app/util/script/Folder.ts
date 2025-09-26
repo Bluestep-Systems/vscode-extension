@@ -4,6 +4,7 @@ import { PathElement } from './PathElement';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
 import path from 'path';
+import { Err } from '../Err';
 export class Folder implements PathElement {
   /**
    * Creates a new Folder instance with the specified URI.
@@ -28,7 +29,7 @@ export class Folder implements PathElement {
       // URI doesn't exist or can't be accessed
     }
     if (!isFolder) {
-      throw new Error("Provided URI does not point to a folder.");
+      throw new Err.InvalidResourceTypeError("folder");
     }
     return new Folder(uri);
   }

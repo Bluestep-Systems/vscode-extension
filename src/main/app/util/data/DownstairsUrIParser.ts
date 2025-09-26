@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ScriptRoot } from '../script/ScriptRoot';
+import { Err } from '../Err';
 
 
 /**
@@ -47,7 +48,7 @@ export class DownstairsUriParser {
     const match = cleanPath.match(DownstairsUriParser.URI_DISAMBIGUATION_REGEX);
 
     if (!match) {
-      throw new Error("The provided URI does not conform to expected structure: " + downstairsUri.toString() + ", expected /^(.*?)[/\\\\](\\d+)[/\\\\](draft|declarations|snapshot|\\.b6p_metadata\\.json||\\.gitignore)(?:[/\\\\](.*))?$/");
+      throw new Err.InvalidUriStructureError(downstairsUri.toString(), "/^(.*?)[/\\\\](\\d+)[/\\\\](draft|declarations|snapshot|\\.b6p_metadata\\.json||\\.gitignore)(?:[/\\\\](.*))?$/");
     }
 
     this.prependingPath = match[1]; // Extract the path before the WebDAV ID
@@ -65,7 +66,7 @@ export class DownstairsUriParser {
     } else if (typeStr === "snapshot") {
       this.type = "snapshot";
     } else {
-      throw new Error("unhandled type in downstairs URI: " + typeStr);
+      throw new Err.InvalidUriStructureError(downstairsUri.toString(), "valid type folder");
     }
     
   }

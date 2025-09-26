@@ -4,6 +4,7 @@ import { PrimitiveNestedObject, Serializable, SourceOps } from "../../../../type
 import { IdUtility } from "./data/IdUtility";
 import { FileSystem } from "./fs/FileSystem";
 import { Folder } from './script/Folder';
+import { Err } from './Err';
 
 const fs = FileSystem.getInstance;
 /**
@@ -11,11 +12,11 @@ const fs = FileSystem.getInstance;
  */
 export namespace Util {
   export function printLine(ops?: { ret?: boolean }) {
-    const stack = new Error().stack || (() => { throw new Error("no stack"); })();
+    const stack = new Error().stack || (() => { throw new Err.NoStackTraceError(); })();
     let FULL_LINE = stack.split('\n')[2]!.trim(); // 0:Error, 1:this function, 2:
 
     const match = FULL_LINE.match(/\(([^)]+)\)/);
-    const extracted = match && match[1] || (() => { throw new Error("no extracted value"); })();
+    const extracted = match && match[1] || (() => { throw new Err.NoExtractedValueError(); })();
     if (ops?.ret) {
       return extracted;
     }
@@ -133,7 +134,7 @@ export namespace Util {
    */
   export async function getDownstairsFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
     if (!sourceOps) {
-      return vscode.window.activeTextEditor?.document.uri || (() => { throw new Error("No active editor found"); })();
+      return vscode.window.activeTextEditor?.document.uri || (() => { throw new Err.NoActiveEditorError(); })();
     }
     const { sourceOrigin, topId } = sourceOps;
     const url = new URL(sourceOrigin);
@@ -146,7 +147,7 @@ export namespace Util {
         const subFolderPath = path.join(curWorkspaceFolder.uri.fsPath, subFolderName);
         if (subFolderPath.includes(url.host)) {
           if (found) {
-            throw new Error("Multiple folders found for source origin");
+            throw new Err.MultipleFoldersFoundError("source origin");
           }
           found = true;
           return vscode.Uri.file(subFolderPath);
@@ -156,13 +157,13 @@ export namespace Util {
       undefined as vscode.Uri | undefined
     );
     if (!folderUri) {
-      throw new Error("No folder found for source origin");
+      throw new Err.NoFolderFoundError("source origin");
     }
     const id = new IdUtility(topId);
   
     const ret = await id.findFileContaining(folderUri);
     if (!ret) {
-      throw new Error("No matching file found");
+      throw new Err.NoMatchingFileFoundError();
     }
     return ret;
   }

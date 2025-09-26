@@ -3,7 +3,8 @@ import { BasicAuthParams } from "../../../../types";
 import { SESSION_MANAGER } from "../b6p_session/SessionManager";
 import { ContextNode } from "../context/ContextNode";
 import { PrivateKeys, PrivateGenericMap } from "../util/PseudoMaps";
-import { AuthError, AuthManager, BasicAuth } from "./classes";
+import { AuthManager, BasicAuth } from "./classes";
+import { Err } from "../util/Err";
 
 /**
  * Singleton BasicAuth manager for VS Code extension authentication.
@@ -84,7 +85,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   public init(parent: typeof SESSION_MANAGER) {
     this._parent = parent;
     if (this._flagMap) {
-      throw new Error("only one auth manager may be initialized");
+      throw new Err.DuplicateInitializationError("auth manager");
     }
     this._flagMap = new PrivateGenericMap(PrivateKeys.BASIC_AUTH, this.context);
     return this;
@@ -99,7 +100,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    */
   public get parent() {
     if (!this._parent) {
-      throw new Error("AuthManager not initialized");
+      throw new Err.ManagerNotInitializedError("AuthManager");
     }
     return this._parent;
   }
@@ -113,7 +114,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    */
   public get context() {
     if (!this.parent.context) {
-      throw new Error("AuthManager not initialized");
+      throw new Err.ManagerNotInitializedError("AuthManager");
     }
     return this.parent.context;
   }
@@ -137,7 +138,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    */
   private get flagMap() {
     if (!this._flagMap) {
-      throw new Error('AuthManager not initialized');
+      throw new Err.ManagerNotInitializedError("AuthManager");
     }
     return this._flagMap;
   }
@@ -181,7 +182,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
         vscode.window.showInformationMessage('No existing credentials found, please enter new credentials.');
         return await this.createNewCredentials(flag);
       } else {
-        throw new AuthError(`No existing credentials found for flag: ${flag}`);
+        throw new Err.AuthenticationError(`No existing credentials found for flag: ${flag}`);
       }
       
     } else {

@@ -117,8 +117,8 @@ suite('DownstairsUriParser Tests', () => {
     });
 
     test('should throw error for unrecognized type folder', () => {
-      const uri = vscode.Uri.file('/workspace/12345/unknown');
-      
+      const uri = vscode.Uri.file('/workspace/not-a-number/unknown');
+
       assert.throws(() => {
         new DownstairsUriParser(uri);
       }, /The provided URI does not conform to expected structure/);

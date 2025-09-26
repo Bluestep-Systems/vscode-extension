@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Err } from '../Err';
 
 /**
  * Gets the URI of the active editor; performing basic checks to ensure it is valid.
@@ -34,7 +35,7 @@ export function getActiveEditorUri({ quiet = false }: { quiet?: boolean; } = {})
 export function getActiveEditor(): vscode.TextEditor {
   const activeEditor = vscode.window.activeTextEditor;
   if (!activeEditor) {
-    throw new Error('No active text editor found.');
+    throw new Err.NoActiveEditorError();
   }
   return activeEditor;
 }

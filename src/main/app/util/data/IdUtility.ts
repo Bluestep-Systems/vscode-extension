@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { Alert } from '../ui/Alert';
 import { MetaDataJsonFileContent } from '../../../../../types';
 import { readFileText } from './readFile';
+import { Err } from '../Err';
 
 /**
  * A utility class for dealing with IDs in the format `363769__FID_dummyTestEndpoint`.
@@ -36,7 +37,7 @@ export class IdUtility {
       this.altIdKey = match[2];
       this.altIdValue = match[3];
     } else {
-      throw new Error("Invalid ID format: expected something like `363769__FID_dummyTestEndpoint` but got: `" + id + "`");
+      throw new Err.InvalidIdFormatError(id, "something like `363769__FID_dummyTestEndpoint`");
     }
   }
 
@@ -57,7 +58,7 @@ export class IdUtility {
     const textContent = await readFileText(uri);
     const metadata = JSON.parse(textContent) as MetaDataJsonFileContent;
     if (!metadata.altIds) {
-      throw new Error("Invalid metadata.json format: missing altIds field");
+      throw new Err.MetadataFormatError("altIds");
     }
     const existingIds = metadata.altIds.split("\n");
     if (existingIds.includes(this.toSearchableString())) {

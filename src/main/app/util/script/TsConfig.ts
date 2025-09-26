@@ -4,6 +4,7 @@ import { FileSystem } from "../fs/FileSystem";
 import { Folder } from "./Folder";
 import { Node } from "./Node";
 import { ScriptNode } from "./ScriptNode";
+import { Err } from "../Err";
 const fs = FileSystem.getInstance;
 /**
  * A specialized ScriptFile representing a tsconfig.json file.
@@ -25,7 +26,7 @@ export class TsConfig implements Node {
    */
   constructor(private readonly sf: ScriptNode) {
     if (!this.sf.path().endsWith(TsConfig.NAME)) {
-      throw new Error("Provided ScriptFile is not a tsconfig.json file: " + this.sf.path());
+      throw new Err.InvalidResourceTypeError("tsconfig.json file");
     }
   }
   
@@ -38,7 +39,7 @@ export class TsConfig implements Node {
    */
   static fromUri(uri: vscode.Uri): TsConfig {
     if (!uri.fsPath.endsWith(TsConfig.NAME)) {
-      throw new Error("Provided URI does not point to a tsconfig.json file.");
+      throw new Err.InvalidResourceTypeError("tsconfig.json file");
     }
     return new TsConfig(ScriptNode.fromUri(uri));
   }
@@ -139,7 +140,7 @@ export class TsConfig implements Node {
   public async getBuildFolder(): Promise<Folder> {
     const fileContents = await readFileText(this.uri());
     const config = JSON.parse(fileContents);
-    const outDir = config.compilerOptions?.outDir || (() => { throw new Error("outDir not specified"); })();
+    const outDir = config.compilerOptions?.outDir || (() => { throw new Err.MissingConfigurationError("outDir"); })();
     return new Folder(vscode.Uri.joinPath(this.folder().uri(), outDir));
   }
 }

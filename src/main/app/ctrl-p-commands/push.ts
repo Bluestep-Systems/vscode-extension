@@ -13,6 +13,7 @@ import { ScriptNode } from '../util/script/ScriptNode';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
+import { Err } from '../util/Err';
 
 /**
  * Pushes a script to a WebDAV location.
@@ -100,7 +101,7 @@ function uriStringToFilePath(uriString: string): string {
  */
 async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, upstairsRootUrlString?: string) {
   if (!downstairsRootFolderUri || !upstairsRootUrlString) {
-    throw new Error("Both downstairsRootFolderUri and upstairsRootUrlString are required for cleanup");
+    throw new Err.CleanupParametersError();
   }
   const upstairsObj = new UpstairsUrlParser(upstairsRootUrlString);
   /**
@@ -108,7 +109,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
    */
   const getScriptRet = await getScript({ url: upstairsObj.url, webDavId: upstairsObj.webDavId });
   if (!getScriptRet) {
-    throw new Error("Failed to get script for cleanup");
+    throw new Err.CleanupScriptError();
   }
   const rawFilePaths = getScriptRet;
 

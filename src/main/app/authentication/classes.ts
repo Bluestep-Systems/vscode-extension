@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { BasicAuthParams, Serializable } from "../../../../types";
 import { ContextNode } from "../context/ContextNode";
 import type { SESSION_MANAGER } from "../b6p_session/SessionManager";
+import { Err } from "../util/Err";
 
 /**
    * Generic Auth class that can be extended for specific auth types.
@@ -34,7 +35,7 @@ export abstract class AuthObject {
    * generates new credentials for this auth object, typically by prompting the user
    */
   static generateNew(): Promise<AuthObject> {
-    throw new AuthError("Not implemented");
+    throw new Err.AuthenticationError("Not implemented");
   }
 
   /**
@@ -194,12 +195,5 @@ export class BasicAuth extends AuthObject {
         return resp || "";
       });
     return new BasicAuth({ username, password });
-  }
-}
-
-export class AuthError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AuthError";
   }
 }

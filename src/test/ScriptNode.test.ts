@@ -107,7 +107,7 @@ suite('ScriptFile Tests', () => {
       
       assert.throws(() => {
         scriptFile.toUpstairsURL();
-      }, /should never try to convert .b6p_metadata.json file to upstairs URL. Review logic on how you got here./);
+      }, /MetadataFileOperationError: Cannot convert to upstairs URL metadata file/);
     });
   });
 
@@ -288,7 +288,7 @@ suite('ScriptFile Tests', () => {
       
       assert.throws(() => {
         metadataFile.withScriptRoot(newRoot);
-      }, /Cannot overwrite script root of a metadata file/);
+      }, /MetadataFileOperationError: Cannot overwrite script root metadata file/);
     });
   });
 
@@ -633,7 +633,7 @@ suite('ScriptFile Tests', () => {
       
       const reason = await metadataFile.getReasonToNotPush();
       
-      assert.strictEqual(reason, 'File is a metadata file');
+      assert.strictEqual(reason, 'Node is a metadata file');
     });
 
     test('should return reason for declarations files', async () => {
@@ -642,7 +642,7 @@ suite('ScriptFile Tests', () => {
       
       const reason = await declarationsFile.getReasonToNotPush();
       
-      assert.strictEqual(reason, 'File is in declarations');
+      assert.strictEqual(reason, 'Node is in declarations');
     });
 
     test('should return reason for external model files', async () => {
@@ -658,7 +658,7 @@ suite('ScriptFile Tests', () => {
       
       const reason = await scriptNode.getReasonToNotPush();
       
-      assert.strictEqual(reason, 'File is an external model');
+      assert.strictEqual(reason, 'Node is an external model');
     });
 
     test('should return reason for gitignored files', async () => {
@@ -675,7 +675,7 @@ suite('ScriptFile Tests', () => {
       
       const reason = await scriptNode.getReasonToNotPush();
       
-      assert.strictEqual(reason, 'File is ignored by .gitignore');
+      assert.strictEqual(reason, 'Node is ignored by .gitignore');
     });
 
     test('should return reason for info/objects files', async () => {
@@ -689,7 +689,7 @@ suite('ScriptFile Tests', () => {
       const scriptFile = ScriptNode.fromUri(infoUri);
       const reason = await scriptFile.getReasonToNotPush();
       
-      assert.strictEqual(reason, 'File is in info or objects');
+      assert.strictEqual(reason, 'Node is in info or objects');
     });
 
     test('should return empty string when file can be pushed (basic validation)', async () => {

@@ -1,47 +1,17 @@
 /**
- * Base class for file I/O related errors.
+ * @deprecated Use Err.FileReadError and Err.FileNotFoundError from ../Err instead
+ * This file is kept for backwards compatibility during migration
  * @lastreviewed null
  */
-class FileIOError extends Error {
-  /**
-   * Creates a new FileIOError instance.
-   * @param message The error message
-   * @lastreviewed null
-   */
-  constructor(message: string) {
-    super(message);
-    this.name = "FileIOError";
-  }
-}
+
+import { Err } from "../Err";
 
 /**
- * Error thrown when a file read operation fails.
- * @lastreviewed null
+ * @deprecated Use Err.FileReadError instead
  */
-export class FileReadError extends FileIOError {
-  /**
-   * Creates a new FileReadError instance.
-   * @param message The error message describing the read failure
-   * @lastreviewed null
-   */
-  constructor(message: string) {
-    super(message);
-    this.name = "FileReadError";
-  }
-}
+export const FileReadError = Err.FileReadError;
 
 /**
- * Error thrown when attempting to access a file that does not exist.
- * @lastreviewed null
+ * @deprecated Use Err.FileNotFoundError instead
  */
-export class FileDoesNotExistError extends FileIOError {
-  /**
-   * Creates a new FileDoesNotExistError instance.
-   * @param message The error message describing the missing file
-   * @lastreviewed null
-   */
-  constructor(message: string) {
-    super(message);
-    this.name = "FileDoesNotExistError";
-  }
-}
+export const FileDoesNotExistError = Err.FileNotFoundError;

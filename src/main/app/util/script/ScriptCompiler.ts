@@ -4,6 +4,7 @@ import { App } from "../../App";
 import { FileSystem } from "../fs/FileSystem";
 import { Node } from "./Node";
 import { ScriptNode } from "./ScriptNode";
+import { Err } from "../Err";
 const fs = FileSystem.getInstance;
 
 /**
@@ -45,7 +46,7 @@ export class ScriptCompiler {
    * @lastreviewed null
    */
   private getDefaultOptions(sf: Node): ts.CompilerOptions {
-    throw new Error("we probably don't want to be using this");
+    throw new Err.MethodNotImplementedError();
     const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
     return LOCAL_CONFIG;
@@ -70,7 +71,7 @@ export class ScriptCompiler {
     pseudoParsedConfig.config.compilerOptions.rootDir = tsConfigFile.folder().path();
     if (pseudoParsedConfig.error) {
       const message = ts.flattenDiagnosticMessageText(pseudoParsedConfig.error.messageText, '\n');
-      throw new Error(`Error parsing tsconfig.json at ${tsConfigFile.path()}: ${message}`);
+      throw new Err.CompilationError(`Error parsing tsconfig.json at ${tsConfigFile.path()}: ${message}`);
     }
     // Parse the configuration but ignore file discovery errors
     // We'll handle file discovery ourselves since we're working with specific files
@@ -101,7 +102,7 @@ export class ScriptCompiler {
    */
   public async addFile(sf: ScriptNode) {
     if (!(await sf.isCopacetic())) {
-      throw new Error("File is not copacetic, cannot compile.");
+      throw new Err.ScriptNotCopaceticError();
     }
     const newTsConfigFile = await sf.getClosestTsConfigFile();
     const existingVals = this.projects.get(newTsConfigFile.path()) || [];
@@ -117,7 +118,7 @@ export class ScriptCompiler {
     const emittedFiles: string[] = [];
     for (const [tsConfigPath, sfList] of this.projects.entries()) {
       if (sfList.length === 0) {
-        throw new Error("No files to compile for tsconfig at: " + tsConfigPath);
+        throw new Err.NoFilesToCompileError(tsConfigPath);
       }
       const compilerOptions = await this.getCompilerOptions(ScriptNode.fromPath(tsConfigPath));
       const sfUris = sfList.map(sf => sf.uri());

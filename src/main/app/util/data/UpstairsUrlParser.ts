@@ -1,18 +1,15 @@
-/**
- * Errors thrown when URL parsing fails.
- */
-class URLParseError extends Error {
-  constructor(message: string, public readonly input?: string) {
-    super(message);
-    this.name = 'URLParseError';
-  }
-}
+import { Err } from "../Err";
+
 
 
 export class UpstairsUrlParser {
+
   static readonly URL_TYPES = ['files', 'public'] as const;
+
   url: URL;
+
   filesOrPublic: typeof UpstairsUrlParser.URL_TYPES[number];
+  
   webDavId: string;
   /**
    * The part of the path after the WebDAV ID, if any. will be something like `.gitignore` or `draft/objects/`, `declarations/scriptlibrary.d.ts` etc.
@@ -28,32 +25,33 @@ export class UpstairsUrlParser {
    * If the trailing path is a file in the root (i.e. no slash), this will be `undefined`.
    */
   trailingFolder?: string;
+
   constructor(public readonly rawUrlString: string) {
     if (!rawUrlString || !rawUrlString.trim()) {
-      throw new URLParseError("URL string cannot be empty");
+      throw new Err.UrlParsingError("URL string cannot be empty");
     }
     const str = rawUrlString.trim();
     try {
       this.url = new URL(str);
     } catch (error) {
-      throw new URLParseError(`Invalid URL format: ${str}`);
+      throw new Err.UrlParsingError(`Invalid URL format: ${str}`);
     }
 
     const pathRegex = /^\/(files|public)\/(\d+)(?:\/(.*))?$/;
     const match = this.url.pathname.match(pathRegex);
     if (!match) {
-      throw new URLParseError(`URL does not match expected BlueStep format: ${str}`);
+      throw new Err.UrlParsingError(`URL does not match expected BlueStep format: ${str}`);
     }
     const [, type, webDavId, trailing] = match;
 
 
     if (!/^\d+$/.test(webDavId) || webDavId.length > 10) {
-      throw new URLParseError("the parsed WebDAV ID is probably too large to be legitimate");
+      throw new Err.UrlParsingError("the parsed WebDAV ID is probably too large to be legitimate");
     }
 
     // note that the typeguard informs TS of the type here
     if (!this.isValidType(type)) {
-      throw new URLParseError(`Invalid path type: ${type}. Expected: ${UpstairsUrlParser.URL_TYPES.join(', ')}`);
+      throw new Err.UrlParsingError(`Invalid path type: ${type}. Expected: ${UpstairsUrlParser.URL_TYPES.join(', ')}`);
     }
     this.filesOrPublic = type as typeof UpstairsUrlParser.URL_TYPES[number];
     this.webDavId = webDavId;

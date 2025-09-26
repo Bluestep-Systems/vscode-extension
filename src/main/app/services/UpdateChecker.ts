@@ -5,6 +5,7 @@ import { ContextNode } from '../context/ContextNode';
 import { FileSystem } from '../util/fs/FileSystem';
 import { PrivateKeys, TypedPersistable } from '../util/PseudoMaps';
 import { TypedPrivatePersistable } from '../util/PseudoMaps/TypedPrivatePersistable';
+import { Err } from '../util/Err';
 const fs = FileSystem.getInstance;
 /**
  * Singleton update checker for the BlueStep VS Code extension.
@@ -49,7 +50,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   
   public get parent(): typeof App {
     if (!this._parent) {
-      throw new Error("UpdateChecker not initialized");
+      throw new Err.ManagerNotInitializedError("UpdateChecker");
     }
     return this._parent;
   }
@@ -57,7 +58,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   
   public get context(): vscode.ExtensionContext {
     if (!this._parent) {
-      throw new Error("UpdateChecker not initialized");
+      throw new Err.ManagerNotInitializedError("UpdateChecker");
     }
     return this._parent.context;
   }
@@ -74,7 +75,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private get state(): TypedPersistable<ClientInfo> {
     if (!this._state) {
-      throw new Error("UpdateChecker not initialized!");
+      throw new Err.ManagerNotInitializedError("UpdateChecker");
     }
     return this._state;
   }
@@ -90,7 +91,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
           this.state.set('githubToken', input);
           return input;
         }
-        throw new Error("No GitHub token available");
+        throw new Err.GitHubTokenNotAvailableError();
       });
     }
     return token;
@@ -109,7 +110,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
     const githubToken = await this.getGithubToken();
     if (!githubToken) {
-      throw new Error("No GitHub token available");
+      throw new Err.GitHubTokenNotAvailableError();
     }
     headers['Authorization'] = `Bearer ${githubToken}`;
 
@@ -211,7 +212,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       }
 
       if (!response.ok) {
-        throw new Error(`GitHub API returned status ${response.status}`);
+        throw new Err.GitHubApiError(response.status);
       }
 
       const release = await response.json() as GithubRelease;
@@ -225,11 +226,11 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          throw new Error('Update check request timed out');
+          throw new Err.UpdateCheckTimeoutError();
         }
-        throw new Error(`Failed to check for updates: ${error.message}`);
+        throw new Err.GraphQLFetchError(error.message);
       }
-      throw new Error(`Failed to parse GitHub API response: ${error}`);
+      throw new Err.DataParsingError(`Failed to parse GitHub API response: ${error}`);
     }
   }
 
@@ -344,7 +345,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
         // Check if the download URL is a .vsix file
         if (!updateInfo.downloadUrl.endsWith('.vsix')) {
-          throw new Error('Auto-install requires a direct .vsix download link');
+          throw new Err.AutoInstallRequiresDirectLinkError();
         }
 
         // Download the .vsix file
@@ -398,7 +399,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       });
 
       if (!response.ok) {
-        throw new Error(`Download failed with status ${response.status}`);
+        throw new Err.ExtensionDownloadError(response.status);
       }
 
       // Create temporary file path
@@ -421,7 +422,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       return tempFilePath.fsPath;
 
     } catch (error) {
-      throw new Error(`Failed to download extension: ${error instanceof Error ? error.message : error}`);
+      throw new Err.ExtensionDownloadError(500); // Generic download error
     }
   }
 
@@ -434,7 +435,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     try {
       await vscode.commands.executeCommand('workbench.extensions.installExtension', vscode.Uri.file(vsixPath));
     } catch (error) {
-      throw new Error(`Failed to install extension: ${error instanceof Error ? error.message : error}`);
+      throw new Err.ExtensionInstallationError(error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -565,7 +566,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       });
 
       if (!response.ok) {
-        throw new Error(`GitHub API returned status ${response.status}`);
+        throw new Err.GitHubApiError(response.status);
       }
 
       const releases = await response.json() as GithubRelease[];
@@ -584,11 +585,11 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          throw new Error('Releases fetch request timed out');
+          throw new Err.UpdateCheckTimeoutError();
         }
-        throw new Error(`Failed to fetch releases: ${error.message}`);
+        throw new Err.GraphQLFetchError(error.message);
       }
-      throw new Error(`Failed to parse GitHub API response: ${error}`);
+      throw new Err.DataParsingError(`Failed to parse GitHub API response: ${error}`);
     }
   }
 }();

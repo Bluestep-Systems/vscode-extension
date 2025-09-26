@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { FileSystemProvider, MockFileSystem, VSCodeFileSystem } from './FileSystemProvider';
+import { Err } from '../Err';
 /**
  * Namespace for managing the file system provider.
  * This allows us to switch between real and mock implementations for testing.
@@ -71,13 +72,13 @@ export namespace FileSystem {
       get eol() { return vscode.EndOfLine.LF; },
       get lineCount() { return 0; },
       lineAt: (_line: number | vscode.Position) => {
-        throw new Error('Method not implemented.');
+        throw new Err.MethodNotImplementedError();
       },
       offsetAt: (_position: vscode.Position) => {
-        throw new Error('Method not implemented.');
+        throw new Err.MethodNotImplementedError();
       },
       positionAt: (_offset: number) => {
-        throw new Error('Method not implemented.');
+        throw new Err.MethodNotImplementedError();
       },
       getText: (_range?: vscode.Range) => {
         return '';

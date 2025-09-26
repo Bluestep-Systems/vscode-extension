@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import type { Serializable } from "../../../../../types";
 import { PrivateKeys } from "./PersistenceKeys";
 import { TypedPersistable } from "./TypedPersistable";
+import { Err } from "../Err";
 
 /**
  * A typed private persistable pseudomap that uses VS Code's secret storage.
@@ -49,7 +50,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
    */
   private checkIsInitialized(): this is TypedPrivatePersistable<T> & { isInitialized: true } {
     if (!this.isInitialized) {
-      throw new Error(`TypedPrivatePersistable for ${this.key} not fully initialized`);
+      throw new Err.PersistenceNotInitializedError("TypedPrivatePersistable", this.key);
     }
     return true;
   }

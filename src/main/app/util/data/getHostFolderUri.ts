@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { Err } from '../Err';
 
 /**
  * Gets the host folder URI from the provided URL.
@@ -11,7 +12,7 @@ export function getHostFolderUri(url: URL): vscode.Uri {
   const activeFolder = vscode.workspace.workspaceFolders?.[0];
   if (!activeFolder) {
     vscode.window.showErrorMessage('No active file found');
-    throw new Error('No active file found');
+    throw new Err.NoActiveFileError();
   }
   const activeFolderUri = activeFolder.uri;
   // this will be replaced with the U rather than the url host.

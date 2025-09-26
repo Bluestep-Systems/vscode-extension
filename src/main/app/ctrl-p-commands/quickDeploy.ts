@@ -43,7 +43,7 @@ export default async function (): Promise<void> {
             return { origin, topId, webDavId };
           } else {
             await Alert.error(`Could not find script at ${origin} with topId ${topId}`);
-            throw new Error(`Could not find script at ${origin} with topId ${topId}`);
+            throw new Err.ScriptNotFoundError(origin, topId);
           }
         },
         description: `${origin} - ${topId}`
@@ -79,16 +79,16 @@ async function getScriptWebdavId(origin: string, topId: string): Promise<string 
       },
       body: gqlBody(topId)
     }).then((res: Response) => res.json()).catch(e => {
-      throw new Error(`[[Error]] fetching GraphQL data: ${e}`);
+      throw new Err.GraphQLFetchError(e);
     }) as ScriptGqlResp;
     if ((GQL_RESP as ScriptGQLBadResp).errors) {
       Alert.error("GraphQL errors found");
-      throw new Error("GraphQL errors found: " + JSON.stringify((GQL_RESP as ScriptGQLBadResp).errors));
+      throw new Err.GraphQLError((GQL_RESP as ScriptGQLBadResp).errors);
     }
     const targetScriptRootFolderId = (GQL_RESP as ScriptGQLGoodResp).data.children[0]?.children.items[0]?.id;
     if (!targetScriptRootFolderId) {
       Alert.error(`No script root folder found for topId: ${topId}`);
-      throw new Error(`No script root folder found for topId: ${topId}`);
+      throw new Err.ScriptRootFolderNotFoundError(topId);
     }
     try {
       const targetScriptWebdavId = new WebDavId(targetScriptRootFolderId).seqnum;
@@ -104,7 +104,7 @@ async function getScriptWebdavId(origin: string, topId: string): Promise<string 
     } else {
       Alert.error(String(e));
     }
-    throw new Error(`Error fetching script WebDAV ID from ${origin} for topId ${topId}`);
+    throw new Err.WebdavIdFetchError(origin, topId);
   }
 }
 
@@ -122,9 +122,6 @@ class WebDavId {
   }
 }
 
-class WebdavParsingError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'WebdavParsingError';
-  }
-}
+import { Err } from "../util/Err";
+
+const WebdavParsingError = Err.WebdavParsingError;

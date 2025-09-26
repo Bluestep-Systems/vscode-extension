@@ -3,6 +3,7 @@ import type { Serializable } from "../../../../../types";
 import { PersistablePseudoMap } from "./PersistablePseudoMap";
 import { Persistable } from "./Persistable";
 import { PrivateKeys } from "./PersistenceKeys";
+import { Err } from "../Err";
 
 /**
  * A persistable map that uses the vscode secret storage to persist data.
@@ -31,7 +32,7 @@ export class PrivateGenericMap<T extends Serializable> extends PersistablePseudo
    */
   private requiresInit() {
     if (!this.initialized) {
-      throw new Error(`PrivatePersistanceMap for ${this.key} not fully initialized`);
+      throw new Err.PersistenceNotInitializedError("PrivatePersistanceMap", this.key);
     }
   }
 

@@ -14,6 +14,7 @@ import { Node } from './Node';
 import { PathElement } from './PathElement';
 import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
+import { Err } from '../Err';
 const fs = FileSystem.getInstance;
 
 /**
@@ -63,9 +64,9 @@ export class ScriptNode implements Node {
   }
 
   /**
-   * Creates a ScriptFile instance from a VS Code URI.
-   * @param uri The URI to create the ScriptFile from
-   * @returns A new ScriptFile instance
+   * Creates a ScriptNode instance from a VS Code URI.
+   * @param uri The URI to create the ScriptNode from
+   * @returns A new ScriptNode instance
    * @lastreviewed null
    */
   public static fromUri(uri: vscode.Uri): ScriptNode {
@@ -73,9 +74,9 @@ export class ScriptNode implements Node {
   }
 
   /**
-   * Creates a ScriptFile instance from a file system path.
-   * @param fsPath The file system path to create the ScriptFile from
-   * @returns A new ScriptFile instance
+   * Creates a ScriptNode instance from a file system path.
+   * @param fsPath The file system path to create the ScriptNode from
+   * @returns A new ScriptNode instance
    * @lastreviewed null
    */
   public static fromPath(fsPath: string): ScriptNode {
@@ -97,13 +98,13 @@ export class ScriptNode implements Node {
     } else if (this._parser.type === "metadata") {
       const fileName = this.getFileName();
       if (fileName === ScriptRoot.METADATA_FILENAME) {
-        throw new Error(`should never try to convert ${ScriptRoot.METADATA_FILENAME} file to upstairs URL. Review logic on how you got here.`);
+        throw new Err.MetadataFileOperationError("convert to upstairs URL");
       }
       newUrl.pathname = upstairsBaseUrl.pathname + fileName;
     } else if (this._parser.isDeclarationsOrDraft()) {
       newUrl.pathname = upstairsBaseUrl.pathname + this._parser.type + "/" + this._parser.rest;
     } else {
-      throw new Error(`unexpected type: \`${this._parser.type}\`, cannot convert to upstairs URL`);
+      throw new Err.InvalidFileTypeForUrlError(this._parser.type);
     }
 
     return newUrl;
@@ -142,7 +143,7 @@ export class ScriptNode implements Node {
     });
     const lastModifiedHeaderValue = response.headers.get("Last-Modified");
     if (!lastModifiedHeaderValue) {
-      throw new Error("Could not determine last modified time");
+      throw new Err.ModificationTimeError();
     }
     return new Date(lastModifiedHeaderValue);
   }
@@ -198,7 +199,7 @@ export class ScriptNode implements Node {
     const localHashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
     if (hexArray.length !== 64) {
-      throw new Error("Could not compute hash of local file");
+      throw new Err.HashCalculationError();
     }
     return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
   }
@@ -247,7 +248,7 @@ export class ScriptNode implements Node {
     }
     if (!etag) {
       if (ops?.required) {
-        throw new Error("Could not determine required upstairs hash");
+      throw new Err.HashCalculationError();
       }
       //TODO determine if there is a legitimate reason that this could be undefined and we should throw an error instead
       // otherwise we can only assume it just doesn't exist upstairs
@@ -271,7 +272,7 @@ export class ScriptNode implements Node {
       } else {
         App.logger.error(`Error reading downstairs file: ${e}`);
       }
-      throw new Error(`Error reading downstairs file: ${e}`);
+      throw new Err.FileReadError(`Error reading downstairs file: ${e}`);
     }
   }
 
@@ -288,7 +289,7 @@ export class ScriptNode implements Node {
       }
     });
     if (response.status >= ResponseCodes.BAD_REQUEST) {
-      throw new Error(`Error fetching upstairs file. Status: ${response.status}.\n ${response.statusText}`);
+      throw new Err.HttpResponseError(`Error fetching upstairs file. Status: ${response.status}.\n ${response.statusText}`);
     }
     return await response.text();
   }
@@ -332,7 +333,7 @@ export class ScriptNode implements Node {
     });
     if (response.status >= ResponseCodes.BAD_REQUEST) {
       App.logger.error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
-      throw new Error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
+      throw new Err.HttpResponseError(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
     }
     const buffer = await response.arrayBuffer();
     await this.writeContent(buffer);
@@ -344,7 +345,7 @@ export class ScriptNode implements Node {
       const etag = JSON.parse(etagHeader?.toLowerCase() || "null");
       const hash = await this.getHash();
       if (hash !== etag) {
-        throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
+        throw new Err.FileIntegrityError();
       }
     } else if (ScriptNode.WeakEtagPattern.test(etagHeader || "")) {
       // weak etags are prefixed with W/ and we ignore the weakness for our purposes
@@ -352,13 +353,13 @@ export class ScriptNode implements Node {
       const etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
       const hash = await this.getHash();
       if (hash !== etag) {
-        throw new Error("Downloaded file hash does not match upstairs hash, disk corruption detected");
+        throw new Err.FileIntegrityError();
       }
     } else if (ScriptNode.ComplexEtagPattern.test(etagHeader || "")) {
       App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
       // complex etags are from the illusory document files and we skip the integrity check on them
     } else {
-      throw new Error(`Could not parse upstairs etag; \`${etagHeader}\`,\n cannot verify integrity`);
+      throw new Err.EtagParsingError(etagHeader || 'null');
     }
 
     // touch the lastPulled time
@@ -417,7 +418,7 @@ export class ScriptNode implements Node {
   public async lastModifiedTime(): Promise<Date> {
     const stat = await this.stat();
     if (!stat) {
-      throw new Error("Node does not exist");
+      throw new Err.NodeNotFoundError();
     }
     return new Date(stat.mtime);
   }
@@ -489,7 +490,7 @@ export class ScriptNode implements Node {
     this._scriptRoot = root;
     //TODO determine if this if-check is even neccessary
     if (this._parser.type === "metadata") {
-      throw new Error("Cannot overwrite script root of a metadata file");
+      throw new Err.MetadataFileOperationError("overwrite script root");
     }
     return this;
   }
@@ -526,7 +527,7 @@ export class ScriptNode implements Node {
   private async getConfigurationFile<T>(fileName: string): Promise<T> {
     const files = await fs().findFiles(new vscode.RelativePattern(this._scriptRoot.getRootUri(), `**/${fileName}`));
     if (!files || files.length !== 1) {
-      throw new Error(`Could not find ${fileName} file, found: ${files ? files.length : 'none'}`);
+      throw new Err.ConfigFileError(fileName, files ? files.length : 0);
     }
     const configFileUri = files[0];
     const configFileContent = await readFileText(configFileUri);
@@ -665,7 +666,7 @@ export class ScriptNode implements Node {
       await fs().delete(this, { recursive: true, useTrash: false });
       await this.deleteFromMetadata();
     } else {
-      throw new Error("File does not exist, cannot delete");
+      throw new Err.FileNotFoundError(this.uri().toString());
     }
   }
 
@@ -700,7 +701,7 @@ export class ScriptNode implements Node {
   public async getClosestTsConfigFile() {
     const tsConfigUri = await this.getClosestTsConfigUri();
     if (!tsConfigUri) {
-      throw new Error("Could not find a tsconfig.json file");
+      throw new Err.ConfigFileError("tsconfig.json", 0);
     }
     return new TsConfig(ScriptNode.fromUri(tsConfigUri));
   }
@@ -754,15 +755,15 @@ export class ScriptNode implements Node {
     const { webDavId, url: upstairsUrl } = upstairsUrlParser;
     const upstairsOverride = new URL(upstairsUrl);
     const downstairsUri = this.uri();
-    const scriptFile = ScriptNode.fromUri(downstairsUri);
+    const scriptNode = ScriptNode.fromUri(downstairsUri);
 
     const desto = downstairsUri.fsPath
       .split(upstairsUrl.host + "/" + webDavId)[1];
     if (typeof desto === 'undefined') {
-      throw new Error('Failed to determine destination path for file: ' + downstairsUri.fsPath);
+      throw new Err.DestinationPathError(downstairsUri.fsPath);
     }
     upstairsOverride.pathname = `/files/${webDavId}${desto}`;
-    const reason = await scriptFile.getReasonToNotPush({ upstairsOverride });
+    const reason = await scriptNode.getReasonToNotPush({ upstairsOverride });
     if (reason) {
       App.logger.info(`${reason}; not pushing file:`, downstairsUri.fsPath);
       return;
@@ -781,9 +782,9 @@ export class ScriptNode implements Node {
     });
     if (!resp.ok) {
       const details = await getDetails(resp);
-      throw new Error('Failed to send file' + details);
+      throw new Err.FileSendError(details);
     }
-    await scriptFile.touch("lastPushed");
+    await scriptNode.touch("lastPushed");
     App.logger.info("File sent successfully:", downstairsUri.fsPath);
     return resp;
     async function getDetails(resp: Response) {
@@ -812,7 +813,7 @@ text: ${await resp.text()}
       if (e instanceof vscode.FileSystemError && e.code === 'FileIsADirectory') {
         return true;
       } else {
-        throw new Error(`Error determining if path is folder: ${e}`);
+      throw new Err.FileSystemError(`Error determining if path is folder: ${e}`);
       }
     }
   }
@@ -829,7 +830,7 @@ text: ${await resp.text()}
     if (await this.isFolder()) {
       return new Folder(this.uri());
     } else {
-      throw new Error("Cannot convert to folder, not a folder");
+      throw new Err.InvalidResourceTypeError("folder");
     }
   }
 
@@ -868,10 +869,10 @@ text: ${await resp.text()}
 
   public async copyDraftFileToBuild() {
     if (await this.isInItsRespectiveBuildFolder()) {
-      throw new Error("Cannot copy a file that is already in a build folder");
+      throw new Err.BuildFolderOperationError("copy");
     }
     if (!(await this.isCopacetic())) {
-      throw new Error("Cannot copy a file that is not copacetic");
+      throw new Err.ScriptNotCopaceticError();
     }
     const buildUri = vscode.Uri.joinPath(
       (await this.getClosestTsConfigFile()).folder().uri(),
@@ -887,10 +888,10 @@ text: ${await resp.text()}
 
   public async copyTo(uri: vscode.Uri): Promise<void> {
     if (await this.isInItsRespectiveBuildFolder()) {
-      throw new Error("Cannot copy a file that is already in a build folder");
+      throw new Err.BuildFolderOperationError("copy");
     }
     if (!(await this.isCopacetic())) {
-      throw new Error("Cannot copy a file that is not copacetic");
+      throw new Err.ScriptNotCopaceticError();
     }
     await fs().copy(this.uri(), uri, { overwrite: true });
   }

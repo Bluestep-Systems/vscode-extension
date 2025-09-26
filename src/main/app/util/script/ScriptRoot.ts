@@ -11,6 +11,7 @@ import { PathElement } from './PathElement';
 import { ScriptCompiler } from './ScriptCompiler';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
+import { Err } from '../Err';
 const fs = FileSystem.getInstance;
 
 /**
@@ -523,7 +524,7 @@ export class ScriptRoot implements PathElement {
   }
   public async preflightCheck(): Promise<string> {
     if (!(await this.isCopacetic())) {
-      throw new Error("Script is not in a copacetic state");
+      throw new Err.ScriptNotCopaceticError();
     }
     const badTsFiles = await this.getBadTsFiles();
     if (badTsFiles.length > 0) {

@@ -6,6 +6,7 @@ import { Alert } from "../util/ui/Alert";
 import { Util } from "../util";
 import type { App } from "../App";
 import { ResponseCodes } from "../util/network/StatusCodes";
+import { Err } from "../util/Err";
 
 /**
  * The session manager is responsible for managing individual sessions with BlueStep servers.
@@ -71,7 +72,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
   init(parent: typeof App) {
     this._parent = parent;
     if (this._sessions) {
-      throw new Error("only one session manager may be initialized");
+      throw new Err.DuplicateInitializationError("session manager");
     }
     this._sessions = new PrivateGenericMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
@@ -85,7 +86,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    */
   public get authManager() {
     if (!this._authManager) {
-      throw new Error("AuthManager not initialized");
+      throw new Err.ManagerNotInitializedError("AuthManager");
     }
     return this._authManager;
   }
@@ -95,7 +96,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    */
   public get parent() {
     if (!this._parent) {
-      throw new Error("SessionManager not initialized");
+      throw new Err.ManagerNotInitializedError("SessionManager");
     }
     return this._parent;
   }
@@ -105,7 +106,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    */
   public get context() {
     if (!this.parent.context) {
-      throw new Error("SessionManager not initialized");
+      throw new Err.ManagerNotInitializedError("SessionManager");
     }
     return this.parent.context;
   }
@@ -115,7 +116,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    */
   private get sessions() {
     if (!this._sessions) {
-      throw new Error("SessionManager not initialized");
+      throw new Err.ManagerNotInitializedError("SessionManager");
     }
     return this._sessions;
   }
@@ -137,7 +138,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     }
     const session = this.sessions.get(origin);
     if (!session) {
-      throw new Error("Session not found for origin: " + origin);
+      throw new Err.SessionNotFoundError(origin);
     }
 
     try {
@@ -154,7 +155,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
 
       (options.headers as Record<string, string>)[this.B6P_CSRF_TOKEN] =
         session.lastCsrfToken
-        || (() => { throw new Error("CSRF token not found"); })();
+        || (() => { throw new Err.CsrfTokenNotFoundError(); })();
       let response = await this.fetch(url, options);
       // TODO: figure out why the get here is always returning empty
       // and why the for loop is needed
@@ -165,7 +166,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         }
       }
       if (!newToken) {
-        throw new Error("No CSRF token in response");
+        throw new Err.CsrfTokenNotFoundError();
       }
       session.lastCsrfToken = newToken;
       await this.sessions.set(origin, session);
@@ -173,14 +174,14 @@ export const SESSION_MANAGER = new class extends ContextNode {
     } catch (e) {
       if (retries <= 0) {
         console.trace(e);
-        throw new SessionError("Retry attempts exhausted: " + (e instanceof Error ? e.stack || e.message : String(e)));
+        throw new Err.RetryAttemptsExhaustedError(e instanceof Error ? e.stack || e.message : String(e));
       }
       // Handle specific error types
       if (e instanceof Error) {
         if (e.name === 'AbortError') {
-          throw new Error('Request timed out');
+          throw new Err.RequestTimeoutError();
         }
-        if (e instanceof UnauthorizedError) {
+        if (e instanceof Err.UnauthorizedError) {
           await this.sessions.delete(origin);
           Alert.info(e.stack || e.message || String(e), { modal: false });
           Alert.info("Session expired/etc, attempting to re-authenticate...", { modal: false });
@@ -209,7 +210,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    */
   private async processResponse(response: Response): Promise<Response> {
     if (response.status === ResponseCodes.FORBIDDEN) {
-      throw new UnauthorizedError(`HTTP Error: ${response.status} ${response.statusText}`);
+      throw new Err.UnauthorizedError(`HTTP Error: ${response.status} ${response.statusText}`);
     }
     const cookies = response.headers.get("set-cookie");
     const responderUrl = new URL(response.url);
@@ -219,7 +220,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         lastTouched: Date.now(),
         JSESSIONID: cookieMap.get("JSESSIONID")
           || this.sessions.get(responderUrl.origin)?.JSESSIONID
-          || (() => { throw new ResponseError("Missing JSESSIONID"); })(),
+          || (() => { throw new Err.SessionIdMissingError(); })(),
         INGRESSCOOKIE: cookieMap.get("INGRESSCOOKIE")
           || this.sessions.get(responderUrl.origin)?.INGRESSCOOKIE
           || null,
@@ -231,7 +232,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     } else {
       const existing = this.sessions.get(responderUrl.origin);
       if (!existing) {
-        throw new ResponseError("No existing session data found, and no cookies in response");
+        throw new Err.SessionDataMissingError();
       }
       existing.lastTouched = Date.now();
       existing.lastCsrfToken = response.headers.get(this.B6P_CSRF_TOKEN) || existing.lastCsrfToken;
@@ -277,7 +278,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
       });
       this.parent.logger.info("login status:" + response.status);
       if (response.status >= ResponseCodes.BAD_REQUEST) {
-        throw new SessionError(`HTTP Error: ${response.status} ${response.statusText}`);
+        throw new Err.HttpResponseError(`HTTP Error: ${response.status} ${response.statusText}`);
       }
       await this.processResponse(response);
       return await this.fetch(url, options);
@@ -353,23 +354,3 @@ export const SESSION_MANAGER = new class extends ContextNode {
   }
 }();
 
-class SessionError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "SessionError";
-  }
-}
-
-class UnauthorizedError extends SessionError {
-  constructor(message: string) {
-    super(message);
-    this.name = "UnauthorizedError";
-  }
-}
-
-class ResponseError extends SessionError {
-  constructor(message: string) {
-    super(message);
-    this.name = "ResponseError";
-  }
-}

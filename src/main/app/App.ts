@@ -7,6 +7,7 @@ import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { UPDATE_MANAGER as UM } from './services/UpdateChecker';
 import { SettingsWrapper } from './util/PseudoMaps';
+import { Err } from './util/Err';
 import { Alert } from './util/ui/Alert';
 
 
@@ -81,7 +82,7 @@ export const App = new class extends ContextNode {
 
   public get context(): vscode.ExtensionContext {
     if (!this.isInitialized()) {
-      throw new Error('Extension context is not set');
+      throw new Err.ContextNotSetError('Extension context');
     }
     return this._context!;
   }
@@ -92,7 +93,7 @@ export const App = new class extends ContextNode {
 
   public get settings() {
     if (this._settings === null) {
-      throw new Error('Settings map is not set');
+      throw new Err.ContextNotSetError('Settings map');
     }
     return this._settings!;
   }
@@ -102,17 +103,17 @@ export const App = new class extends ContextNode {
    */
   public get logger() {
     if (this._outputChannel === null) {
-      throw new Error('Output channel is not set');
+      throw new Err.ContextNotSetError('Output channel');
     }
     return this._outputChannel;
   }
 
   public init(context: vscode.ExtensionContext) {
     if (this._context !== null) {
-      throw new Error('Extension context is already set');
+      throw new Err.ContextAlreadySetError('Extension context');
     }
     this._context = context;
-    // for some reason we can't perform the truncated version of this. I.E.
+    // for some reason we can't perform the truncated version of this. I.Err.
     // `.forEach(context.subscriptions.push)`
     this.disposables.forEach(disposable => this.context.subscriptions.push(disposable));
     this._outputChannel = vscode.window.createOutputChannel("B6P", {
@@ -178,7 +179,7 @@ export const App = new class extends ContextNode {
       if (extension && extension.packageJSON && extension.packageJSON.version) {
         return extension.packageJSON.version;
       }
-      throw new Error('Could not find extension package.json');
+      throw new Err.PackageJsonNotFoundError();
     } catch (error) {
       //TODO determine if we want to rethrow or not
       throw error;

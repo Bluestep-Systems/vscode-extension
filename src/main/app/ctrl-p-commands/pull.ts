@@ -8,6 +8,7 @@ import { ScriptNode } from '../util/script/ScriptNode';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
 import { ScriptRoot } from '../util/script/ScriptRoot';
+import { Err } from '../util/Err';
 import { Folder } from '../util/script/Folder';
 /**
  * Pulls files from a WebDAV location to the local workspace.
@@ -97,7 +98,7 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
   const activeFolder = vscode.workspace.workspaceFolders?.[0];
   if (!activeFolder) {
     vscode.window.showErrorMessage('No active file found');
-    throw new Error('No active file found');
+    throw new Err.NoActiveFileError();
   }
   const curPath = activeFolder.uri;
   const ultimatePath = vscode.Uri.joinPath(curPath, sourceUrl.host, downstairsRest);
