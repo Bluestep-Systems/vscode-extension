@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { PathElement } from '../script/PathElement';
-import type { Folder } from '../script/Folder';
+import type { ScriptFolder } from '../script/ScriptFolder';
 import { Err } from '../Err';
 
 /**
@@ -100,7 +100,7 @@ export interface FileSystemProvider {
    * }
    * ```
    */
-  readDirectory(folder: Folder): Promise<[string, vscode.FileType][]>;
+  readDirectory(folder: ScriptFolder): Promise<[string, vscode.FileType][]>;
 
   /**
    * Delete a file or directory.
@@ -256,7 +256,7 @@ export class VSCodeFileSystem implements FileSystemProvider {
   async findFiles(include: vscode.GlobPattern, exclude?: vscode.GlobPattern | null, maxResults?: number, token?: vscode.CancellationToken): Promise<vscode.Uri[]> {
     return vscode.workspace.findFiles(include, exclude, maxResults, token);
   }
-  async readDirectory(folder: Folder): Promise<[string, vscode.FileType][]> {
+  async readDirectory(folder: ScriptFolder): Promise<[string, vscode.FileType][]> {
     return vscode.workspace.fs.readDirectory(folder.uri());
   }
   async delete(element: PathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
@@ -600,7 +600,7 @@ export class MockFileSystem implements FileSystemProvider {
     
     return results;
   }
-  async readDirectory(folder: Folder): Promise<[string, vscode.FileType][]> {
+  async readDirectory(folder: ScriptFolder): Promise<[string, vscode.FileType][]> {
     const key = folder.uri().toString();
     const stat = this.stats.get(key);
     

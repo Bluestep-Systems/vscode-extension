@@ -7,24 +7,21 @@ import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
 import { readFileText } from '../data/readFile';
 import { UpstairsUrlParser } from '../data/UpstairsUrlParser';
+import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
-import { Folder } from './Folder';
-import { Node } from './Node';
 import { PathElement } from './PathElement';
+import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
-import { Err } from '../Err';
 const fs = FileSystem.getInstance;
 
 /**
- * A class representing metadata extracted from a file path.
+ * A class representing a file or folder element of a script.
  *
- * Specifically, we use a local {@link vscode.Uri} from any file within a formula's draft folder
- * to extract the WebDAV ID and domain associated with that formula.
  * @lastreviewed 2025-09-15
  */
-export class ScriptNode implements Node {
+export class ScriptNode implements PathElement {
 
   /**
    * The downstairs URI (local file system path).
@@ -36,20 +33,7 @@ export class ScriptNode implements Node {
    */
   private _scriptRoot: ScriptRoot;
 
-  /**
-   * Regex specifically for myassn document key patterns:
-   */
-  private static ComplexEtagPattern = /^"?\d{10,13}-\{.*?"class":\s*"myassn\.document\.(Proxy|LibraryServlet)MemoryDocumentKey".*?"classId":\s*\d+.*?\}"?$/;
 
-  /**
-   * Regex for standard etags (SHA-512 hashes).
-   */
-  private static EtagPattern = /^"[a-f0-9]{128}"$/;
-
-  /**
-   * Regex for "weak" etags (SHA-512 hashes).
-   */
-  private static WeakEtagPattern = /^W\/"[a-f0-9]{128}"$/;
 
   /**
    * Creates a {@link ScriptNode} instance in addition to its associated {@link ScriptRoot} object.
@@ -58,20 +42,11 @@ export class ScriptNode implements Node {
    * @param param0.downstairsUri The local file system URI for this script file
    * @lastreviewed 2025-09-15
    */
-  constructor({ downstairsUri }: { downstairsUri: vscode.Uri, }) {
+  constructor(public readonly downstairsUri: vscode.Uri) {
     this._parser = new DownstairsUriParser(downstairsUri);
-    this._scriptRoot = new ScriptRoot({ childUri: downstairsUri });
+    this._scriptRoot = new ScriptRoot(this);
   }
 
-  /**
-   * Creates a ScriptNode instance from a VS Code URI.
-   * @param uri The URI to create the ScriptNode from
-   * @returns A new ScriptNode instance
-   * @lastreviewed null
-   */
-  public static fromUri(uri: vscode.Uri): ScriptNode {
-    return new ScriptNode({ downstairsUri: uri });
-  }
 
   /**
    * Creates a ScriptNode instance from a file system path.
@@ -81,7 +56,7 @@ export class ScriptNode implements Node {
    */
   public static fromPath(fsPath: string): ScriptNode {
     const uri = vscode.Uri.file(fsPath);
-    return new ScriptNode({ downstairsUri: uri });
+    return new ScriptNode(uri);
   }
 
   /**
@@ -178,7 +153,6 @@ export class ScriptNode implements Node {
       return "Node is in info or objects";
     }
     if (await this.isFolder()) {
-      //TODO determine if we want to allow pushing empty folders
       return "Node is a folder";
     }
     if ((await this.isFile()) && await this.integrityMatches(ops)) {
@@ -188,74 +162,15 @@ export class ScriptNode implements Node {
   }
 
   /**
-   * Gets the lowercased SHA-512 hash of the local file.
-   * @lastreviewed 2025-09-15
+   * default implementation always returns true since folders don't have integrity to match
+   * @param _ops 
+   * @returns 
    */
-  public async getHash(): Promise<string | null> {
-    if (await this.isFolder()) {
-      return null;
-    }
-    const bufferSource = await fs().readFile(this.uri());
-    const localHashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
-    const hexArray = Array.from(new Uint8Array(localHashBuffer));
-    if (hexArray.length !== 64) {
-      throw new Err.HashCalculationError();
-    }
-    return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+  public async integrityMatches(_ops?: { upstairsOverride?: URL }): Promise<boolean> {
+    return true;
   }
 
-  /**
-   * Checks if the local file's integrity matches the upstairs file.
-   * Compares SHA-512 hashes between local and remote versions.
-   * 
-   * @param ops.upstairsOverride Optional override {@link URL} to check against instead of the default upstairs {@link URL}
-   * @lastreviewed 2025-09-15
-   */
-  public async integrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
-    const localHash = await this.getHash();
-    const upstairsHash = await this.getUpstairsHash(ops);
-    const matches = localHash === upstairsHash;
-    App.isDebugMode() && console.log("matches:", matches, "local:", localHash, "upstairs:", upstairsHash);
-    return matches;
-  }
 
-  /**
-   * Gets the hash of the upstairs file, or `null` if it doesn't exist.
-   * Extracts SHA-512 hash from the ETag header, handling both standard and weak ETags.
-   * Complex ETags (from memory documents) are not supported and return null.
-   * 
-   * @param ops.required If true, throws an error when upstairs hash cannot be determined
-   * @param ops.upstairsOverride Optional override URL to check instead of the default upstairs URL
-   * @returns The SHA-512 hash string in lowercase, or `null` if file doesn't exist or has complex ETag
-   * @lastreviewed 2025-09-15
-   */
-  public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
-    const response = await SM.fetch(ops?.upstairsOverride || this.toUpstairsURL(), {
-      method: "HEAD"
-    });
-    const etagHeader = response.headers.get("etag");
-
-    //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
-    let etag: string | null = null;
-    if (ScriptNode.EtagPattern.test(etagHeader || "")) {
-      etag = JSON.parse(etagHeader?.toLowerCase() || "null");
-    } else if (ScriptNode.WeakEtagPattern.test(etagHeader || "")) {
-      // weak etags are prefixed with W/ and we ignore the weakness for our purposes
-      App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
-      etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
-    } else {
-      App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
-    }
-    if (!etag) {
-      if (ops?.required) {
-      throw new Err.HashCalculationError();
-      }
-      //TODO determine if there is a legitimate reason that this could be undefined and we should throw an error instead
-      // otherwise we can only assume it just doesn't exist upstairs
-      return null;
-    }
-    return etag.toLowerCase();
-  }
 
   /**
    * Gets the content of the local file as UTF-8 text.
@@ -294,78 +209,9 @@ export class ScriptNode implements Node {
     return await response.text();
   }
 
-  /**
-   * Removes this file's record from the metadata push/pull tracking.
-   * @lastreviewed 2025-09-15
-   */
-  private async deleteFromMetadata() {
-    await this.getScriptRoot().modifyMetaData((md) => {
-      const index = md.pushPullRecords.findIndex(record => record.downstairsPath === this.uri().fsPath);
-      if (index !== -1) {
-        md.pushPullRecords.splice(index, 1);
-      }
-    });
-  }
 
-  /**
-   * Downloads the file from the upstairs location and writes it to the local file system.
-   * Performs integrity verification using ETag headers and updates the lastPulled timestamp.
-   * Skips download if the file is in .gitignore and removes it from metadata instead.
-   * 
-   * @returns Response object with status 418 if file is in .gitignore, otherwise the actual HTTP response
-   * @throws {Error} When the download fails, integrity verification fails, or ETag parsing fails
-   * @lastreviewed 2025-09-15
-   */
-  public async download(): Promise<Response> {
-    const ignore = await this.isInGitIgnore();
-    if (ignore) {
-      App.logger.info(`not downloading \`${this.getFileName()}\` because in .gitignore`);
-      await this.deleteFromMetadata();
-      return new Response("", { status: ResponseCodes.TEAPOT });
-    }
-    const lookupUri = this.toUpstairsURL();
-    App.logger.info("downloading from:" + lookupUri);
-    const response = await SM.fetch(lookupUri, {
-      method: "GET",
-      headers: {
-        "Accept": "*/*",
-      }
-    });
-    if (response.status >= ResponseCodes.BAD_REQUEST) {
-      App.logger.error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
-      throw new Err.HttpResponseError(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
-    }
-    const buffer = await response.arrayBuffer();
-    await this.writeContent(buffer);
-    const etagHeader = response.headers.get("etag");
 
-    //TODO merge this with the other etag parsing code elsewhere in this class
-    //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
-    if (ScriptNode.EtagPattern.test(etagHeader || "")) {
-      const etag = JSON.parse(etagHeader?.toLowerCase() || "null");
-      const hash = await this.getHash();
-      if (hash !== etag) {
-        throw new Err.FileIntegrityError();
-      }
-    } else if (ScriptNode.WeakEtagPattern.test(etagHeader || "")) {
-      // weak etags are prefixed with W/ and we ignore the weakness for our purposes
-      App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
-      const etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
-      const hash = await this.getHash();
-      if (hash !== etag) {
-        throw new Err.FileIntegrityError();
-      }
-    } else if (ScriptNode.ComplexEtagPattern.test(etagHeader || "")) {
-      App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
-      // complex etags are from the illusory document files and we skip the integrity check on them
-    } else {
-      throw new Err.EtagParsingError(etagHeader || 'null');
-    }
 
-    // touch the lastPulled time
-    await this.touch("lastPulled");
-    return response;
-  }
 
   /**
    * Writes binary content to the local file.
@@ -656,28 +502,16 @@ export class ScriptNode implements Node {
     return this.toUpstairsURL().pathname;
   }
 
-  /**
-   * Deletes the script file from metadata and the local file system.
-   * @throws {Error} When the file does not exist
-   * @lastreviewed 2025-09-18
-   */
-  public async delete() {
-    if (await this.exists()) {
-      await fs().delete(this, { recursive: true, useTrash: false });
-      await this.deleteFromMetadata();
-    } else {
-      throw new Err.FileNotFoundError(this.uri().toString());
-    }
-  }
+
 
   /**
    * Gets the URI of the folder containing this file.
    * @returns The URI of the parent directory
    * @lastreviewed null
    */
-  public folder(): Folder {
+  public folder(): ScriptFolder {
     const fileUri = this.uri();
-    return new Folder(vscode.Uri.joinPath(fileUri, '..'));
+    return ScriptFolder.fromUriNoCheck(vscode.Uri.joinPath(fileUri, '..'));
   }
 
   /**
@@ -703,7 +537,7 @@ export class ScriptNode implements Node {
     if (!tsConfigUri) {
       throw new Err.ConfigFileError("tsconfig.json", 0);
     }
-    return new TsConfig(ScriptNode.fromUri(tsConfigUri));
+    return new TsConfig(new ScriptNode(tsConfigUri));
   }
 
   /**
@@ -744,10 +578,6 @@ export class ScriptNode implements Node {
     return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), "draft").fsPath, this.uri().fsPath);
   }
 
-  create(vsCodeUri: vscode.Uri) {
-    return new ScriptNode({ downstairsUri: vsCodeUri });
-  }
-
   async upload(upstairsUrlOverrideString: string | null = null): Promise<Response | void> {
     App.logger.info("Preparing to send file:", this.uri().fsPath);
     App.logger.info("To target formula URI:", upstairsUrlOverrideString);
@@ -755,7 +585,7 @@ export class ScriptNode implements Node {
     const { webDavId, url: upstairsUrl } = upstairsUrlParser;
     const upstairsOverride = new URL(upstairsUrl);
     const downstairsUri = this.uri();
-    const scriptNode = ScriptNode.fromUri(downstairsUri);
+    const scriptNode = new ScriptNode(downstairsUri);
 
     const desto = downstairsUri.fsPath
       .split(upstairsUrl.host + "/" + webDavId)[1];
@@ -813,7 +643,7 @@ text: ${await resp.text()}
       if (e instanceof vscode.FileSystemError && e.code === 'FileIsADirectory') {
         return true;
       } else {
-      throw new Err.FileSystemError(`Error determining if path is folder: ${e}`);
+        throw new Err.FileSystemError(`Error determining if path is folder: ${e}`);
       }
     }
   }
@@ -826,9 +656,9 @@ text: ${await resp.text()}
    * Converts the current node to a Folder instance if can be represented by one
    * @returns 
    */
-  public async toFolder(): Promise<Folder> {
+  public async toFolder(): Promise<ScriptFolder> {
     if (await this.isFolder()) {
-      return new Folder(this.uri());
+      return ScriptFolder.fromUriNoCheck(this.uri());
     } else {
       throw new Err.InvalidResourceTypeError("folder");
     }
@@ -902,6 +732,29 @@ text: ${await resp.text()}
 
   public isMarkdown(): boolean {
     return this.extension === '.md';
+  }
+
+  public async getHash(): Promise<string | null> {
+    try {
+      if (await this.isFolder()) {
+        return null; // Folders don't have hashes
+      }
+
+      const fileContent = await fs().readFile(this.uri());
+      const hashBuffer = await crypto.subtle.digest('SHA-512', fileContent);
+      const hexArray = Array.from(new Uint8Array(hashBuffer));
+      return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
+    } catch (error) {
+      throw new Error(`Error reading downstairs file: ${error}`);
+    }
+  }
+
+  public async delete(): Promise<void> {
+    if (await this.isCopacetic()) {
+      await fs().delete(this, { useTrash: true, recursive: true });
+    } else {
+      throw new Err.ScriptNotCopaceticError();
+    }
   }
 }
 

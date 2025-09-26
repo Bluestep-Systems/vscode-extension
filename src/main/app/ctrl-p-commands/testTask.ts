@@ -10,7 +10,7 @@ import { ScriptNode } from '../util/script/ScriptNode';
 //const fs = FileSystem.getInstance;
 export default async function () {
   const activeUri = await Util.getDownstairsFileUri();
-  const sf = ScriptNode.fromUri(activeUri);
+  const sf = new ScriptNode(activeUri);
   console.log("folderUri", sf.folder().path());
   // console.log(sf.pathWithRespectToDraftRoot());
   // const compiler = new ScriptCompiler(sf);

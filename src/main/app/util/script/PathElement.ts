@@ -27,5 +27,6 @@ export interface PathElement {
    */
   equals(other: PathElement): boolean;
   
+  
 }
 

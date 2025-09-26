@@ -1,21 +1,22 @@
 import * as vscode from "vscode";
 import { readFileText } from "../data/readFile";
 import { FileSystem } from "../fs/FileSystem";
-import { Folder } from "./Folder";
-import { Node } from "./Node";
+import { ScriptFolder } from "./ScriptFolder";
 import { ScriptNode } from "./ScriptNode";
 import { Err } from "../Err";
+import { PathElement } from "./PathElement";
 const fs = FileSystem.getInstance;
+
 /**
  * A specialized ScriptFile representing a tsconfig.json file.
  * 
- * I wanted this to extend ScriptFile for cleanliness (since they truly are the same thing),
+ * We want this to extend ScriptFile for cleanliness (since they truly are the same thing),
  * but there were some circular dependency issues that were difficult to resolve. If at some point
  * in the future ScriptFile is refactored such that it isn't an issue, we can revisit this.
  * 
  * Instead, TsConfig merely wraps a ScriptFile and delegates relevant methods to it.
  */
-export class TsConfig implements Node {
+export class TsConfig implements PathElement {
   static NAME = "tsconfig.json";
   
   /**
@@ -41,7 +42,7 @@ export class TsConfig implements Node {
     if (!uri.fsPath.endsWith(TsConfig.NAME)) {
       throw new Err.InvalidResourceTypeError("tsconfig.json file");
     }
-    return new TsConfig(ScriptNode.fromUri(uri));
+    return new TsConfig(new ScriptNode(uri));
   }
   
   /**
@@ -137,10 +138,10 @@ export class TsConfig implements Node {
     return this.sf.getScriptRoot();
   }
 
-  public async getBuildFolder(): Promise<Folder> {
+  public async getBuildFolder(): Promise<ScriptFolder> {
     const fileContents = await readFileText(this.uri());
     const config = JSON.parse(fileContents);
     const outDir = config.compilerOptions?.outDir || (() => { throw new Err.MissingConfigurationError("outDir"); })();
-    return new Folder(vscode.Uri.joinPath(this.folder().uri(), outDir));
+    return await ScriptFolder.fromUri(vscode.Uri.joinPath(this.folder().uri(), outDir));
   }
 }

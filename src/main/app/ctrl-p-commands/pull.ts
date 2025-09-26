@@ -9,7 +9,8 @@ import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Err } from '../util/Err';
-import { Folder } from '../util/script/Folder';
+import { ScriptFolder } from '../util/script/ScriptFolder';
+import { ScriptFile } from '../util/script/ScriptFile';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -42,8 +43,8 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       title: "Pulling Script...",
       cleanupMessage: "Cleaning up the downstairs folder..."
     });
-
-    const flattenedDirectory = await flattenDirectory(new Folder(vscode.Uri.joinPath(getHostFolderUri(url), webDavId)));
+    const directory = await ScriptFolder.fromUri(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
+    const flattenedDirectory = await flattenDirectory(directory);
     await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
     Alert.info('Pull complete!');
@@ -63,7 +64,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
   const toDelete: vscode.Uri[] = [];
   for (const ep of existingPaths) {
     //ignore special files
-    if (await ScriptNode.fromUri(ep).isInGitIgnore()) {
+    if (await new ScriptNode(ep).isInGitIgnore()) {
       continue;
     }
     if ([ScriptRoot.METADATA_FILENAME, ScriptRoot.GITIGNORE_FILENAME].some(special => ep.fsPath.endsWith(special))) {
@@ -119,7 +120,7 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const sf = ScriptNode.fromUri(ultimatePath);
+    const sf = new ScriptFile(ultimatePath);
     if (await sf.exists() && await sf.integrityMatches()) {
       App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
       await sf.touch("lastPulled");

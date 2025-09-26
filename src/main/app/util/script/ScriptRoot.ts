@@ -4,13 +4,12 @@ import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
+import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
-import { Folder } from './Folder';
-import { PathElement } from './PathElement';
 import { ScriptCompiler } from './ScriptCompiler';
+import { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
-import { Err } from '../Err';
 const fs = FileSystem.getInstance;
 
 /**
@@ -23,14 +22,13 @@ const fs = FileSystem.getInstance;
  * This originally was the webdavid root file.
  * @lastreviewed null
  */
-export class ScriptRoot implements PathElement {
-  private folder: Folder;
+export class ScriptRoot {
   private static readonly ScriptContentFolders = ["info", "scripts", "objects"] as const;
   public static readonly METADATA_FILENAME = ".b6p_metadata.json";
   public static readonly GITIGNORE_FILENAME = ".gitignore";
   readonly downstairsRootPath: path.ParsedPath;
   readonly downstairsRootOrgPath: path.ParsedPath;
-
+  public readonly rootUri: vscode.Uri;
   /**
    * Creates a script root utilizing any of the children in said script.
    * 
@@ -40,21 +38,15 @@ export class ScriptRoot implements PathElement {
    * @param childUri Any file within the downstairs root folder
    * @lastreviewed 2025-09-15
    */
-  constructor({ childUri }: { childUri: vscode.Uri; }) {
+  constructor(public readonly node: ScriptNode) {
 
-    const parser = new DownstairsUriParser(childUri);
+    const parser = new DownstairsUriParser(node.uri());
     const shavedName = parser.getShavedName();
     const scriptPath = path.parse(shavedName);                  // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
     const parentDirBase = path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
-    this.folder = new Folder(vscode.Uri.file(scriptPath.dir + path.sep + scriptPath.base));
+    this.rootUri = vscode.Uri.file(shavedName);
     this.downstairsRootPath = scriptPath;
     this.downstairsRootOrgPath = parentDirBase;
-  }
-  path(): string {
-    return this.folder.path();
-  }
-  uri(): vscode.Uri {
-    return this.folder.uri();
   }
 
   /**
@@ -74,10 +66,6 @@ export class ScriptRoot implements PathElement {
     const downstairsRoot = this.getRootUri();
     return vscode.Uri.joinPath(downstairsRoot, ".gitignore");
   }
-
-
-
-
 
   /**
    * Modifies the metadata for the script root.
@@ -245,7 +233,7 @@ export class ScriptRoot implements PathElement {
    * @lastreviewed 2025-09-15
    */
   public getRootUri() {
-    return this.folder.uri();
+    return this.rootUri;
   }
 
   /**
@@ -303,7 +291,7 @@ export class ScriptRoot implements PathElement {
    * @lastreviewed 2025-09-15
    */
   static fromRootUri(rootUri: vscode.Uri) {
-    return new ScriptRoot({ childUri: vscode.Uri.joinPath(rootUri, "/") });
+    return new ScriptRoot(new ScriptFolder(vscode.Uri.joinPath(rootUri, "/")));
   }
 
 
@@ -385,8 +373,8 @@ export class ScriptRoot implements PathElement {
    * @param b The other ScriptRoot to compare against
    * @lastreviewed 2025-09-15
    */
-  equals(b: PathElement) {
-    return this.path() === b.path();
+  equals(b: ScriptRoot) {
+    return this.rootUri.fsPath === b.rootUri.fsPath;
   }
 
   /**
@@ -424,8 +412,8 @@ export class ScriptRoot implements PathElement {
     const compiler = new ScriptCompiler();
     const copiedFiles: string[] = [];
     for (const file of allDraftFiles) {
-      if (file.isMarkdown() || 
-        await file.isInItsRespectiveBuildFolder() || 
+      if (file.isMarkdown() ||
+        await file.isInItsRespectiveBuildFolder() ||
         await file.isInInfoOrObjects() || // TODO delete this after these folders are obviated
         await file.isFolder()) {
         continue;
@@ -439,24 +427,34 @@ export class ScriptRoot implements PathElement {
       }
     }
     const emittedEntries = await compiler.compile();
-    const emittedSFs = emittedEntries.map(e => ScriptNode.fromPath(e));
+    const emittedScriptNodes = emittedEntries.map(e => ScriptNode.fromPath(e));
 
     // now we need to delete any files in the build folder(s) that were not emitted by the compiler
     // or copied (like JSON files, js files, etc).
     //TODO at this time (2024-09-25) this is really only serving as a safety check until
     // we stop starting by wholesale deleting the build folder.
-    for (const buildFile of emittedSFs) {
-      if (await buildFile.isFolder()) {
+    for (const buildNode of emittedScriptNodes) {
+      if (await buildNode.isFolder()) {
         continue;
       }
       if (
-        !emittedEntries.includes(buildFile.path()) &&
-        !copiedFiles.includes(buildFile.path()
-          .replace(path.sep + (await buildFile.getBuildFolder()).folderName() + path.sep, path.sep))) {
-        App.logger.warn("file detected for deletion" + buildFile.path());
-        await buildFile.delete();
+        !emittedEntries.includes(buildNode.path()) &&
+        !copiedFiles.includes(buildNode.path()
+          .replace(path.sep + (await buildNode.getBuildFolder()).folderName() + path.sep, path.sep))) {
+        App.logger.warn("file detected for deletion" + buildNode.path());
+        await buildNode.delete();
       }
     }
+    await this.cleanupMetadataFile();
+  }
+  private async cleanupMetadataFile() {
+    const draftFolder = this.getDraftFolder();
+    const draftFiles = (await draftFolder.flattenRaw()).map(uri => uri.fsPath);
+    await this.modifyMetaData((meta) => {
+      meta.pushPullRecords = meta.pushPullRecords.filter(record => {
+        return draftFiles.includes(record.downstairsPath);
+      });
+    });
   }
 
   /**
@@ -465,7 +463,7 @@ export class ScriptRoot implements PathElement {
    * @lastreviewed null
    */
   public getDraftFolder() {
-    return this.folder.getChildFolder("draft");
+    return ScriptFolder.fromUriNoCheck(vscode.Uri.joinPath(this.rootUri, "draft"));
   }
 
   /**
@@ -483,7 +481,7 @@ export class ScriptRoot implements PathElement {
    * @lastreviewed null
    */
   public getSnapshotFolder() {
-    return this.folder.getChildFolder("snapshot");
+    return ScriptFolder.fromUriNoCheck(vscode.Uri.joinPath(this.rootUri, "snapshot"));
   }
 
   /**
@@ -492,7 +490,7 @@ export class ScriptRoot implements PathElement {
    * @lastreviewed null
    */
   public getDeclarationsFolder() {
-    return this.folder.getChildFolder("declarations");
+    return ScriptFolder.fromUriNoCheck(vscode.Uri.joinPath(this.rootUri, "declarations"));
   }
 
   public async findTsConfigFiles(): Promise<TsConfig[]> {

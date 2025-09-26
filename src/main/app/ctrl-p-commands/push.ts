@@ -8,7 +8,7 @@ import { DownstairsUriParser } from '../util/data/DownstairsUrIParser';
 import { flattenDirectory } from '../util/data/flattenDirectory';
 import { getScript } from '../util/data/getScript';
 import { UpstairsUrlParser } from '../util/data/UpstairsUrlParser';
-import { Folder } from '../util/script/Folder';
+import { ScriptFolder } from '../util/script/ScriptFolder';
 import { ScriptNode } from '../util/script/ScriptNode';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
@@ -112,8 +112,8 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     throw new Err.CleanupScriptError();
   }
   const rawFilePaths = getScriptRet;
-
-  const flattenedDownstairs = await flattenDirectory(new Folder(downstairsRootFolderUri));
+  const directory = await ScriptFolder.fromUri(downstairsRootFolderUri);
+  const flattenedDownstairs = await flattenDirectory(directory);
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
   // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for
@@ -126,7 +126,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     if (!downstairsPath) {
       // we don't want to delete stuff that is in gitignore
       const parser = new DownstairsUriParser(downstairsRootFolderUri);
-      const sf = ScriptNode.fromUri(vscode.Uri.joinPath(parser.prependingPathUri(), rawFilePath.downstairsPath));
+      const sf = new ScriptNode(vscode.Uri.joinPath(parser.prependingPathUri(), rawFilePath.downstairsPath));
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;

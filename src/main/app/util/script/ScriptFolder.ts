@@ -1,18 +1,13 @@
+import path from 'path';
 import * as vscode from 'vscode';
 import { flattenDirectory } from '../data/flattenDirectory';
+import { Err } from '../Err';
 import { PathElement } from './PathElement';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
-import path from 'path';
-import { Err } from '../Err';
-export class Folder implements PathElement {
-  /**
-   * Creates a new Folder instance with the specified URI.
-   * @param folderUri The URI of the folder
-   * @lastreviewed null
-   */
-  constructor(private readonly folderUri: vscode.Uri) { }
-  
+export class ScriptFolder extends ScriptNode {
+
+
   /**
    * Creates a Folder instance from a URI, verifying it points to a directory.
    * @param uri The URI to create a folder from
@@ -20,7 +15,7 @@ export class Folder implements PathElement {
    * @throws {Error} When the URI does not point to a folder
    * @lastreviewed null
    */
-  public static async fromUri(uri: vscode.Uri): Promise<Folder> {
+  public static async fromUri(uri: vscode.Uri): Promise<ScriptFolder> {
     let isFolder = false;
     try {
       const stat = await vscode.workspace.fs.stat(uri);
@@ -31,7 +26,11 @@ export class Folder implements PathElement {
     if (!isFolder) {
       throw new Err.InvalidResourceTypeError("folder");
     }
-    return new Folder(uri);
+    return new ScriptFolder(uri);
+  }
+
+  public static fromUriNoCheck(uri: vscode.Uri): ScriptFolder {
+    return new ScriptFolder(uri);
   }
   
   /**
@@ -50,8 +49,8 @@ export class Folder implements PathElement {
    * @returns True if the folders have the same path, false otherwise
    * @lastreviewed null
    */
-  public equals(other: Folder): boolean {
-    if (!(other instanceof Folder)) {
+  public equals(other: ScriptFolder): boolean {
+    if (!(other instanceof ScriptFolder)) {
       return false;
     }
     return this.uri().fsPath === other.uri().fsPath;
@@ -72,7 +71,7 @@ export class Folder implements PathElement {
    * @lastreviewed null
    */
   public uri(): vscode.Uri {
-    return this.folderUri;
+    return super.uri();
   }
 
   /**
@@ -81,8 +80,8 @@ export class Folder implements PathElement {
    * @returns A new Folder instance representing the child folder
    * @lastreviewed null
    */
-  public getChildFolder(folderName: string): Folder {
-    return new Folder(vscode.Uri.joinPath(this.uri(), folderName));
+  public getChildFolder(folderName: string): ScriptFolder {
+    return new ScriptFolder(vscode.Uri.joinPath(this.uri(), folderName));
   }
 
   /**
@@ -92,7 +91,7 @@ export class Folder implements PathElement {
    * @lastreviewed null
    */
   public contains(other: PathElement): boolean {
-    if (!(other instanceof Folder)) {
+    if (!(other instanceof ScriptFolder)) {
       return false;
     }
     return other.path().includes(this.path());
@@ -104,7 +103,7 @@ export class Folder implements PathElement {
    * @lastreviewed null
    */
   public async flatten(): Promise<ScriptNode[]> {
-    return (await this.flattenRaw()).map(uri => ScriptNode.fromUri(uri));
+    return (await this.flattenRaw()).map(uri => new ScriptNode(uri));
   }
   
   /**

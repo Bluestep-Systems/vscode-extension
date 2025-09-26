@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import { PrimitiveNestedObject, Serializable, SourceOps } from "../../../../types";
 import { IdUtility } from "./data/IdUtility";
 import { FileSystem } from "./fs/FileSystem";
-import { Folder } from './script/Folder';
+import { ScriptFolder } from './script/ScriptFolder';
 import { Err } from './Err';
 
 const fs = FileSystem.getInstance;
@@ -140,7 +140,7 @@ export namespace Util {
     const url = new URL(sourceOrigin);
     let found = false;
     const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
-    const wsDir = await fs().readDirectory(await Folder.fromUri(curWorkspaceFolder.uri));
+    const wsDir = await fs().readDirectory(await ScriptFolder.fromUri(curWorkspaceFolder.uri));
   
     const folderUri = wsDir.reduce(
       (curValue, [subFolderName, _fileType]) => {

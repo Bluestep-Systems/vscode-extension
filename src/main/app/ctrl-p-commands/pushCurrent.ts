@@ -19,7 +19,7 @@ export default async function (): Promise<void> {
     if (activeEditorUri === undefined) {
       return;
     }
-    const fileMetaData = ScriptNode.fromUri(activeEditorUri);
+    const fileMetaData = new ScriptNode(activeEditorUri);
     const dirtyDocs = await getDirtyDocs(fileMetaData.getScriptRoot().getRootUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';

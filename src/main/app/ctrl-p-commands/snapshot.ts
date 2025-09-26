@@ -16,7 +16,7 @@ export default async function snapshot({ overrideFormulaUri, sourceOps }: { over
     }
     // "contextual" meaning currently open or determined from sourceOps
     const contextualUri = await Util.getDownstairsFileUri(sourceOps);
-    const sf = ScriptNode.fromUri(contextualUri!);
+    const sf = new ScriptNode(contextualUri!);
     sf.getScriptRoot().snapshot();
     // console.log("sf.getScriptRoot().getDraftBuildFolderUri())", sf.getScriptRoot().getDraftBuildFolderUri());
     // await fs().delete(sf.getScriptRoot().getDraftBuildFolderUri()).catch(e => {console.error(e);});

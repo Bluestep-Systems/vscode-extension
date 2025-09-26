@@ -9,7 +9,7 @@ export default async function (): Promise<void> {
       vscode.window.showErrorMessage('No source path provided');
       return;
     }
-    const fileMetaData = ScriptNode.fromUri(activeEditorUri);
+    const fileMetaData = new ScriptNode(activeEditorUri);
     await pullScript(fileMetaData.getScriptRoot().toBaseUpstairsString());
   } catch (e) {
     if (e instanceof Error) {

@@ -2,7 +2,6 @@ import ts from "typescript";
 import * as vscode from "vscode";
 import { App } from "../../App";
 import { FileSystem } from "../fs/FileSystem";
-import { Node } from "./Node";
 import { ScriptNode } from "./ScriptNode";
 import { Err } from "../Err";
 const fs = FileSystem.getInstance;
@@ -45,7 +44,7 @@ export class ScriptCompiler {
    * @throws {Error} Always throws as this method is deprecated
    * @lastreviewed null
    */
-  private getDefaultOptions(sf: Node): ts.CompilerOptions {
+  private getDefaultOptions(sf: ScriptNode): ts.CompilerOptions {
     throw new Err.MethodNotImplementedError();
     const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
@@ -59,7 +58,7 @@ export class ScriptCompiler {
    * @throws {Error} When tsconfig.json parsing fails
    * @lastreviewed null
    */
-  private async getCompilerOptions(sf: Node): Promise<ts.CompilerOptions> {
+  private async getCompilerOptions(sf: ScriptNode): Promise<ts.CompilerOptions> {
     const tsConfigFile = await sf.getClosestTsConfigFile();
     if (!tsConfigFile) {
       App.logger.info("No tsconfig.json found, using default compiler options.");

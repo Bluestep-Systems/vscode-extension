@@ -13,7 +13,7 @@ export default async function () {
     if (!activeEditorUri) {
       return; // if there's no active editor, just return. not our problem
     }
-    const sf = ScriptNode.fromUri(activeEditorUri);
+    const sf = new ScriptNode(activeEditorUri);
     if (!(await sf.exists())) {
       return; // if the active editor is not part of a script, just return. not our problem
     }
