@@ -1,4 +1,6 @@
 //@ts-nocheck
+console.log('JsonPath');
+
 /* eslint-disable */
 
 // this is copied from web source code: `jsonPath.0.8.0.ts`

@@ -3,36 +3,20 @@ import * as vscode from 'vscode';
 import { flattenDirectory } from '../data/flattenDirectory';
 import { Err } from '../Err';
 import { PathElement } from './PathElement';
+import { ScriptFactory } from './ScriptFactory';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
 export class ScriptFolder extends ScriptNode {
-
-
-  /**
-   * Creates a Folder instance from a URI, verifying it points to a directory.
-   * @param uri The URI to create a folder from
-   * @returns A Promise that resolves to a new Folder instance
-   * @throws {Error} When the URI does not point to a folder
-   * @lastreviewed null
-   */
-  public static async fromUri(uri: vscode.Uri): Promise<ScriptFolder> {
-    let isFolder = false;
-    try {
-      const stat = await vscode.workspace.fs.stat(uri);
-      isFolder = stat.type === vscode.FileType.Directory;
-    } catch (error) {
-      // URI doesn't exist or can't be accessed
-    }
-    if (!isFolder) {
-      throw new Err.InvalidResourceTypeError("folder");
-    }
-    return new ScriptFolder(uri);
+  public integrityMatches(_ops?: { upstairsOverride?: URL; }): Promise<boolean> {
+    throw new Error('Method not implemented.');
   }
-
-  public static fromUriNoCheck(uri: vscode.Uri): ScriptFolder {
-    return new ScriptFolder(uri);
+  toUpstairsURL(): URL {
+    throw new Err.MethodNotImplementedError();
   }
-  
+  public async upload(_upstairsUrlOverrideString: string | null): Promise<Response | void> {
+    return;
+  }
+ 
   /**
    * Finds all tsconfig.json files within this folder and its subdirectories.
    * @returns A Promise that resolves to an array of TsConfig instances
@@ -40,7 +24,7 @@ export class ScriptFolder extends ScriptNode {
    */
   public async findAllTsConfigFiles(): Promise<TsConfig[]> {
     const files = await vscode.workspace.findFiles(new vscode.RelativePattern(this.uri(), '**/tsconfig.json'));
-    return files.map(file => TsConfig.fromUri(file));
+    return files.map(file => new TsConfig(file));
   }
   
   /**
@@ -81,7 +65,7 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed null
    */
   public getChildFolder(folderName: string): ScriptFolder {
-    return new ScriptFolder(vscode.Uri.joinPath(this.uri(), folderName));
+    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.uri(), folderName));
   }
 
   /**
@@ -103,7 +87,7 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed null
    */
   public async flatten(): Promise<ScriptNode[]> {
-    return (await this.flattenRaw()).map(uri => new ScriptNode(uri));
+    return (await this.flattenRaw()).map(uri => ScriptFactory.createScriptFromUri(uri));
   }
   
   /**

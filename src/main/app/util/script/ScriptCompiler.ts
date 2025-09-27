@@ -1,9 +1,10 @@
 import ts from "typescript";
 import * as vscode from "vscode";
 import { App } from "../../App";
-import { FileSystem } from "../fs/FileSystem";
-import { ScriptNode } from "./ScriptNode";
 import { Err } from "../Err";
+import { FileSystem } from "../fs/FileSystem";
+import { ScriptFactory } from "./ScriptFactory";
+import type { ScriptNode } from "./ScriptNode";
 const fs = FileSystem.getInstance;
 
 /**
@@ -30,7 +31,7 @@ export class ScriptCompiler {
     declaration: false,
     listEmittedFiles: true,
   };
-  
+
   /**
    * Creates a new ScriptCompiler instance.
    * @lastreviewed null
@@ -119,7 +120,7 @@ export class ScriptCompiler {
       if (sfList.length === 0) {
         throw new Err.NoFilesToCompileError(tsConfigPath);
       }
-      const compilerOptions = await this.getCompilerOptions(ScriptNode.fromPath(tsConfigPath));
+      const compilerOptions = await this.getCompilerOptions(ScriptFactory.createScriptFileFromUri(vscode.Uri.file(tsConfigPath)));
       const sfUris = sfList.map(sf => sf.uri());
       const program = ts.createProgram(sfUris.map(uri => uri.fsPath), compilerOptions);
       const emitResult = program.emit();

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { App } from "../App";
 import { getActiveEditorUri } from "../util/data/getActiveEditorUri";
-import { ScriptNode } from "../util/script/ScriptNode";
+import { ScriptFile } from '../util/script/ScriptFile';
 import { ScriptRoot } from "../util/script/ScriptRoot";
 
 export default async function () {
@@ -13,7 +13,7 @@ export default async function () {
     if (!activeEditorUri) {
       return; // if there's no active editor, just return. not our problem
     }
-    const sf = new ScriptNode(activeEditorUri);
+    const sf = new ScriptFile(activeEditorUri);
     if (!(await sf.exists())) {
       return; // if the active editor is not part of a script, just return. not our problem
     }
@@ -35,7 +35,7 @@ export default async function () {
  * //TODO improve this logic to be more efficient
  * @param sf 
  */
-async function determine(sf: ScriptNode) {
+async function determine(sf: ScriptFile) {
   const curFileName = sf.getFileName();
   const specialFileNames = [ScriptRoot.METADATA_FILENAME];
   if (specialFileNames.includes(curFileName)) {

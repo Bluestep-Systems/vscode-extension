@@ -2,9 +2,9 @@ import * as path from 'path';
 import * as vscode from "vscode";
 import { PrimitiveNestedObject, Serializable, SourceOps } from "../../../../types";
 import { IdUtility } from "./data/IdUtility";
-import { FileSystem } from "./fs/FileSystem";
-import { ScriptFolder } from './script/ScriptFolder';
 import { Err } from './Err';
+import { FileSystem } from "./fs/FileSystem";
+import { ScriptFactory } from './script/ScriptFactory';
 
 const fs = FileSystem.getInstance;
 /**
@@ -140,7 +140,7 @@ export namespace Util {
     const url = new URL(sourceOrigin);
     let found = false;
     const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
-    const wsDir = await fs().readDirectory(await ScriptFolder.fromUri(curWorkspaceFolder.uri));
+    const wsDir = await fs().readDirectory(ScriptFactory.createScriptFolderFromUri(curWorkspaceFolder.uri));
   
     const folderUri = wsDir.reduce(
       (curValue, [subFolderName, _fileType]) => {

@@ -1,7 +1,6 @@
 import { Util } from '../util';
 //@ts-ignore
-import { ScriptCompiler } from '../util/script/ScriptCompiler';
-import { ScriptNode } from '../util/script/ScriptNode';
+import { ScriptFile } from '../util/script/ScriptFile';
 //import { FileSystem } from "../util/fs/FileSystemFactory";
 /**
  * TypeScript compiler worker that compiles the current file using TypeScript's programmatic API.
@@ -10,7 +9,7 @@ import { ScriptNode } from '../util/script/ScriptNode';
 //const fs = FileSystem.getInstance;
 export default async function () {
   const activeUri = await Util.getDownstairsFileUri();
-  const sf = new ScriptNode(activeUri);
+  const sf = new ScriptFile(activeUri);
   console.log("folderUri", sf.folder().path());
   // console.log(sf.pathWithRespectToDraftRoot());
   // const compiler = new ScriptCompiler(sf);

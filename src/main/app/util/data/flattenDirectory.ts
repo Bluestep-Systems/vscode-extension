@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { ScriptFolder } from '../script/ScriptFolder';
+import type{ ScriptFolder } from '../script/ScriptFolder';
+import { ScriptFactory } from '../script/ScriptFactory';
 
 export async function flattenDirectory(dir: ScriptFolder): Promise<vscode.Uri[]> {
   const result: vscode.Uri[] = [];
@@ -9,7 +10,7 @@ export async function flattenDirectory(dir: ScriptFolder): Promise<vscode.Uri[]>
   for (const [name, type] of items) {
     const fullPath = vscode.Uri.joinPath(dir.uri(), name);
     if (type === vscode.FileType.Directory) {
-      const subFolder = await ScriptFolder.fromUri(fullPath);
+      const subFolder = ScriptFactory.createScriptFolderFromUri(fullPath);
       result.push(...(await flattenDirectory(subFolder)));
     } else {
       result.push(fullPath);

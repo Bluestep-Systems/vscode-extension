@@ -6,7 +6,6 @@ import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
 import { readFileText } from '../data/readFile';
-import { UpstairsUrlParser } from '../data/UpstairsUrlParser';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
@@ -14,24 +13,24 @@ import { PathElement } from './PathElement';
 import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
+import { ScriptFactory } from './ScriptFactory';
 const fs = FileSystem.getInstance;
-
 /**
  * A class representing a file or folder element of a script.
  *
  * @lastreviewed 2025-09-15
  */
-export class ScriptNode implements PathElement {
+export abstract class ScriptNode implements PathElement {
 
   /**
    * The downstairs URI (local file system path).
    */
-  private _parser: DownstairsUriParser;
+  protected parser: DownstairsUriParser;
 
   /**
    * The downstairs root object.
    */
-  private _scriptRoot: ScriptRoot;
+  protected scriptRoot: ScriptRoot;
 
 
 
@@ -43,47 +42,11 @@ export class ScriptNode implements PathElement {
    * @lastreviewed 2025-09-15
    */
   constructor(public readonly downstairsUri: vscode.Uri) {
-    this._parser = new DownstairsUriParser(downstairsUri);
-    this._scriptRoot = new ScriptRoot(this);
+    this.parser = new DownstairsUriParser(downstairsUri);
+    this.scriptRoot = new ScriptRoot(this);
   }
 
-
-  /**
-   * Creates a ScriptNode instance from a file system path.
-   * @param fsPath The file system path to create the ScriptNode from
-   * @returns A new ScriptNode instance
-   * @lastreviewed null
-   */
-  public static fromPath(fsPath: string): ScriptNode {
-    const uri = vscode.Uri.file(fsPath);
-    return new ScriptNode(uri);
-  }
-
-  /**
-   * Returns the {@link URL} for the proper upstairs file.
-   * Constructs the appropriate WebDAV {@link URL} based on the file type (root, metadata, declarations, or draft).
-   * @lastreviewed 2025-09-15
-   */
-  public toUpstairsURL(): URL {
-
-    const upstairsBaseUrl = this.getScriptRoot().toBaseUpstairsUrl();
-    const newUrl = new URL(upstairsBaseUrl);
-    if (this._parser.type === "root") {
-      return newUrl;
-    } else if (this._parser.type === "metadata") {
-      const fileName = this.getFileName();
-      if (fileName === ScriptRoot.METADATA_FILENAME) {
-        throw new Err.MetadataFileOperationError("convert to upstairs URL");
-      }
-      newUrl.pathname = upstairsBaseUrl.pathname + fileName;
-    } else if (this._parser.isDeclarationsOrDraft()) {
-      newUrl.pathname = upstairsBaseUrl.pathname + this._parser.type + "/" + this._parser.rest;
-    } else {
-      throw new Err.InvalidFileTypeForUrlError(this._parser.type);
-    }
-
-    return newUrl;
-  }
+  abstract toUpstairsURL(): URL;
 
   /**
    * Gets the downstairs (local) {@link vscode.Uri} for this file
@@ -95,7 +58,7 @@ export class ScriptNode implements PathElement {
    * @lastreviewed null
    */
   public uri() {
-    return this._parser.rawUri;
+    return this.parser.rawUri;
   }
 
   /**
@@ -123,73 +86,15 @@ export class ScriptNode implements PathElement {
     return new Date(lastModifiedHeaderValue);
   }
 
-  /**
-   * Determines a reason to not push this file upstairs.
-   * Checks various conditions including metadata files, declarations, external models, 
-   * .gitignore patterns, info/objects folders, and integrity matching.
-   * 
-   * @param ops.upstairsOverride Optional override URL to check against instead of the default upstairs URL
-   * @returns Empty string if the file can be pushed, otherwise a descriptive reason why not
-   * @lastreviewed 2025-09-15
-   */
-  public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string> {
-
-    if (this._parser.type === "root") {
-      return "Node is the root folder";
-    }
-    if (this.getFileName() === ScriptRoot.METADATA_FILENAME) {
-      return "Node is a metadata file";
-    }
-    if (this.isInDeclarations()) {
-      return "Node is in declarations";
-    }
-    if (await this.isExternalModel()) {
-      return "Node is an external model";
-    }
-    if (await this.isInGitIgnore()) {
-      return "Node is ignored by .gitignore";
-    }
-    if (await this.isInInfoOrObjects()) {
-      return "Node is in info or objects";
-    }
-    if (await this.isFolder()) {
-      return "Node is a folder";
-    }
-    if ((await this.isFile()) && await this.integrityMatches(ops)) {
-      return "File integrity matches";
-    }
-    return "";
-  }
 
   /**
    * default implementation always returns true since folders don't have integrity to match
    * @param _ops 
    * @returns 
    */
-  public async integrityMatches(_ops?: { upstairsOverride?: URL }): Promise<boolean> {
-    return true;
-  }
+  public abstract integrityMatches(_ops?: { upstairsOverride?: URL }): Promise<boolean>;
 
 
-
-  /**
-   * Gets the content of the local file as UTF-8 text.
-   * @lastreviewed 2025-09-15
-   */
-  public async getDownstairsContent(): Promise<string> {
-    const downstairsUri = this.uri();
-    try {
-      const fileData = await fs().readFile(downstairsUri);
-      return Buffer.from(fileData).toString('utf8');
-    } catch (e) {
-      if (e instanceof Error || typeof e === 'string') {
-        App.logger.error(e);
-      } else {
-        App.logger.error(`Error reading downstairs file: ${e}`);
-      }
-      throw new Err.FileReadError(`Error reading downstairs file: ${e}`);
-    }
-  }
 
   /**
    * Gets the content of the upstairs file as text.
@@ -274,7 +179,7 @@ export class ScriptNode implements PathElement {
    * @lastreviewed 2025-09-15
    */
   public getScriptRoot() {
-    return this._scriptRoot;
+    return this.scriptRoot;
   }
 
   /**
@@ -333,9 +238,9 @@ export class ScriptNode implements PathElement {
    * @lastreviewed 2025-09-15
    */
   withScriptRoot(root: ScriptRoot): ScriptNode {
-    this._scriptRoot = root;
+    this.scriptRoot = root;
     //TODO determine if this if-check is even neccessary
-    if (this._parser.type === "metadata") {
+    if (this.parser.type === "metadata") {
       throw new Err.MetadataFileOperationError("overwrite script root");
     }
     return this;
@@ -350,7 +255,7 @@ export class ScriptNode implements PathElement {
    * @lastreviewed 2025-09-15
    */
   withParser(parser: DownstairsUriParser): ScriptNode {
-    this._parser = parser;
+    this.parser = parser;
     return this;
   }
 
@@ -371,7 +276,7 @@ export class ScriptNode implements PathElement {
    * @lastreviewed 2025-09-15
    */
   private async getConfigurationFile<T>(fileName: string): Promise<T> {
-    const files = await fs().findFiles(new vscode.RelativePattern(this._scriptRoot.getRootUri(), `**/${fileName}`));
+    const files = await fs().findFiles(new vscode.RelativePattern(this.scriptRoot.getRootUri(), `**/${fileName}`));
     if (!files || files.length !== 1) {
       throw new Err.ConfigFileError(fileName, files ? files.length : 0);
     }
@@ -389,19 +294,7 @@ export class ScriptNode implements PathElement {
     return this.getConfigurationFile<ConfigJsonContent>('config.json');
   }
 
-  /**
-   * Determines if the file is an external model.
-   * 
-   * External models are defined in the config.json file, and are not to be pushed or pulled.
-   * @lastreviewed 2025-09-15
-   */
-  public async isExternalModel(): Promise<boolean> {
-    const config = await this.getConfigFile();
-    if (config.models?.map(m => m.name).includes(this.getFileName())) {
-      return true;
-    }
-    return false;
-  }
+
 
   /**
    * Gets the metadata file for the script.
@@ -411,24 +304,18 @@ export class ScriptNode implements PathElement {
     return this.getConfigurationFile<MetaDataJsonFileContent>('metadata.json');
   }
 
-  /**
-   * Gets the file name from the downstairs URI.
-   * @lastreviewed 2025-09-15
-   */
-  public getFileName(): string {
-    return path.parse(this.uri().fsPath).base;
-  }
+
 
   /**
    * Checks if the script file is in the declarations folder.
    * @lastreviewed 2025-09-15
    */
   public isInDeclarations(): boolean {
-    return this._parser.type === "declarations";
+    return this.parser.type === "declarations";
   }
 
   public isInSnapshot(): boolean {
-    return this._parser.type === "snapshot";
+    return this.parser.type === "snapshot";
   }
 
   /**
@@ -462,7 +349,7 @@ export class ScriptNode implements PathElement {
    * @lastreviewed 2025-09-15
    */
   public isInDraft(): boolean {
-    return this._parser.type === "draft";
+    return this.parser.type === "draft";
   }
 
   /**
@@ -511,7 +398,7 @@ export class ScriptNode implements PathElement {
    */
   public folder(): ScriptFolder {
     const fileUri = this.uri();
-    return ScriptFolder.fromUriNoCheck(vscode.Uri.joinPath(fileUri, '..'));
+    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(fileUri, '..'));
   }
 
   /**
@@ -537,7 +424,7 @@ export class ScriptNode implements PathElement {
     if (!tsConfigUri) {
       throw new Err.ConfigFileError("tsconfig.json", 0);
     }
-    return new TsConfig(new ScriptNode(tsConfigUri));
+    return new TsConfig(tsConfigUri);
   }
 
   /**
@@ -546,15 +433,6 @@ export class ScriptNode implements PathElement {
    */
   private async getClosestTsConfigUri() {
     return await fs().closest(this.uri(), TsConfig.NAME);
-  }
-
-
-  public shouldCopyRaw() {
-    return path.extname(this.getFileName()).toLowerCase() !== '.ts';
-  }
-
-  public copyToSnapshot() {
-    console.log("copying file over", this.uri().fsPath);
   }
 
   public closest(fileName: string) {
@@ -570,66 +448,11 @@ export class ScriptNode implements PathElement {
     return await tsConfig.getBuildFolder();
   }
 
-  public get extension() {
-    return path.extname(this.getFileName()).toLowerCase();
-  }
-
   public pathWithRespectToDraftRoot() {
     return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), "draft").fsPath, this.uri().fsPath);
   }
 
-  async upload(upstairsUrlOverrideString: string | null = null): Promise<Response | void> {
-    App.logger.info("Preparing to send file:", this.uri().fsPath);
-    App.logger.info("To target formula URI:", upstairsUrlOverrideString);
-    const upstairsUrlParser = new UpstairsUrlParser(upstairsUrlOverrideString || this.toUpstairsURL().toString());
-    const { webDavId, url: upstairsUrl } = upstairsUrlParser;
-    const upstairsOverride = new URL(upstairsUrl);
-    const downstairsUri = this.uri();
-    const scriptNode = new ScriptNode(downstairsUri);
-
-    const desto = downstairsUri.fsPath
-      .split(upstairsUrl.host + "/" + webDavId)[1];
-    if (typeof desto === 'undefined') {
-      throw new Err.DestinationPathError(downstairsUri.fsPath);
-    }
-    upstairsOverride.pathname = `/files/${webDavId}${desto}`;
-    const reason = await scriptNode.getReasonToNotPush({ upstairsOverride });
-    if (reason) {
-      App.logger.info(`${reason}; not pushing file:`, downstairsUri.fsPath);
-      return;
-    }
-    App.logger.info("Destination:", upstairsUrl.toString());
-
-
-    //TODO investigate if this can be done via streaming
-    const fileContents = await fs().readFile(downstairsUri);
-    const resp = await SM.fetch(upstairsOverride, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: fileContents
-    });
-    if (!resp.ok) {
-      const details = await getDetails(resp);
-      throw new Err.FileSendError(details);
-    }
-    await scriptNode.touch("lastPushed");
-    App.logger.info("File sent successfully:", downstairsUri.fsPath);
-    return resp;
-    async function getDetails(resp: Response) {
-      return `
-========
-========
-status: ${resp.status}
-statusText: ${resp.statusText}
-========
-========
-text: ${await resp.text()}
-========
-========`;
-    }
-  }
+  abstract upload(upstairsUrlOverrideString: string | null): Promise<Response | void> ;
 
   /**
    * 
@@ -658,7 +481,7 @@ text: ${await resp.text()}
    */
   public async toFolder(): Promise<ScriptFolder> {
     if (await this.isFolder()) {
-      return ScriptFolder.fromUriNoCheck(this.uri());
+      return ScriptFactory.createScriptFolderFromUri(this.uri());
     } else {
       throw new Err.InvalidResourceTypeError("folder");
     }
@@ -726,13 +549,7 @@ text: ${await resp.text()}
     await fs().copy(this.uri(), uri, { overwrite: true });
   }
 
-  public isTsConfig(): boolean {
-    return this.getFileName() === TsConfig.NAME;
-  }
 
-  public isMarkdown(): boolean {
-    return this.extension === '.md';
-  }
 
   public async getHash(): Promise<string | null> {
     try {

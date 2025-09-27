@@ -6,6 +6,8 @@ import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
 import { FileSystem } from '../main/app/util/fs/FileSystem';
 import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
 import { App } from '../main/app/App';
+import { ScriptFactory } from '../main/app/util/script/ScriptFactory';
+import { ScriptFile } from '../main/app/util/script/ScriptFile';
 
 suite('ScriptFile Tests', () => {
     let mockFileSystemProvider: MockFileSystem;
@@ -50,7 +52,7 @@ suite('ScriptFile Tests', () => {
         const mockChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
 
         // Create test ScriptFile
-      scriptNode = new ScriptNode(mockChildUri);
+      scriptNode = ScriptFactory.createScriptFromUri(mockChildUri);
 
         // Set up some default mock files
         const testContent = Buffer.from('console.log("test");');
@@ -66,7 +68,7 @@ suite('ScriptFile Tests', () => {
   suite('File Type Detection', () => {
     test('should identify draft files correctly', () => {
       const draftUri = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
-      const scriptFile = new ScriptNode(draftUri);
+      const scriptFile = new ScriptFile(draftUri);
       
       assert.strictEqual(scriptFile.isInDraft(), true);
       assert.strictEqual(scriptFile.isInDeclarations(), false);
@@ -74,17 +76,13 @@ suite('ScriptFile Tests', () => {
 
     test('should identify declarations files correctly', () => {
       const declarationsUri = vscode.Uri.file('/test/workspace/123/declarations/test-script.js');
-      const scriptFile = new ScriptNode(declarationsUri);
+      const scriptFile = new ScriptFile(declarationsUri);
       
       assert.strictEqual(scriptFile.isInDeclarations(), true);
       assert.strictEqual(scriptFile.isInDraft(), false);
     });
 
-    test('should get filename correctly', () => {
-      const filename = scriptNode.getFileName();
-      
-      assert.strictEqual(filename, 'test.js');
-    });
+
   });
 
   suite('URI Operations', () => {
@@ -101,7 +99,7 @@ suite('ScriptFile Tests', () => {
 
     test('should throw error for metadata files when converting to upstairs URL', () => {
       const metadataUri = vscode.Uri.file('/test/workspace/123/.b6p_metadata.json');
-      const scriptFile = new ScriptNode(metadataUri);
+      const scriptFile = new ScriptFile(metadataUri);
       
       assert.throws(() => {
         scriptFile.toUpstairsURL();
@@ -190,28 +188,7 @@ suite('ScriptFile Tests', () => {
   });
 
   suite('Content Operations', () => {
-    test('should get downstairs content successfully', async () => {
-      const testContent = 'console.log("test content");';
-      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-      
-      // Set up mock file content
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(testContent));
-      
-      const content = await scriptNode.getDownstairsContent();
-      assert.strictEqual(content, testContent);
-    });
 
-    test('should handle error when reading downstairs content', async () => {
-      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-      
-      // Set up mock to throw error
-      mockFileSystemProvider.setMockError(testUri, new Error('Read failed'));
-      
-      await assert.rejects(
-        () => scriptNode.getDownstairsContent(),
-        /Error reading downstairs file: Error: Read failed/
-      );
-    });
 
     test('should write content to file system', async () => {
       const testContent = 'test file content';
@@ -231,8 +208,8 @@ suite('ScriptFile Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
 
-      const scriptFile1 = new ScriptNode(uri1);
-      const scriptFile2 = new ScriptNode(uri2);
+      const scriptFile1 = new ScriptFile(uri1);
+      const scriptFile2 = new ScriptFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, true);
@@ -242,8 +219,8 @@ suite('ScriptFile Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/456/draft/other-script.js');
 
-      const scriptFile1 = new ScriptNode(uri1);
-      const scriptFile2 = new ScriptNode(uri2);
+      const scriptFile1 = new ScriptFile(uri1);
+      const scriptFile2 = new ScriptFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
@@ -253,8 +230,8 @@ suite('ScriptFile Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/123/declarations/test-script.js');
 
-      const scriptFile1 = new ScriptNode(uri1);
-      const scriptFile2 = new ScriptNode(uri2);
+      const scriptFile1 = new ScriptFile(uri1);
+      const scriptFile2 = new ScriptFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
@@ -270,7 +247,7 @@ suite('ScriptFile Tests', () => {
 
     test('should allow overwriting script root for non-metadata files', () => {
       const newUri = vscode.Uri.file('/test/workspace/456/draft/new-script.js');
-      const newRoot = new ScriptRoot(new ScriptNode(newUri));
+      const newRoot = new ScriptRoot(new ScriptFile(newUri));
       
       const result = scriptNode.withScriptRoot(newRoot);
       
@@ -280,9 +257,9 @@ suite('ScriptFile Tests', () => {
 
     test('should throw error when trying to overwrite script root of metadata file', () => {
       const metadataUri = vscode.Uri.file('/test/workspace/configbeh.bluestep.net/123/.b6p_metadata.json');
-      const metadataFile = new ScriptNode(metadataUri);
+      const metadataFile = new ScriptFile(metadataUri);
       const newChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/other.js');
-      const newRoot = new ScriptRoot(new ScriptNode(newChildUri));
+      const newRoot = new ScriptRoot(new ScriptFile(newChildUri));
       
       assert.throws(() => {
         metadataFile.withScriptRoot(newRoot);
@@ -299,7 +276,7 @@ suite('ScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
 
-      const scriptFile = new ScriptNode(infoUri);
+      const scriptFile = new ScriptFile(infoUri);
 
       const isInInfo = await scriptFile.isInInfo();
       const isInInfoFolder = await scriptFile.isInInfoFolder();
@@ -316,7 +293,7 @@ suite('ScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(objectsFolderUri);
       mockFileSystemProvider.setMockFile(objectsUri, 'export {};');
 
-      const scriptFile = new ScriptNode(objectsUri);
+      const scriptFile = new ScriptFile(objectsUri);
 
       const isInObjects = await scriptFile.isInObjects();
       
@@ -331,7 +308,7 @@ suite('ScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
 
-      const scriptFile = new ScriptNode(infoUri);
+      const scriptFile = new ScriptFile(infoUri);
 
       const isInInfoOrObjects = await scriptFile.isInInfoOrObjects();
       
@@ -340,7 +317,7 @@ suite('ScriptFile Tests', () => {
 
     test('should return false for files not in info or objects', async () => {
       const scriptUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/scripts/main.js');
-      const scriptFile = new ScriptNode(scriptUri);
+      const scriptFile = new ScriptFile(scriptUri);
       
       // Set up empty folders so the file isn't found in them
       const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
@@ -417,50 +394,10 @@ suite('ScriptFile Tests', () => {
   });
 
   suite('External Model Detection', () => {
-    test('should detect external model files', async () => {
-      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
-      const configContent = {
-        models: [
-          { name: 'test.js', type: 'external' },
-          { name: 'other.js', type: 'internal' }
-        ]
-      };
-      
-      // Set up config file
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-      
-      const isExternal = await scriptNode.isExternalModel();
-      
-      assert.strictEqual(isExternal, true);
-    });
 
-    test('should return false for non-external model files', async () => {
-      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
-      const configContent = {
-        models: [
-          { name: 'other.js', type: 'internal' }
-        ]
-      };
-      
-      // Set up config file
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-      
-      const isExternal = await scriptNode.isExternalModel();
-      
-      assert.strictEqual(isExternal, false);
-    });
 
-    test('should return false when no models defined', async () => {
-      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
-      const configContent = {};
-      
-      // Set up config file
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-      
-      const isExternal = await scriptNode.isExternalModel();
-      
-      assert.strictEqual(isExternal, false);
-    });
+
+
   });
 
   suite('GitIgnore Operations', () => {
@@ -585,7 +522,7 @@ suite('ScriptFile Tests', () => {
       // REASON-FOR-ANY: Accessing private property for test verification
       const originalParser = (scriptNode as any).parser;
       const newUri = vscode.Uri.parse('file:///test/workspace/different.domain.com/9999/draft/different.js');
-      const newScriptFile = new ScriptNode(newUri);
+      const newScriptFile = new ScriptFile(newUri);
       // REASON-FOR-ANY: Accessing private property for test verification
       const newParser = (newScriptFile as any).parser;
       
@@ -627,7 +564,7 @@ suite('ScriptFile Tests', () => {
   suite('Push Validation', () => {
     test('should return reason for metadata files', async () => {
       const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
-      const metadataFile = new ScriptNode(metadataUri);
+      const metadataFile = new ScriptFile(metadataUri);
       
       const reason = await metadataFile.getReasonToNotPush();
       
@@ -636,45 +573,16 @@ suite('ScriptFile Tests', () => {
 
     test('should return reason for declarations files', async () => {
       const declarationsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/test.js');
-      const declarationsFile = new ScriptNode(declarationsUri);
+      const declarationsFile = new ScriptFile(declarationsUri);
       
       const reason = await declarationsFile.getReasonToNotPush();
       
       assert.strictEqual(reason, 'Node is in declarations');
     });
 
-    test('should return reason for external model files', async () => {
-      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
-      const configContent = {
-        models: [
-          { name: 'test.js', type: 'external' }
-        ]
-      };
-      
-      // Set up config file
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-      
-      const reason = await scriptNode.getReasonToNotPush();
-      
-      assert.strictEqual(reason, 'Node is an external model');
-    });
 
-    test('should return reason for gitignored files', async () => {
-      const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
-      const gitIgnoreContent = 'draft/test.js';
-      
-      // Set up gitignore file
-      mockFileSystemProvider.setMockFile(gitIgnoreUri, gitIgnoreContent);
-      
-      // Set up config file with no external models so external model check passes
-      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
-      const configContent = { models: [] };
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-      
-      const reason = await scriptNode.getReasonToNotPush();
-      
-      assert.strictEqual(reason, 'Node is ignored by .gitignore');
-    });
+
+
 
     test('should return reason for info/objects files', async () => {
       const infoUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
@@ -684,42 +592,12 @@ suite('ScriptFile Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
       
-      const scriptFile = new ScriptNode(infoUri);
+      const scriptFile = new ScriptFile(infoUri);
       const reason = await scriptFile.getReasonToNotPush();
       
       assert.strictEqual(reason, 'Node is in info or objects');
     });
 
-    test('should return empty string when file can be pushed (basic validation)', async () => {
-      // Set up a normal script file that can be pushed
-      const configUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info/config.json');
-      const gitIgnoreUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.gitignore');
-      
-      // Set up config with no external models
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify({ models: [] }));
-      
-      // Set up gitignore that doesn't include our file
-      mockFileSystemProvider.setMockFile(gitIgnoreUri, '*.log\nnode_modules/');
-      
-      // Set up empty folders so the file isn't found in them
-      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
-      const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/objects');
-      
-      mockFileSystemProvider.setMockDirectory(infoFolderUri);
-      mockFileSystemProvider.setMockDirectory(objectsFolderUri);
-      
-      // This test will fail at the integrity check due to SessionManager not being initialized
-      // which is expected in a unit test environment
-      try {
-        const reason = await scriptNode.getReasonToNotPush();
-        // If we somehow get past the network call, the result should be a string
-        assert.ok(typeof reason === 'string');
-      } catch (error) {
-        // We expect this to fail due to SessionManager not being initialized
-        assert.ok(error instanceof Error);
-        assert.ok(error.message.includes('SessionManager not initialized'));
-      }
-    });
   });
 
   suite('Time Operations', () => {

@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
 import { readFileText } from "../data/readFile";
-import { FileSystem } from "../fs/FileSystem";
-import { ScriptFolder } from "./ScriptFolder";
-import { ScriptNode } from "./ScriptNode";
 import { Err } from "../Err";
+import { FileSystem } from "../fs/FileSystem";
 import { PathElement } from "./PathElement";
+import { ScriptFactory } from "./ScriptFactory";
+import { ScriptFile } from "./ScriptFile";
 const fs = FileSystem.getInstance;
 
 /**
@@ -18,41 +18,18 @@ const fs = FileSystem.getInstance;
  */
 export class TsConfig implements PathElement {
   static NAME = "tsconfig.json";
-  
+  private sf: ScriptFile;
   /**
    * Creates a new TsConfig instance wrapping a ScriptFile.
    * @param sf The ScriptFile representing the tsconfig.json file
    * @throws {Error} When the ScriptFile does not point to a tsconfig.json file
    * @lastreviewed null
    */
-  constructor(private readonly sf: ScriptNode) {
-    if (!this.sf.path().endsWith(TsConfig.NAME)) {
+  constructor(protected readonly rawUri: vscode.Uri) {
+    this.sf = new ScriptFile(rawUri);
+    if (!this.path().endsWith(TsConfig.NAME)) {
       throw new Err.InvalidResourceTypeError("tsconfig.json file");
     }
-  }
-  
-  /**
-   * Creates a TsConfig instance from a VS Code URI.
-   * @param uri The URI pointing to a tsconfig.json file
-   * @returns A new TsConfig instance
-   * @throws {Error} When the URI does not point to a tsconfig.json file
-   * @lastreviewed null
-   */
-  static fromUri(uri: vscode.Uri): TsConfig {
-    if (!uri.fsPath.endsWith(TsConfig.NAME)) {
-      throw new Err.InvalidResourceTypeError("tsconfig.json file");
-    }
-    return new TsConfig(new ScriptNode(uri));
-  }
-  
-  /**
-   * Creates a TsConfig instance from a file system path.
-   * @param fsPath The file system path to a tsconfig.json file
-   * @returns A new TsConfig instance
-   * @lastreviewed null
-   */
-  static fromPath(fsPath: string): TsConfig {
-    return TsConfig.fromUri(vscode.Uri.file(fsPath));
   }
 
   /**
@@ -65,7 +42,7 @@ export class TsConfig implements PathElement {
     if (!(other instanceof TsConfig)) {
       return false;
     }
-    return this.sf.equals(other.sf);
+    return this.equals(other);
   }
 
   /**
@@ -74,7 +51,7 @@ export class TsConfig implements PathElement {
    * @lastreviewed null
    */
   public path(): string {
-    return this.sf.path();
+    return this.rawUri.fsPath;
   }
 
   /**
@@ -83,7 +60,7 @@ export class TsConfig implements PathElement {
    * @lastreviewed null
    */
   public uri(): vscode.Uri {
-    return this.sf.uri();
+    return this.rawUri;
   }
 
   /**
@@ -92,7 +69,7 @@ export class TsConfig implements PathElement {
    * @lastreviewed null
    */
   public folder() {
-    return this.sf.folder();
+    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.rawUri, ".."));
   }
 
   /**
@@ -119,7 +96,7 @@ export class TsConfig implements PathElement {
       return false;
     }
   }
-  
+
   /**
    * Returns this TsConfig instance as it is already the closest tsconfig.json file to itself.
    * @returns A Promise that resolves to this TsConfig instance
@@ -128,20 +105,11 @@ export class TsConfig implements PathElement {
   public async getClosestTsConfigFile(): Promise<TsConfig> {
     return this;
   }
-  
-  /**
-   * Gets the ScriptRoot for this tsconfig.json file.
-   * @returns The ScriptRoot instance
-   * @lastreviewed null
-   */
-  public getScriptRoot() {
-    return this.sf.getScriptRoot();
-  }
 
-  public async getBuildFolder(): Promise<ScriptFolder> {
+  public async getBuildFolder() {
     const fileContents = await readFileText(this.uri());
     const config = JSON.parse(fileContents);
     const outDir = config.compilerOptions?.outDir || (() => { throw new Err.MissingConfigurationError("outDir"); })();
-    return await ScriptFolder.fromUri(vscode.Uri.joinPath(this.folder().uri(), outDir));
+    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.folder().uri(), outDir));
   }
 }

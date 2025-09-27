@@ -7,7 +7,8 @@ import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ScriptCompiler } from './ScriptCompiler';
-import { ScriptFolder } from './ScriptFolder';
+import { ScriptFactory } from './ScriptFactory';
+import { ScriptFile } from './ScriptFile';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
@@ -291,7 +292,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-09-15
    */
   static fromRootUri(rootUri: vscode.Uri) {
-    return new ScriptRoot(new ScriptFolder(vscode.Uri.joinPath(rootUri, "/")));
+    return new ScriptRoot(ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(rootUri, "/")));
   }
 
 
@@ -412,7 +413,7 @@ export class ScriptRoot {
     const compiler = new ScriptCompiler();
     const copiedFiles: string[] = [];
     for (const file of allDraftFiles) {
-      if (file.isMarkdown() ||
+      if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
         await file.isInItsRespectiveBuildFolder() ||
         await file.isInInfoOrObjects() || // TODO delete this after these folders are obviated
         await file.isFolder()) {
@@ -421,13 +422,13 @@ export class ScriptRoot {
 
       if (file.path().endsWith(".ts") || file.path().endsWith(".tsx")) {
         await compiler.addFile(file);
-      } else if (!file.isTsConfig()) {
+      } else if (!(file as ScriptFile).isTsConfig()) {
         copiedFiles.push(file.path());
         await file.copyDraftFileToBuild();
       }
     }
     const emittedEntries = await compiler.compile();
-    const emittedScriptNodes = emittedEntries.map(e => ScriptNode.fromPath(e));
+    const emittedScriptNodes = emittedEntries.map(e => ScriptFactory.createScriptFromUri(vscode.Uri.file(e)));
 
     // now we need to delete any files in the build folder(s) that were not emitted by the compiler
     // or copied (like JSON files, js files, etc).
@@ -463,7 +464,7 @@ export class ScriptRoot {
    * @lastreviewed null
    */
   public getDraftFolder() {
-    return ScriptFolder.fromUriNoCheck(vscode.Uri.joinPath(this.rootUri, "draft"));
+    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.rootUri, "draft"));
   }
 
   /**
@@ -481,7 +482,7 @@ export class ScriptRoot {
    * @lastreviewed null
    */
   public getSnapshotFolder() {
-    return ScriptFolder.fromUriNoCheck(vscode.Uri.joinPath(this.rootUri, "snapshot"));
+    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.rootUri, "snapshot"));
   }
 
   /**
@@ -490,12 +491,12 @@ export class ScriptRoot {
    * @lastreviewed null
    */
   public getDeclarationsFolder() {
-    return ScriptFolder.fromUriNoCheck(vscode.Uri.joinPath(this.rootUri, "declarations"));
+    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.rootUri, "declarations"));
   }
 
   public async findTsConfigFiles(): Promise<TsConfig[]> {
     const tsConfigFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.getDraftFolder().uri(), '**/' + TsConfig.NAME));
-    return tsConfigFiles.map(f => TsConfig.fromUri(f));
+    return tsConfigFiles.map(f => new TsConfig(f));
   }
 
   public async getBadTsFiles(): Promise<string[]> {
@@ -517,7 +518,7 @@ export class ScriptRoot {
         filtered.push(f);
       }
     }
-    return filtered.map(f => ScriptNode.fromPath(f.path()));
+    return filtered;
   }
   public async preflightCheck(): Promise<string> {
     if (!(await this.isCopacetic())) {

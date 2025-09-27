@@ -4,13 +4,12 @@ import { flattenDirectory } from '../util/data/flattenDirectory';
 import { getHostFolderUri } from '../util/data/getHostFolderUri';
 import { getScript } from "../util/data/getScript";
 import { UpstairsUrlParser } from "../util/data/UpstairsUrlParser";
-import { ScriptNode } from '../util/script/ScriptNode';
+import { Err } from '../util/Err';
+import { ScriptFactory } from '../util/script/ScriptFactory';
+import { ScriptFile } from '../util/script/ScriptFile';
+import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
-import { ScriptRoot } from '../util/script/ScriptRoot';
-import { Err } from '../util/Err';
-import { ScriptFolder } from '../util/script/ScriptFolder';
-import { ScriptFile } from '../util/script/ScriptFile';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -43,7 +42,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       title: "Pulling Script...",
       cleanupMessage: "Cleaning up the downstairs folder..."
     });
-    const directory = await ScriptFolder.fromUri(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
+    const directory = ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
     const flattenedDirectory = await flattenDirectory(directory);
     await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
@@ -64,7 +63,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
   const toDelete: vscode.Uri[] = [];
   for (const ep of existingPaths) {
     //ignore special files
-    if (await new ScriptNode(ep).isInGitIgnore()) {
+    if (await ScriptFactory.createScriptFromUri(ep).isInGitIgnore()) {
       continue;
     }
     if ([ScriptRoot.METADATA_FILENAME, ScriptRoot.GITIGNORE_FILENAME].some(special => ep.fsPath.endsWith(special))) {
