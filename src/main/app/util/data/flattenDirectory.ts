@@ -10,7 +10,7 @@ export async function flattenDirectory(dir: ScriptFolder): Promise<vscode.Uri[]>
   for (const [name, type] of items) {
     const fullPath = vscode.Uri.joinPath(dir.uri(), name);
     if (type === vscode.FileType.Directory) {
-      const subFolder = ScriptFactory.createScriptFolderFromUri(fullPath);
+      const subFolder = ScriptFactory.createFolder(() => fullPath);
       result.push(...(await flattenDirectory(subFolder)));
     } else {
       result.push(fullPath);

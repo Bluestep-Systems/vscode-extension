@@ -8,20 +8,20 @@ import * as vscode from "vscode";
 console.log("ScriptFactory loaded");
 export namespace ScriptFactory {
 
-  export function createScriptFromUri(uri: vscode.Uri): ScriptNode {
+  export function createNode(uriSupplier: () => vscode.Uri): ScriptNode {
     
-    if (uri.fsPath.endsWith('/')) {
-      return new ScriptFolder(uri);
+    if (uriSupplier().fsPath.endsWith('/')) {
+      return new ScriptFolder(uriSupplier());
     } else {
-      return new ScriptFile(uri);
+      return new ScriptFile(uriSupplier());
     }
   }
 
-  export function createScriptFolderFromUri(uri: vscode.Uri): ScriptFolder {
-    return new ScriptFolder(uri);
+  export function createFolder(uriSupplier: () => vscode.Uri): ScriptFolder {
+    return new ScriptFolder(uriSupplier());
   }
 
-  export function createScriptFileFromUri(uri: vscode.Uri): ScriptFile {
-    return new ScriptFile(uri);
+  export function createFile(uriSupplier: () => vscode.Uri): ScriptFile {
+    return new ScriptFile(uriSupplier());
   }
 }

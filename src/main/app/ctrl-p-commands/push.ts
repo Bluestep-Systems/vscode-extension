@@ -112,7 +112,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     throw new Err.CleanupScriptError();
   }
   const rawFilePaths = getScriptRet;
-  const directory = ScriptFactory.createScriptFolderFromUri(downstairsRootFolderUri);
+  const directory = ScriptFactory.createFolder(() => downstairsRootFolderUri);
   const flattenedDownstairs = await flattenDirectory(directory);
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.

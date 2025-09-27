@@ -275,7 +275,7 @@ export class ScriptFile extends ScriptNode {
     const { webDavId, url: upstairsUrl } = upstairsUrlParser;
     const upstairsOverride = new URL(upstairsUrl);
     const downstairsUri = this.uri();
-    const scriptNode = ScriptFactory.createScriptFromUri(downstairsUri);
+    const scriptNode = ScriptFactory.createNode(() => downstairsUri);
 
     const desto = downstairsUri.fsPath
       .split(upstairsUrl.host + "/" + webDavId)[1];

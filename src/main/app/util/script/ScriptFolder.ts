@@ -65,7 +65,7 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed null
    */
   public getChildFolder(folderName: string): ScriptFolder {
-    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.uri(), folderName));
+    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.uri(), folderName));
   }
 
   /**
@@ -87,7 +87,7 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed null
    */
   public async flatten(): Promise<ScriptNode[]> {
-    return (await this.flattenRaw()).map(uri => ScriptFactory.createScriptFromUri(uri));
+    return (await this.flattenRaw()).map(uri => ScriptFactory.createNode(() => uri));
   }
   
   /**

@@ -398,7 +398,7 @@ export abstract class ScriptNode implements PathElement {
    */
   public folder(): ScriptFolder {
     const fileUri = this.uri();
-    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(fileUri, '..'));
+    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(fileUri, '..'));
   }
 
   /**
@@ -481,7 +481,7 @@ export abstract class ScriptNode implements PathElement {
    */
   public async toFolder(): Promise<ScriptFolder> {
     if (await this.isFolder()) {
-      return ScriptFactory.createScriptFolderFromUri(this.uri());
+      return ScriptFactory.createFolder(() => this.uri());
     } else {
       throw new Err.InvalidResourceTypeError("folder");
     }

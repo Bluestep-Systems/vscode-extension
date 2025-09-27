@@ -40,7 +40,6 @@ export class ScriptRoot {
    * @lastreviewed 2025-09-15
    */
   constructor(public readonly node: ScriptNode) {
-
     const parser = new DownstairsUriParser(node.uri());
     const shavedName = parser.getShavedName();
     const scriptPath = path.parse(shavedName);                  // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
@@ -292,7 +291,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-09-15
    */
   static fromRootUri(rootUri: vscode.Uri) {
-    return new ScriptRoot(ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(rootUri, "/")));
+    return new ScriptRoot(ScriptFactory.createFolder(() => vscode.Uri.joinPath(rootUri, "/")));
   }
 
 
@@ -428,7 +427,7 @@ export class ScriptRoot {
       }
     }
     const emittedEntries = await compiler.compile();
-    const emittedScriptNodes = emittedEntries.map(e => ScriptFactory.createScriptFromUri(vscode.Uri.file(e)));
+    const emittedScriptNodes = emittedEntries.map(e => ScriptFactory.createNode(() => vscode.Uri.file(e)));
 
     // now we need to delete any files in the build folder(s) that were not emitted by the compiler
     // or copied (like JSON files, js files, etc).
@@ -464,7 +463,7 @@ export class ScriptRoot {
    * @lastreviewed null
    */
   public getDraftFolder() {
-    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.rootUri, "draft"));
+    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "draft"));
   }
 
   /**
@@ -482,7 +481,7 @@ export class ScriptRoot {
    * @lastreviewed null
    */
   public getSnapshotFolder() {
-    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.rootUri, "snapshot"));
+    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "snapshot"));
   }
 
   /**
@@ -491,7 +490,7 @@ export class ScriptRoot {
    * @lastreviewed null
    */
   public getDeclarationsFolder() {
-    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.rootUri, "declarations"));
+    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "declarations"));
   }
 
   public async findTsConfigFiles(): Promise<TsConfig[]> {

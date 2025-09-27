@@ -42,7 +42,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       title: "Pulling Script...",
       cleanupMessage: "Cleaning up the downstairs folder..."
     });
-    const directory = ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
+    const directory = ScriptFactory.createFolder(() => vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
     const flattenedDirectory = await flattenDirectory(directory);
     await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
@@ -63,7 +63,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
   const toDelete: vscode.Uri[] = [];
   for (const ep of existingPaths) {
     //ignore special files
-    if (await ScriptFactory.createScriptFromUri(ep).isInGitIgnore()) {
+    if (await ScriptFactory.createNode(() => ep).isInGitIgnore()) {
       continue;
     }
     if ([ScriptRoot.METADATA_FILENAME, ScriptRoot.GITIGNORE_FILENAME].some(special => ep.fsPath.endsWith(special))) {

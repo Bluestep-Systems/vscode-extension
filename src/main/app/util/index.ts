@@ -140,7 +140,7 @@ export namespace Util {
     const url = new URL(sourceOrigin);
     let found = false;
     const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
-    const wsDir = await fs().readDirectory(ScriptFactory.createScriptFolderFromUri(curWorkspaceFolder.uri));
+    const wsDir = await fs().readDirectory(ScriptFactory.createFolder(() => curWorkspaceFolder.uri));
   
     const folderUri = wsDir.reduce(
       (curValue, [subFolderName, _fileType]) => {

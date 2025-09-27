@@ -69,7 +69,7 @@ export class TsConfig implements PathElement {
    * @lastreviewed null
    */
   public folder() {
-    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.rawUri, ".."));
+    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rawUri, ".."));
   }
 
   /**
@@ -110,6 +110,6 @@ export class TsConfig implements PathElement {
     const fileContents = await readFileText(this.uri());
     const config = JSON.parse(fileContents);
     const outDir = config.compilerOptions?.outDir || (() => { throw new Err.MissingConfigurationError("outDir"); })();
-    return ScriptFactory.createScriptFolderFromUri(vscode.Uri.joinPath(this.folder().uri(), outDir));
+    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.folder().uri(), outDir));
   }
 }
