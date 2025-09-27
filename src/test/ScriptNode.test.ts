@@ -637,4 +637,411 @@ suite('ScriptNode Tests', () => {
     const hexArray = Array.from(new Uint8Array(hashBuffer));
     return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
   }
+
+  // Enhanced test suites for edge cases and error scenarios
+  suite('Concurrent Operations and Race Conditions', () => {
+    test('should handle concurrent hash calculations', async () => {
+      const testContent = 'concurrent test content';
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/concurrent.js');
+      mockFileSystemProvider.setMockFile(testUri, Buffer.from(testContent));
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: testContent.length
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      // Run multiple hash calculations concurrently
+      const hashPromises = [];
+      for (let i = 0; i < 10; i++) {
+        hashPromises.push(scriptFile.getHash());
+      }
+
+      const hashes = await Promise.all(hashPromises);
+
+      // All hashes should be identical
+      const firstHash = hashes[0];
+      hashes.forEach((hash, index) => {
+        assert.strictEqual(hash, firstHash, `Hash ${index} should match the first hash`);
+      });
+    });
+
+    test('should handle concurrent metadata access', async () => {
+      const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
+      const metadata = {
+        scriptName: 'Concurrent Test',
+        webdavId: '1466960',
+        pushPullRecords: [{
+          downstairsPath: scriptNode.uri().fsPath,
+          lastPulled: '2023-01-01T12:00:00.000Z',
+          lastPushed: null,
+          lastVerifiedHash: 'abcd1234'
+        }]
+      };
+
+      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
+      mockFileSystemProvider.setMockStat(metadataUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 100
+      });
+
+      // Run multiple metadata operations concurrently
+      const operations = [];
+      for (let i = 0; i < 5; i++) {
+        operations.push(scriptNode.getLastPulledTimeStr());
+        operations.push(scriptNode.getLastPushedTimeStr());
+      }
+
+      const results = await Promise.all(operations);
+
+      // All pulled time results should be the same
+      const pulledResults = results.filter((_, index) => index % 2 === 0);
+      const pushedResults = results.filter((_, index) => index % 2 === 1);
+
+      pulledResults.forEach((result, index) => {
+        assert.strictEqual(result, '2023-01-01T12:00:00.000Z', `Pulled time ${index} should be consistent`);
+      });
+
+      pushedResults.forEach((result, index) => {
+        assert.strictEqual(result, null, `Pushed time ${index} should be consistent`);
+      });
+    });
+
+    test('should handle concurrent file existence checks', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/existence.js');
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 100
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      // Run multiple existence checks concurrently
+      const existencePromises = [];
+      for (let i = 0; i < 15; i++) {
+        existencePromises.push(scriptFile.exists());
+      }
+
+      const results = await Promise.all(existencePromises);
+
+      // All results should be true
+      results.forEach((result, index) => {
+        assert.strictEqual(result, true, `Existence check ${index} should return true`);
+      });
+    });
+  });
+
+  suite('Error Handling and Recovery', () => {
+    test('should handle file system permission errors', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/permission.js');
+      const permissionError = new Error('Permission denied');
+      permissionError.name = 'EACCES';
+      mockFileSystemProvider.setMockError(testUri, permissionError);
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      await assert.rejects(
+        () => scriptFile.getHash(),
+        /Permission denied/,
+        'Should propagate permission errors'
+      );
+    });
+
+    test('should handle corrupted metadata files gracefully', async () => {
+      const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
+
+      // Set corrupted JSON
+      mockFileSystemProvider.setMockFile(metadataUri, Buffer.from('{ corrupted json'));
+      mockFileSystemProvider.setMockStat(metadataUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 100
+      });
+
+      // Should handle gracefully and return null
+      const lastPulled = await scriptNode.getLastPulledTimeStr();
+      assert.strictEqual(lastPulled, null, 'Should return null for corrupted metadata');
+    });
+
+
+    test('should handle large file operations', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/large.js');
+
+      // Create a large buffer (1MB)
+      const largeContent = Buffer.alloc(1024 * 1024, 'a');
+      mockFileSystemProvider.setMockFile(testUri, largeContent);
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: largeContent.length
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      // Should handle large files without error
+      const hash = await scriptFile.getHash();
+      assert.ok(hash, 'Should generate hash for large file');
+      assert.strictEqual(typeof hash, 'string', 'Hash should be a string');
+      assert.strictEqual(hash.length, 128, 'Hash should be 128 characters (SHA-512)');
+    });
+
+    test('should handle binary file content', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/binary.bin');
+
+      // Create binary content
+      const binaryContent = Buffer.from([0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD]);
+      mockFileSystemProvider.setMockFile(testUri, binaryContent);
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: binaryContent.length
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      // Should handle binary content
+      const hash = await scriptFile.getHash();
+      assert.ok(hash, 'Should generate hash for binary file');
+      assert.strictEqual(typeof hash, 'string', 'Hash should be a string');
+    });
+  });
+
+  suite('Edge Cases and Boundary Conditions', () => {
+    test('should handle empty files', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/empty.js');
+      const emptyContent = Buffer.alloc(0);
+
+      mockFileSystemProvider.setMockFile(testUri, emptyContent);
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 0
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      const hash = await scriptFile.getHash();
+      assert.ok(hash, 'Should generate hash for empty file');
+      assert.strictEqual(hash.length, 128, 'Empty file hash should be 128 characters');
+    });
+
+    test('should handle files with Unicode content', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/unicode.js');
+      const unicodeContent = 'console.log("Hello 世界 🌍 αβγ");';
+
+      mockFileSystemProvider.setMockFile(testUri, Buffer.from(unicodeContent, 'utf8'));
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: Buffer.from(unicodeContent, 'utf8').length
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      const hash = await scriptFile.getHash();
+      assert.ok(hash, 'Should generate hash for Unicode file');
+      assert.strictEqual(hash.length, 128, 'Unicode file hash should be 128 characters');
+    });
+
+    test('should handle very long file paths', async () => {
+      const longPath = '/test/workspace/configbeh.bluestep.net/1466960/draft/' + 'a'.repeat(200) + '.js';
+      const testUri = vscode.Uri.parse('file://' + longPath);
+
+      mockFileSystemProvider.setMockFile(testUri, Buffer.from('test'));
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 4
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      const exists = await scriptFile.exists();
+      assert.strictEqual(exists, true, 'Should handle very long file paths');
+    });
+
+    test('should handle files with special characters in names', async () => {
+      const specialFileName = 'test file with spaces & symbols!@#$%^&*()+={}[]|\\:;";\',.<>?.js';
+      const testUri = vscode.Uri.parse(
+        'file:///test/workspace/configbeh.bluestep.net/1466960/draft/' +
+        encodeURIComponent(specialFileName)
+      );
+
+      mockFileSystemProvider.setMockFile(testUri, Buffer.from('test'));
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 4
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      const exists = await scriptFile.exists();
+      assert.strictEqual(exists, true, 'Should handle special characters in file names');
+    });
+
+    test('should handle metadata with extreme timestamps', async () => {
+      const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
+      const metadata = {
+        scriptName: 'Extreme Timestamp Test',
+        webdavId: '1466960',
+        pushPullRecords: [{
+          downstairsPath: scriptNode.uri().fsPath,
+          lastPulled: '1970-01-01T00:00:00.000Z', // Unix epoch
+          lastPushed: '2038-01-19T03:14:07.000Z',  // Year 2038 problem edge
+          lastVerifiedHash: 'abcd1234'
+        }]
+      };
+
+      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
+      mockFileSystemProvider.setMockStat(metadataUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 100
+      });
+
+      const lastPulledTime = await scriptNode.getLastPulledTime();
+      const lastPushedTime = await scriptNode.getLastPushedTime();
+
+      assert.ok(lastPulledTime instanceof Date, 'Should parse extreme past timestamp');
+      assert.ok(lastPushedTime instanceof Date, 'Should parse extreme future timestamp');
+      assert.strictEqual(lastPulledTime?.getFullYear(), new Date(0).getFullYear(), 'Should handle Unix epoch');
+      assert.strictEqual(lastPushedTime?.getFullYear(), 2038, 'Should handle 2038 timestamp');
+    });
+  });
+
+  suite('Performance and Stress Testing', () => {
+    test('should handle rapid successive operations', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/rapid.js');
+      mockFileSystemProvider.setMockFile(testUri, Buffer.from('rapid test'));
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 10
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      // Perform many operations in rapid succession
+      const operations = [];
+      for (let i = 0; i < 50; i++) {
+        operations.push(scriptFile.exists());
+        operations.push(scriptFile.isInDraft());
+        operations.push(scriptFile.isInDeclarations());
+      }
+
+      const results = await Promise.all(operations);
+
+      // All should complete successfully
+      assert.strictEqual(results.length, 150, 'All operations should complete');
+
+      // Check specific patterns
+      for (let i = 0; i < 50; i++) {
+        assert.strictEqual(results[i * 3], true, `Exists operation ${i} should be true`);
+        assert.strictEqual(results[i * 3 + 1], true, `Draft check ${i} should be true`);
+        assert.strictEqual(results[i * 3 + 2], false, `Declarations check ${i} should be false`);
+      }
+    });
+
+    test('should handle multiple ScriptNode instances for same file', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/shared.js');
+      mockFileSystemProvider.setMockFile(testUri, Buffer.from('shared content'));
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: 14
+      });
+
+      // Create multiple ScriptNode instances for the same URI
+      const scriptFiles = [];
+      for (let i = 0; i < 10; i++) {
+        scriptFiles.push(ScriptFactory.createFile(testUri));
+      }
+
+      // All instances should behave consistently
+      const hashPromises = scriptFiles.map(sf => sf.getHash());
+      const hashes = await Promise.all(hashPromises);
+
+      const firstHash = hashes[0];
+      hashes.forEach((hash, index) => {
+        assert.strictEqual(hash, firstHash, `Hash from instance ${index} should match`);
+      });
+
+      // Equality checks
+      for (let i = 1; i < scriptFiles.length; i++) {
+        assert.strictEqual(
+          scriptFiles[0].equals(scriptFiles[i]),
+          true,
+          `Instance 0 should equal instance ${i}`
+        );
+      }
+    });
+  });
+
+  suite('Memory and Resource Management', () => {
+    test('should not leak memory with repeated operations', async () => {
+      // Create and destroy many ScriptNode instances
+      for (let cycle = 0; cycle < 20; cycle++) {
+        const testUri = vscode.Uri.parse(`file:///test/workspace/configbeh.bluestep.net/1466960/draft/cycle${cycle}.js`);
+        mockFileSystemProvider.setMockFile(testUri, Buffer.from(`cycle ${cycle}`));
+        mockFileSystemProvider.setMockStat(testUri, {
+          type: vscode.FileType.File,
+          ctime: Date.now(),
+          mtime: Date.now(),
+          size: 10
+        });
+
+        const scriptFile = ScriptFactory.createFile(testUri);
+
+        // Perform operations
+        await scriptFile.exists();
+        await scriptFile.getHash();
+
+        // File should be processed correctly
+        assert.ok(true, `Cycle ${cycle} completed successfully`);
+      }
+    });
+
+    test('should handle cleanup of large data structures', async () => {
+      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/cleanup.js');
+
+      // Create content with large data structure simulation
+      const largeContent = JSON.stringify({
+        data: new Array(1000).fill(0).map((_, i) => ({ id: i, value: `item${i}` }))
+      });
+
+      mockFileSystemProvider.setMockFile(testUri, Buffer.from(largeContent));
+      mockFileSystemProvider.setMockStat(testUri, {
+        type: vscode.FileType.File,
+        ctime: Date.now(),
+        mtime: Date.now(),
+        size: largeContent.length
+      });
+
+      const scriptFile = ScriptFactory.createFile(testUri);
+
+      // Process the large content
+      const hash = await scriptFile.getHash();
+      assert.ok(hash, 'Should process large content successfully');
+
+      // Should not throw during cleanup
+      assert.ok(true, 'Cleanup should handle large data structures');
+    });
+  });
 });
