@@ -9,7 +9,7 @@ import { App } from '../main/app/App';
 import { ScriptFactory } from '../main/app/util/script/ScriptFactory';
 import { ScriptFile } from '../main/app/util/script/ScriptFile';
 
-suite('ScriptFile Tests', () => {
+suite('ScriptNode Tests', () => {
     let mockFileSystemProvider: MockFileSystem;
     let scriptNode: ScriptNode;
     let originalLogger: any;
@@ -530,7 +530,7 @@ suite('ScriptFile Tests', () => {
       
       assert.strictEqual(result, scriptNode);
       // REASON-FOR-ANY: Accessing private property for test verification
-      assert.strictEqual((scriptNode as any).parser, originalParser);
+      assert.notStrictEqual((scriptNode as any).parser, originalParser);
       // REASON-FOR-ANY: Accessing private property for test verification
       assert.strictEqual((scriptNode as any).parser, newParser);
     });
