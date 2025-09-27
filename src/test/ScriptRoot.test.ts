@@ -5,7 +5,7 @@ import { ScriptMetaData } from '../../types';
 import { App } from '../main/app/App';
 import { FileSystem } from '../main/app/util/fs/FileSystem';
 import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
-import { ScriptFile } from '../main/app/util/script/ScriptFile';
+import { ScriptFactory } from '../main/app/util/script/ScriptFactory';
 import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
 
 suite('ScriptRoot Tests', () => {
@@ -51,7 +51,7 @@ suite('ScriptRoot Tests', () => {
         testChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
         
         // Create ScriptRoot instance
-        scriptRoot = new ScriptRoot(new ScriptFile(testChildUri));
+        scriptRoot = ScriptFactory.createScriptRoot(testChildUri);
 
         // Set up basic mock metadata file
         const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
@@ -71,7 +71,7 @@ suite('ScriptRoot Tests', () => {
 
     suite('Constructor and Path Parsing', () => {
         test('should parse child URI correctly', () => {
-            const scriptRoot = new ScriptRoot(new ScriptFile(testChildUri));
+            const scriptRoot = ScriptFactory.createScriptRoot(testChildUri);
             
             assert.strictEqual(scriptRoot.webDavId, '1466960');
             assert.strictEqual(scriptRoot.origin, 'configbeh.bluestep.net');
@@ -79,15 +79,15 @@ suite('ScriptRoot Tests', () => {
 
         test('should handle different file types in same directory', () => {
             const declarationsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/script.js');
-            const scriptRoot = new ScriptRoot(new ScriptFile(declarationsUri));
-            
+            const scriptRoot = ScriptFactory.createScriptRoot(declarationsUri);
+
             assert.strictEqual(scriptRoot.webDavId, '1466960');
             assert.strictEqual(scriptRoot.origin, 'configbeh.bluestep.net');
         });
 
         test('should handle metadata file as child URI', () => {
             const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
-            const scriptRoot = new ScriptRoot(new ScriptFile(metadataUri));
+            const scriptRoot = ScriptFactory.createScriptRoot(metadataUri);
             
             assert.strictEqual(scriptRoot.webDavId, '1466960');
             assert.strictEqual(scriptRoot.origin, 'configbeh.bluestep.net');
@@ -146,9 +146,9 @@ suite('ScriptRoot Tests', () => {
             const uri1 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/file1.js');
             const uri2 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/file2.js');
             
-            const root1 = new ScriptRoot(new ScriptFile(uri1));
-            const root2 = new ScriptRoot(new ScriptFile(uri2));
-            
+            const root1 = ScriptFactory.createScriptRoot(uri1);
+            const root2 = ScriptFactory.createScriptRoot(uri2);
+
             assert.strictEqual(root1.equals(root2), true);
         });
 
@@ -156,8 +156,8 @@ suite('ScriptRoot Tests', () => {
             const uri1 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/file1.js');
             const uri2 = vscode.Uri.parse('file:///test/workspace/different.domain.com/1466960/draft/file2.js');
             
-            const root1 = new ScriptRoot(new ScriptFile(uri1));
-            const root2 = new ScriptRoot(new ScriptFile(uri2));
+            const root1 = ScriptFactory.createScriptRoot(uri1);
+            const root2 = ScriptFactory.createScriptRoot(() => uri2);
 
             assert.strictEqual(root1.equals(root2), false);
         });
@@ -166,8 +166,8 @@ suite('ScriptRoot Tests', () => {
             const uri1 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/file1.js');
             const uri2 = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/9999999/draft/file2.js');
 
-            const root1 = new ScriptRoot(new ScriptFile(uri1));
-            const root2 = new ScriptRoot(new ScriptFile(uri2));
+            const root1 = ScriptFactory.createScriptRoot(uri1);
+            const root2 = ScriptFactory.createScriptRoot(() => uri2);
             
             assert.strictEqual(root1.equals(root2), false);
         });
@@ -220,7 +220,7 @@ suite('ScriptRoot Tests', () => {
     suite('Touch File Operations', () => {
         test('should touch file with lastPulled timestamp', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = new ScriptFile(fileUri);
+            const scriptFile = ScriptFactory.createFile(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -243,7 +243,7 @@ suite('ScriptRoot Tests', () => {
 
         test('should update existing record when touching same file again', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = new ScriptFile(fileUri);
+            const scriptFile = ScriptFactory.createFile(fileUri);
             
             // Set up mock file content for hash calculation
             mockFileSystem.setMockFile(fileUri, Buffer.from('console.log("test");'));
@@ -268,7 +268,7 @@ suite('ScriptRoot Tests', () => {
 
         test('should store hash when touching file', async () => {
             const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-            const scriptFile = new ScriptFile(fileUri);
+            const scriptFile = ScriptFactory.createFile(fileUri);
             const testContent = 'console.log("test");';
             
             // Set up mock file content for hash calculation

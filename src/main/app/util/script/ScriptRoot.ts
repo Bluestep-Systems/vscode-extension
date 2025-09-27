@@ -39,8 +39,8 @@ export class ScriptRoot {
    * @param childUri Any file within the downstairs root folder
    * @lastreviewed 2025-09-15
    */
-  constructor(public readonly node: ScriptNode) {
-    const parser = new DownstairsUriParser(node.uri());
+  constructor(public readonly uri: vscode.Uri) {
+    const parser = new DownstairsUriParser(uri);
     const shavedName = parser.getShavedName();
     const scriptPath = path.parse(shavedName);                  // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
     const parentDirBase = path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
@@ -291,7 +291,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-09-15
    */
   static fromRootUri(rootUri: vscode.Uri) {
-    return new ScriptRoot(ScriptFactory.createFolder(() => vscode.Uri.joinPath(rootUri, "/")));
+    return ScriptFactory.createScriptRoot(vscode.Uri.joinPath(rootUri, "/"));
   }
 
 
@@ -307,7 +307,7 @@ export class ScriptRoot {
     return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folder.uri(), name));
   }
 
-  /**n
+  /**
    * Gets the contents of the info folder.
    * @lastreviewed 2025-09-15
    */
@@ -378,8 +378,11 @@ export class ScriptRoot {
   }
 
   /**
-   * Does the BSJS "snapshot" process, involves a clean, build, preloads a
-   * copy of the results and pushes upstairs.
+   * Performs the BSJS "snapshot" process which involves compiling the draft folder.
+   * This method compiles TypeScript files and prepares the script for deployment.
+   * 
+   * @throws {Error} When compilation fails or file system operations encounter errors
+   * @lastreviewed null
    */
   public async snapshot() {
     //TODO do a safety check on the hash to prevent deleted files needlessly
@@ -390,6 +393,13 @@ export class ScriptRoot {
 
 
 
+  /**
+   * Deletes the relevant build folder (e.g. ".build") within the draft directory.
+   * Ignores FileNotFound errors if the folder doesn't exist.
+   * 
+   * @throws {Error} For file system errors other than FileNotFound (e.g., permission issues)
+   * @lastreviewed null
+   */
   public async deleteBuildFolder() {
     try {
       return await fs().delete(this.getDraftBuildFolder(), { recursive: true });
@@ -404,6 +414,16 @@ export class ScriptRoot {
     }
   }
 
+  /**
+   * Compiles all TypeScript files in the draft folder and copies non-TypeScript files to its 
+   * respective build folder.
+   * 
+   * Deletes the existing build folder first, then compiles TypeScript files using ScriptCompiler,
+   * copies other relevant files, and cleans up any orphaned files in the build directory.
+   * 
+   * @throws {Error} When compilation fails or file system operations encounter errors
+   * @lastreviewed null
+   */
   public async compileDraftFolder(): Promise<void> {
     //TODO see if we can optimize this to only compile changed files
     await this.deleteBuildFolder();
@@ -445,9 +465,15 @@ export class ScriptRoot {
         await buildNode.delete();
       }
     }
-    await this.cleanupMetadataFile();
+    await this.tidyMetadataFile();
   }
-  private async cleanupMetadataFile() {
+  /**
+   * Removes stale push/pull records from metadata that reference files no longer in the draft folder.
+   * This ensures the metadata stays synchronized with the actual file system state.
+   * 
+   * @lastreviewed null
+   */
+  private async tidyMetadataFile() {
     const draftFolder = this.getDraftFolder();
     const draftFiles = (await draftFolder.flattenRaw()).map(uri => uri.fsPath);
     await this.modifyMetaData((meta) => {
@@ -493,11 +519,23 @@ export class ScriptRoot {
     return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "declarations"));
   }
 
+  /**
+   * Finds all tsconfig.json files within the draft folder and its subdirectories.
+   * 
+   * @returns A Promise that resolves to an array of TsConfig instances
+   * @lastreviewed null
+   */
   public async findTsConfigFiles(): Promise<TsConfig[]> {
     const tsConfigFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.getDraftFolder().uri(), '**/' + TsConfig.NAME));
-    return tsConfigFiles.map(f => new TsConfig(f));
+    return tsConfigFiles.map(f => ScriptFactory.createTsConfig(() => f));
   }
 
+  /**
+   * Identifies TypeScript configuration files that are not in a copacetic (valid) state.
+   * 
+   * @returns A Promise that resolves to an array of file paths for invalid tsconfig.json files
+   * @lastreviewed null
+   */
   public async getBadTsFiles(): Promise<string[]> {
 
     const tsConfigFiles = this.findTsConfigFiles();
@@ -509,6 +547,12 @@ export class ScriptRoot {
     }
     return badFiles;
   }
+  /**
+   * Gets all draft folder files that are eligible for pushing (excludes build folder contents).
+   * 
+   * @returns A Promise that resolves to an array of ScriptNode instances that can be pushed
+   * @lastreviewed null
+   */
   public async getPushableDraftNodes(): Promise<ScriptNode[]> {
     const flattened = await this.getDraftFolder().flatten();
     const filtered = [];
@@ -519,6 +563,14 @@ export class ScriptRoot {
     }
     return filtered;
   }
+  /**
+   * Performs pre-deployment validation checks on the script root.
+   * Verifies the script is copacetic and all TypeScript configuration files are valid.
+   * 
+   * @returns A Promise that resolves to an empty string if all checks pass, or an error message describing issues
+   * @throws {Err.ScriptNotCopaceticError} When the script root is not in a copacetic state
+   * @lastreviewed null
+   */
   public async preflightCheck(): Promise<string> {
     if (!(await this.isCopacetic())) {
       throw new Err.ScriptNotCopaceticError();

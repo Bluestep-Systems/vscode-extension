@@ -23,8 +23,8 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed null
    */
   public async findAllTsConfigFiles(): Promise<TsConfig[]> {
-    const files = await vscode.workspace.findFiles(new vscode.RelativePattern(this.uri(), '**/tsconfig.json'));
-    return files.map(file => new TsConfig(file));
+    const uris = await vscode.workspace.findFiles(new vscode.RelativePattern(this.uri(), '**/tsconfig.json'));
+    return uris.map(ScriptFactory.createTsConfig);
   }
   
   /**

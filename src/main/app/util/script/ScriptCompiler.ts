@@ -120,7 +120,7 @@ export class ScriptCompiler {
       if (sfList.length === 0) {
         throw new Err.NoFilesToCompileError(tsConfigPath);
       }
-      const compilerOptions = await this.getCompilerOptions(ScriptFactory.createFile(() => vscode.Uri.file(tsConfigPath)));
+      const compilerOptions = await this.getCompilerOptions(ScriptFactory.createFile(vscode.Uri.file(tsConfigPath)));
       const sfUris = sfList.map(sf => sf.uri());
       const program = ts.createProgram(sfUris.map(uri => uri.fsPath), compilerOptions);
       const emitResult = program.emit();

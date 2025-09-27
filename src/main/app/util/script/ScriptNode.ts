@@ -43,7 +43,7 @@ export abstract class ScriptNode implements PathElement {
    */
   constructor(public readonly downstairsUri: vscode.Uri) {
     this.parser = new DownstairsUriParser(downstairsUri);
-    this.scriptRoot = new ScriptRoot(this);
+    this.scriptRoot = new ScriptRoot(downstairsUri);
   }
 
   abstract toUpstairsURL(): URL;
@@ -424,7 +424,7 @@ export abstract class ScriptNode implements PathElement {
     if (!tsConfigUri) {
       throw new Err.ConfigFileError("tsconfig.json", 0);
     }
-    return new TsConfig(tsConfigUri);
+    return ScriptFactory.createTsConfig(() => tsConfigUri);
   }
 
   /**

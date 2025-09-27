@@ -1,13 +1,12 @@
 import * as assert from 'assert';
-import * as vscode from 'vscode';
 import * as path from 'path';
-import { ScriptNode } from '../main/app/util/script/ScriptNode';
-import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
+import * as vscode from 'vscode';
+import { App } from '../main/app/App';
 import { FileSystem } from '../main/app/util/fs/FileSystem';
 import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
-import { App } from '../main/app/App';
 import { ScriptFactory } from '../main/app/util/script/ScriptFactory';
-import { ScriptFile } from '../main/app/util/script/ScriptFile';
+import { ScriptNode } from '../main/app/util/script/ScriptNode';
+import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
 
 suite('ScriptNode Tests', () => {
   let mockFileSystemProvider: MockFileSystem;
@@ -68,7 +67,7 @@ suite('ScriptNode Tests', () => {
   suite('File Type Detection', () => {
     test('should identify draft files correctly', () => {
       const draftUri = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
-      const scriptFile = new ScriptFile(draftUri);
+      const scriptFile = ScriptFactory.createFile(draftUri);
 
       assert.strictEqual(scriptFile.isInDraft(), true);
       assert.strictEqual(scriptFile.isInDeclarations(), false);
@@ -76,7 +75,7 @@ suite('ScriptNode Tests', () => {
 
     test('should identify declarations files correctly', () => {
       const declarationsUri = vscode.Uri.file('/test/workspace/123/declarations/test-script.js');
-      const scriptFile = new ScriptFile(declarationsUri);
+      const scriptFile = ScriptFactory.createFile(declarationsUri);
 
       assert.strictEqual(scriptFile.isInDeclarations(), true);
       assert.strictEqual(scriptFile.isInDraft(), false);
@@ -99,7 +98,7 @@ suite('ScriptNode Tests', () => {
 
     test('should throw error for metadata files when converting to upstairs URL', () => {
       const metadataUri = vscode.Uri.file('/test/workspace/123/.b6p_metadata.json');
-      const scriptFile = new ScriptFile(metadataUri);
+      const scriptFile = ScriptFactory.createFile(metadataUri);
 
       assert.throws(() => {
         scriptFile.toUpstairsURL();
@@ -208,8 +207,8 @@ suite('ScriptNode Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
 
-      const scriptFile1 = new ScriptFile(uri1);
-      const scriptFile2 = new ScriptFile(uri2);
+      const scriptFile1 = ScriptFactory.createFile(uri1);
+      const scriptFile2 = ScriptFactory.createFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, true);
@@ -219,8 +218,8 @@ suite('ScriptNode Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/456/draft/other-script.js');
 
-      const scriptFile1 = new ScriptFile(uri1);
-      const scriptFile2 = new ScriptFile(uri2);
+      const scriptFile1 = ScriptFactory.createFile(uri1);
+      const scriptFile2 = ScriptFactory.createFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
@@ -230,8 +229,8 @@ suite('ScriptNode Tests', () => {
       const uri1 = vscode.Uri.file('/test/workspace/123/draft/test-script.js');
       const uri2 = vscode.Uri.file('/test/workspace/123/declarations/test-script.js');
 
-      const scriptFile1 = new ScriptFile(uri1);
-      const scriptFile2 = new ScriptFile(uri2);
+      const scriptFile1 = ScriptFactory.createFile(uri1);
+      const scriptFile2 = ScriptFactory.createFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
@@ -247,7 +246,7 @@ suite('ScriptNode Tests', () => {
 
     test('should allow overwriting script root for non-metadata files', () => {
       const newUri = vscode.Uri.file('/test/workspace/456/draft/new-script.js');
-      const newRoot = new ScriptRoot(new ScriptFile(newUri));
+      const newRoot = ScriptFactory.createScriptRoot(newUri);
 
       const result = scriptNode.withScriptRoot(newRoot);
 
@@ -257,9 +256,9 @@ suite('ScriptNode Tests', () => {
 
     test('should throw error when trying to overwrite script root of metadata file', () => {
       const metadataUri = vscode.Uri.file('/test/workspace/configbeh.bluestep.net/123/.b6p_metadata.json');
-      const metadataFile = new ScriptFile(metadataUri);
+      const metadataFile = ScriptFactory.createFile(metadataUri);
       const newChildUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/other.js');
-      const newRoot = new ScriptRoot(new ScriptFile(newChildUri));
+      const newRoot = ScriptFactory.createScriptRoot(newChildUri);
 
       assert.throws(() => {
         metadataFile.withScriptRoot(newRoot);
@@ -276,7 +275,7 @@ suite('ScriptNode Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
 
-      const scriptFile = new ScriptFile(infoUri);
+      const scriptFile = ScriptFactory.createFile(infoUri);
 
       const isInInfo = await scriptFile.isInInfo();
       const isInInfoFolder = await scriptFile.isInInfoFolder();
@@ -293,7 +292,7 @@ suite('ScriptNode Tests', () => {
       mockFileSystemProvider.setMockDirectory(objectsFolderUri);
       mockFileSystemProvider.setMockFile(objectsUri, 'export {};');
 
-      const scriptFile = new ScriptFile(objectsUri);
+      const scriptFile = ScriptFactory.createFile(objectsUri);
 
       const isInObjects = await scriptFile.isInObjects();
 
@@ -308,7 +307,7 @@ suite('ScriptNode Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
 
-      const scriptFile = new ScriptFile(infoUri);
+      const scriptFile = ScriptFactory.createFile(infoUri);
 
       const isInInfoOrObjects = await scriptFile.isInInfoOrObjects();
 
@@ -317,7 +316,7 @@ suite('ScriptNode Tests', () => {
 
     test('should return false for files not in info or objects', async () => {
       const scriptUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/scripts/main.js');
-      const scriptFile = new ScriptFile(scriptUri);
+      const scriptFile = ScriptFactory.createFile(scriptUri);
 
       // Set up empty folders so the file isn't found in them
       const infoFolderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/info');
@@ -522,7 +521,7 @@ suite('ScriptNode Tests', () => {
       // REASON-FOR-ANY: Accessing private property for test verification
       const originalParser = (scriptNode as any).parser;
       const newUri = vscode.Uri.parse('file:///test/workspace/different.domain.com/9999/draft/different.js');
-      const newScriptFile = new ScriptFile(newUri);
+      const newScriptFile = ScriptFactory.createFile(newUri);
       // REASON-FOR-ANY: Accessing private property for test verification
       const newParser = (newScriptFile as any).parser;
 
@@ -564,7 +563,7 @@ suite('ScriptNode Tests', () => {
   suite('Push Validation', () => {
     test('should return reason for metadata files', async () => {
       const metadataUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/.b6p_metadata.json');
-      const metadataFile = new ScriptFile(metadataUri);
+      const metadataFile = ScriptFactory.createFile(() => metadataUri);
 
       const reason = await metadataFile.getReasonToNotPush();
 
@@ -573,7 +572,7 @@ suite('ScriptNode Tests', () => {
 
     test('should return reason for declarations files', async () => {
       const declarationsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/test.js');
-      const declarationsFile = new ScriptFile(declarationsUri);
+      const declarationsFile = ScriptFactory.createFile(declarationsUri);
 
       const reason = await declarationsFile.getReasonToNotPush();
 
@@ -592,7 +591,7 @@ suite('ScriptNode Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockFile(infoUri, '{}');
 
-      const scriptFile = new ScriptFile(infoUri);
+      const scriptFile = ScriptFactory.createFile(infoUri);
       const reason = await scriptFile.getReasonToNotPush();
 
       assert.strictEqual(reason, 'Node is in info or objects');

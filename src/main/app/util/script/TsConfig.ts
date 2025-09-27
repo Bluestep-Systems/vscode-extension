@@ -26,7 +26,7 @@ export class TsConfig implements PathElement {
    * @lastreviewed null
    */
   constructor(protected readonly rawUri: vscode.Uri) {
-    this.sf = new ScriptFile(rawUri);
+    this.sf = ScriptFactory.createFile(rawUri);
     if (!this.path().endsWith(TsConfig.NAME)) {
       throw new Err.InvalidResourceTypeError("tsconfig.json file");
     }

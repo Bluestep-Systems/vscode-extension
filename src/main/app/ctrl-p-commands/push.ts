@@ -10,7 +10,6 @@ import { getScript } from '../util/data/getScript';
 import { UpstairsUrlParser } from '../util/data/UpstairsUrlParser';
 import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
-import { ScriptFile } from '../util/script/ScriptFile';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
@@ -112,7 +111,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     throw new Err.CleanupScriptError();
   }
   const rawFilePaths = getScriptRet;
-  const directory = ScriptFactory.createFolder(() => downstairsRootFolderUri);
+  const directory = ScriptFactory.createFolder(downstairsRootFolderUri);
   const flattenedDownstairs = await flattenDirectory(directory);
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
@@ -126,7 +125,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     if (!downstairsPath) {
       // we don't want to delete stuff that is in gitignore
       const parser = new DownstairsUriParser(downstairsRootFolderUri);
-      const sf = new ScriptFile(vscode.Uri.joinPath(parser.prependingPathUri(), rawFilePath.downstairsPath));
+      const sf = ScriptFactory.createFile(vscode.Uri.joinPath(parser.prependingPathUri(), rawFilePath.downstairsPath));
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;

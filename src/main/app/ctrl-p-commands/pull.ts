@@ -6,7 +6,6 @@ import { getScript } from "../util/data/getScript";
 import { UpstairsUrlParser } from "../util/data/UpstairsUrlParser";
 import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
-import { ScriptFile } from '../util/script/ScriptFile';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
@@ -119,7 +118,7 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
       await vscode.workspace.fs.createDirectory(ultimatePath);
     }
   } else {
-    const sf = new ScriptFile(ultimatePath);
+    const sf = ScriptFactory.createFile(ultimatePath);
     if (await sf.exists() && await sf.integrityMatches()) {
       App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
       await sf.touch("lastPulled");

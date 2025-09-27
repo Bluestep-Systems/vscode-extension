@@ -1,4 +1,5 @@
 import { Util } from '../util';
+import { ScriptFactory } from '../util/script/ScriptFactory';
 //@ts-ignore
 import { ScriptFile } from '../util/script/ScriptFile';
 //import { FileSystem } from "../util/fs/FileSystemFactory";
@@ -9,7 +10,7 @@ import { ScriptFile } from '../util/script/ScriptFile';
 //const fs = FileSystem.getInstance;
 export default async function () {
   const activeUri = await Util.getDownstairsFileUri();
-  const sf = new ScriptFile(activeUri);
+  const sf = ScriptFactory.createFile(activeUri);
   console.log("folderUri", sf.folder().path());
   // console.log(sf.pathWithRespectToDraftRoot());
   // const compiler = new ScriptCompiler(sf);

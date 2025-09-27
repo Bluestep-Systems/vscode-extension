@@ -3,6 +3,7 @@ import { App } from "../App";
 import { getActiveEditorUri } from "../util/data/getActiveEditorUri";
 import { ScriptFile } from '../util/script/ScriptFile';
 import { ScriptRoot } from "../util/script/ScriptRoot";
+import { ScriptFactory } from '../util/script/ScriptFactory';
 
 export default async function () {
   try {
@@ -13,7 +14,7 @@ export default async function () {
     if (!activeEditorUri) {
       return; // if there's no active editor, just return. not our problem
     }
-    const sf = new ScriptFile(activeEditorUri);
+    const sf = ScriptFactory.createFile(activeEditorUri);
     if (!(await sf.exists())) {
       return; // if the active editor is not part of a script, just return. not our problem
     }

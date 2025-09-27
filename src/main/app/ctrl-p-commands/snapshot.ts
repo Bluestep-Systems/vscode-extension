@@ -1,7 +1,7 @@
 import { SourceOps } from "../../../../types";
 import { App } from "../App";
 import { Util } from "../util";
-import { ScriptFile } from "../util/script/ScriptFile";
+import { ScriptFactory } from "../util/script/ScriptFactory";
 //import { FileSystem } from "../util/fs/FileSystemFactory";
 import { Alert } from "../util/ui/Alert";
 
@@ -16,7 +16,7 @@ export default async function snapshot({ overrideFormulaUri, sourceOps }: { over
     }
     // "contextual" meaning currently open or determined from sourceOps
     const contextualUri = await Util.getDownstairsFileUri(sourceOps);
-    const sf = new ScriptFile(contextualUri!);
+    const sf = ScriptFactory.createFile(contextualUri!);
     sf.getScriptRoot().snapshot();
     // console.log("sf.getScriptRoot().getDraftBuildFolderUri())", sf.getScriptRoot().getDraftBuildFolderUri());
     // await fs().delete(sf.getScriptRoot().getDraftBuildFolderUri()).catch(e => {console.error(e);});
