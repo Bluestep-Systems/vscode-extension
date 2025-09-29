@@ -323,7 +323,7 @@ export namespace Err {
   export class ScriptNotCopaceticError extends ScriptOperationError {
     constructor() {
       super("Script is not in a copacetic state");
-      this.name = "ScriptNotCopacentricError";
+      this.name = "ScriptNotCopaceticError";
     }
   }
 
