@@ -226,7 +226,6 @@ export abstract class ScriptNode implements PathElement {
    */
   withScriptRoot(root: ScriptRoot): ScriptNode {
     this.scriptRoot = root;
-    //TODO determine if this if-check is even neccessary
     if (this.parser.type === "metadata") {
       throw new Err.MetadataFileOperationError("overwrite script root");
     }
