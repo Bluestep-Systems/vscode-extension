@@ -42,11 +42,11 @@ export class ScriptCompiler {
    * Gets default TypeScript compiler options for a file.
    * @param sf The file to get default options for
    * @returns Default TypeScript compiler options
-   * @throws {Error} Always throws as this method is deprecated
+   * @throws an {@link Err.InvalidStateError} Always throws as this method is deprecated
    * @lastreviewed null
    */
   private getDefaultOptions(sf: ScriptNode): ts.CompilerOptions {
-    throw new Err.MethodNotImplementedError();
+    throw new Err.InvalidStateError("did not find a tsconfig for " + sf.path() + ".");
     const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
     return LOCAL_CONFIG;
@@ -54,16 +54,15 @@ export class ScriptCompiler {
 
   /**
    * Gets TypeScript compiler options from the closest tsconfig.json file.
-   * @param sf The file to get compiler options for
+   * @param sn The file to get compiler options for
    * @returns A Promise that resolves to TypeScript compiler options
-   * @throws {Error} When tsconfig.json parsing fails
    * @lastreviewed null
    */
-  private async getCompilerOptions(sf: ScriptNode): Promise<ts.CompilerOptions> {
-    const tsConfigFile = await sf.getClosestTsConfigFile();
+  private async getCompilerOptions(sn: ScriptNode): Promise<ts.CompilerOptions> {
+    const tsConfigFile = await sn.getClosestTsConfigFile();
     if (!tsConfigFile) {
       App.logger.info("No tsconfig.json found, using default compiler options.");
-      return this.getDefaultOptions(sf);
+      return this.getDefaultOptions(sn);
     }
 
     const tsconfigTextArray = await fs().readFile(tsConfigFile.uri());
@@ -97,7 +96,7 @@ export class ScriptCompiler {
    * Adds a script file to the compilation queue.
    * Files are grouped by their associated tsconfig.json file.
    * @param sf The ScriptFile to add for compilation
-   * @throws {Error} When the file is not copacetic and cannot be compiled
+   * @throws an {@link Err.ScriptNotCopaceticError} when the file is not in a good state.
    * @lastreviewed null
    */
   public async addFile(sf: ScriptNode) {

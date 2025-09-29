@@ -718,4 +718,14 @@ export namespace Err {
       this.name = "NoExtractedValueError";
     }
   }
+  
+  /**
+   * Error thrown when an operation is attempted in an invalid state.
+   */
+  export class InvalidStateError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "InvalidStateError";
+    }
+  }
 }

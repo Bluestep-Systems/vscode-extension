@@ -37,19 +37,11 @@ export namespace ScriptFactory {
    * @lastreviewed null
    */
   export function createNode(uriSupplier: (() => vscode.Uri) | vscode.Uri): ScriptNode {
-
-    if (uriSupplier instanceof Function === false) {
-      if (uriSupplier.fsPath.endsWith('/')) {
-        return new ScriptFolder(uriSupplier);
-      } else {
-        return new ScriptFile(uriSupplier);
-      }
-    }
-
-    if (uriSupplier().fsPath.endsWith('/')) {
-      return new ScriptFolder(uriSupplier());
+    const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
+    if (uri.fsPath.endsWith('/')) {
+      return new ScriptFolder(uri);
     } else {
-      return new ScriptFile(uriSupplier());
+      return new ScriptFile(uri);
     }
   }
 
@@ -70,10 +62,8 @@ export namespace ScriptFactory {
    * @lastreviewed null
    */
   export function createFolder(uriSupplier: (() => vscode.Uri) | vscode.Uri): ScriptFolder {
-    if (uriSupplier instanceof Function === false) {
-      return new ScriptFolder(uriSupplier);
-    }
-    return new ScriptFolder(uriSupplier());
+    const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
+    return new ScriptFolder(uri);
   }
 
   /**
@@ -93,10 +83,8 @@ export namespace ScriptFactory {
    * @lastreviewed null
    */
   export function createFile(uriSupplier: (() => vscode.Uri) | vscode.Uri): ScriptFile {
-    if (uriSupplier instanceof Function === false) {
-      return new ScriptFile(uriSupplier);
-    }
-    return new ScriptFile(uriSupplier());
+    const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
+    return new ScriptFile(uri);
   }
 
   /**
@@ -123,10 +111,8 @@ export namespace ScriptFactory {
    * @lastreviewed null
    */
   export function createScriptRoot(uriSupplier: (() => vscode.Uri) | vscode.Uri): ScriptRoot {
-    if (uriSupplier instanceof Function === false) {
-      return new ScriptRoot(uriSupplier);
-    }
-    return new ScriptRoot(uriSupplier());
+    const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
+    return new ScriptRoot(uri);
   }
 
 
@@ -154,9 +140,7 @@ export namespace ScriptFactory {
    * @lastreviewed null
    */
   export function createTsConfig(uriSupplier: (() => vscode.Uri) | vscode.Uri): TsConfig {
-    if (uriSupplier instanceof Function === false) {
-      return new TsConfig(uriSupplier);
-    }
-    return new TsConfig(uriSupplier());
+    const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
+    return new TsConfig(uri);
   }
 }
