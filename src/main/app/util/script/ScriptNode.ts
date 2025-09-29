@@ -246,9 +246,9 @@ export abstract class ScriptNode implements PathElement {
   }
 
   /**
-   * Compares this script file to another for equality.
-   * @param other The other script file to compare against
-   * @lastreviewed 2025-09-15
+   * Compares this script node to another for equality.
+   * @param other The other element to compare against
+   * @lastreviewed 2025-09-29
    */
   public equals(other: PathElement): boolean {
     return this.path() === other.path();
@@ -258,8 +258,8 @@ export abstract class ScriptNode implements PathElement {
    * Generic method to find and parse a JSON configuration file.
    * @param fileName The name of the file to search for
    * @returns The parsed JSON content
-   * @throws {Error} When the file is not found or multiple files are found
-   * @lastreviewed 2025-09-15
+   * @throws an {@link Err.ConfigFileError} When the file is not found or multiple files are found
+   * @lastreviewed 2025-09-29
    */
   private async getConfigurationFile<T>(fileName: string): Promise<T> {
     const files = await fs().findFiles(new vscode.RelativePattern(this.scriptRoot.getRootUri(), `**/${fileName}`));
@@ -274,7 +274,7 @@ export abstract class ScriptNode implements PathElement {
 
   /**
    * Gets the configuration file for the script.
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-09-29
    */
   public async getConfigFile(): Promise<ConfigJsonContent> {
     return this.getConfigurationFile<ConfigJsonContent>('config.json');
