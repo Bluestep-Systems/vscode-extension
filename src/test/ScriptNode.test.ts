@@ -181,8 +181,8 @@ suite('ScriptNode Tests', () => {
       const exists = await scriptNode.exists();
       assert.strictEqual(exists, false);
 
-      const doesNotExist = await scriptNode.fileDoesNotExist();
-      assert.strictEqual(doesNotExist, true);
+      const doesNotExist = await scriptNode.exists();
+      assert.strictEqual(doesNotExist, false);
     });
   });
 

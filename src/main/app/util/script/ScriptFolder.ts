@@ -6,32 +6,40 @@ import { PathElement } from './PathElement';
 import { ScriptFactory } from './ScriptFactory';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
+
+/**
+ * Represents a folder in the script project structure.
+ */
 export class ScriptFolder extends ScriptNode {
-  public integrityMatches(_ops?: { upstairsOverride?: URL; }): Promise<boolean> {
-    throw new Error('Method not implemented.');
-  }
-  toUpstairsURL(): URL {
-    throw new Err.MethodNotImplementedError();
-  }
+
+  /**
+   * The upload method is not implemented for {@link ScriptFolder} since individual files
+   * automatically create parent folders upstairs, so this really should only be called when
+   * the folder is empty. We are not going to bother uploading empty folders right now, so this is a no-op
+   * as of this time.
+   * @lastreviewed 2025-09-29
+   * @param _upstairsUrlOverrideString 
+   * @returns 
+   */
   public async upload(_upstairsUrlOverrideString: string | null): Promise<Response | void> {
     return;
   }
- 
+
   /**
    * Finds all tsconfig.json files within this folder and its subdirectories.
-   * @returns A Promise that resolves to an array of TsConfig instances
-   * @lastreviewed null
+   * @returns A Promise that resolves to an array of {@link TsConfig} instances
+   * @lastreviewed 2025-09-29
    */
   public async findAllTsConfigFiles(): Promise<TsConfig[]> {
     const uris = await vscode.workspace.findFiles(new vscode.RelativePattern(this.uri(), '**/tsconfig.json'));
     return uris.map(ScriptFactory.createTsConfig);
   }
-  
+
   /**
-   * Checks if this folder is equal to another folder by comparing their file system paths.
+   * Checks if this {@link ScriptFolder} is equal to another folder by comparing their file system paths.
    * @param other The folder to compare with
-   * @returns True if the folders have the same path, false otherwise
-   * @lastreviewed null
+   * @returns True if both elements are {@link ScriptFolder} instances and they have the same path, false otherwise
+   * @lastreviewed 2025-09-29
    */
   public equals(other: ScriptFolder): boolean {
     if (!(other instanceof ScriptFolder)) {
@@ -39,30 +47,30 @@ export class ScriptFolder extends ScriptNode {
     }
     return this.uri().fsPath === other.uri().fsPath;
   }
-  
+
   /**
-   * Gets the file system path of this folder.
+   * Gets the file system path of this {@link ScriptFolder}.
    * @returns The file system path as a string
-   * @lastreviewed null
+   * @lastreviewed 2025-09-29
    */
   public path(): string {
     return this.uri().fsPath;
   }
-  
+
   /**
-   * Gets the URI of this folder.
-   * @returns The folder's URI
-   * @lastreviewed null
+   * Gets the URI of this {@link ScriptFolder}.
+   * @returns The folder's {@link vscode.Uri}
+   * @lastreviewed 2025-09-29
    */
   public uri(): vscode.Uri {
     return super.uri();
   }
 
   /**
-   * Creates a new Folder instance for a child folder within this folder.
-   * @param folderName The name of the child folder
-   * @returns A new Folder instance representing the child folder
-   * @lastreviewed null
+   * Creates a new {@link ScriptFolder} instance for a child folder within this one.
+   * 
+   * This can also be used to create non-direct children, or even ancestors, but that is not the intended use.
+   * @lastreviewed 2025-09-29
    */
   public getChildFolder(folderName: string): ScriptFolder {
     return ScriptFactory.createFolder(vscode.Uri.joinPath(this.uri(), folderName));
@@ -70,37 +78,52 @@ export class ScriptFolder extends ScriptNode {
 
   /**
    * Checks if this folder contains another PathElement by comparing their paths.
-   * @param other The PathElement to check if it's contained within this folder
+   * @param other The {@link PathElement} to check if it's contained within this folder
    * @returns True if the other element's path is within this folder's path, false otherwise
-   * @lastreviewed null
+   * @lastreviewed 2025-09-29
    */
   public contains(other: PathElement): boolean {
-    if (!(other instanceof ScriptFolder)) {
-      return false;
-    }
     return other.path().includes(this.path());
   }
 
   /**
    * Recursively flattens all files in this folder and returns them as ScriptFile instances.
-   * @returns A Promise that resolves to an array of ScriptFile instances for all files in the folder tree
-   * @lastreviewed null
+   * @lastreviewed 2025-09-29
    */
   public async flatten(): Promise<ScriptNode[]> {
     return (await this.flattenRaw()).map(ScriptFactory.createNode);
   }
-  
+
   /**
    * Recursively flattens all files in this folder and returns their URIs.
-   * @returns A Promise that resolves to an array of URIs for all files in the folder tree
-   * @lastreviewed null
+   * @lastreviewed 2025-09-29
    */
   public async flattenRaw(): Promise<vscode.Uri[]> {
     return flattenDirectory(this);
   }
 
+  /**
+   * Gets the name of this folder. Literally just its own name.
+   */
   public folderName(): string {
     return path.basename(this.path());
   }
 
+  /**
+   * Not implemented. {@link ScriptFolder} does not yet need to do this.
+   * @throws an {@link Err.MethodNotImplementedError} 
+   * @lastreviewed 2025-09-29
+   */
+  public integrityMatches(_ops?: { upstairsOverride?: URL; }): Promise<boolean> {
+    throw new Err.MethodNotImplementedError();
+  }
+
+  /**
+   * Not implemented. {@link ScriptFolder} does not yet need to do this.
+   * @throws an {@link Err.MethodNotImplementedError} 
+   * @lastreviewed 2025-09-29
+   */
+  toUpstairsURL(): URL {
+    throw new Err.MethodNotImplementedError();
+  }
 }

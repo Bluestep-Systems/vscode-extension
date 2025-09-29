@@ -15,6 +15,7 @@ import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
 import { ScriptFactory } from './ScriptFactory';
 const fs = FileSystem.getInstance;
+
 /**
  * A class representing a file or folder element of a script.
  *
@@ -23,7 +24,7 @@ const fs = FileSystem.getInstance;
 export abstract class ScriptNode implements PathElement {
 
   /**
-   * The downstairs URI (local file system path).
+   * The parser for the downstairs URI of this file.
    */
   protected parser: DownstairsUriParser;
 
@@ -31,8 +32,6 @@ export abstract class ScriptNode implements PathElement {
    * The downstairs root object.
    */
   protected scriptRoot: ScriptRoot;
-
-
 
   /**
    * Creates a {@link ScriptNode} instance in addition to its associated {@link ScriptRoot} object.
@@ -46,16 +45,15 @@ export abstract class ScriptNode implements PathElement {
     this.scriptRoot = new ScriptRoot(downstairsUri);
   }
 
+  /**
+   * Meant to convert the current node to a matching upstairs {@link URL}.
+   * @lastreviewed 2025-09-29
+   */
   abstract toUpstairsURL(): URL;
 
   /**
    * Gets the downstairs (local) {@link vscode.Uri} for this file
-   * @lastreviewed 2025-09-15
-   */
-  /**
-   * Gets the URI of this script file.
-   * @returns The VS Code URI of this file
-   * @lastreviewed null
+   * @lastreviewed 2025-09-29
    */
   public uri() {
     return this.parser.rawUri;
@@ -64,7 +62,7 @@ export abstract class ScriptNode implements PathElement {
   /**
    * Gets the file system path of this script file.
    * @returns The file system path as a string
-   * @lastreviewed null
+   * @lastreviewed 2025-09-29
    */
   public path() {
     return this.uri().fsPath;
@@ -72,7 +70,7 @@ export abstract class ScriptNode implements PathElement {
 
   /**
    * Produces the last modified {@link Date} of the upstairs object
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-09-29
    */
   public async getUpstairsLastModified(): Promise<Date> {
 
@@ -88,9 +86,11 @@ export abstract class ScriptNode implements PathElement {
 
 
   /**
-   * default implementation always returns true since folders don't have integrity to match
+   * Determines if the upstairs file matches the local file in terms of integrity.
+   * Compares the hash of the local file with the hash stored in the metadata.
    * @param _ops 
    * @returns 
+   * @lastreviewed 2025-09-29
    */
   public abstract integrityMatches(_ops?: { upstairsOverride?: URL }): Promise<boolean>;
 
@@ -98,7 +98,7 @@ export abstract class ScriptNode implements PathElement {
 
   /**
    * Gets the content of the upstairs file as text.
-   * @throws {Error} When the upstairs file returns a 400+ status code
+   * @throws an {@link Err.HttpResponseError} When the upstairs file returns a 400+ status code
    * @lastreviewed 2025-09-15
    */
   public async getUpstairsContent(): Promise<string> {
@@ -114,23 +114,18 @@ export abstract class ScriptNode implements PathElement {
     return await response.text();
   }
 
-
-
-
-
   /**
    * Writes binary content to the local file.
    * @param buffer The binary content to write to the file
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-09-29
    */
   public async writeContent(buffer: ArrayBuffer) {
     await fs().writeFile(this.uri(), Buffer.from(buffer));
   }
 
   /**
-   * Determines if the file exists and corresponds to an actual file (not a directory).
-   * Metadata files are considered to always exist.
-   * @lastreviewed 2025-09-15
+   * Determines if the node exists and corresponds to an actual, real file on disk.
+   * @lastreviewed 2025-09-29
    */
   public async exists(): Promise<boolean> {
     try {
@@ -142,16 +137,8 @@ export abstract class ScriptNode implements PathElement {
   }
 
   /**
-   * Inverse of {@link exists}, for readability.
-   * @lastreviewed 2025-09-15
-   */
-  public async fileDoesNotExist(): Promise<boolean> {
-    return !(await this.exists() && await this.isFile());
-  }
-
-  /**
-   * Produces the file stat, or `null` if it doesn't exist.
-   * @lastreviewed 2025-09-15
+   * Produces the {@link vscode.FileStat} of the underlaying file, or `null` if it doesn't exist.
+   * @lastreviewed 2025-09-29
    */
   public async stat(): Promise<vscode.FileStat | null> {
     try {
@@ -162,9 +149,9 @@ export abstract class ScriptNode implements PathElement {
   }
 
   /**
-   * The last modified time of the local file.
-   * @throws {Error} When the file does not exist
-   * @lastreviewed 2025-09-15
+   * The last modified {@link Date} of the local file.
+   * @throws an {@link Err.NodeNotFoundError} When the file does not exist
+   * @lastreviewed 2025-09-29
    */
   public async lastModifiedTime(): Promise<Date> {
     const stat = await this.stat();
@@ -176,7 +163,7 @@ export abstract class ScriptNode implements PathElement {
 
   /**
    * Get the {@link ScriptRoot} object for this file.
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-09-29
    */
   public getScriptRoot() {
     return this.scriptRoot;
@@ -185,7 +172,7 @@ export abstract class ScriptNode implements PathElement {
   /**
    * Gets the last pulled time for the script file as a string in UTC format, or `null` if not found
    * in the metadata object.
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-09-29
    */
   public async getLastPulledTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
@@ -195,7 +182,7 @@ export abstract class ScriptNode implements PathElement {
   /**
    * Gets the last pulled time for the script file as a {@link Date}, or `null` if not found in the
    * metadata object.
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-09-29
    */
   public async getLastPulledTime(): Promise<Date | null> {
     const lastPulledStr = await this.getLastPulledTimeStr();
@@ -208,7 +195,7 @@ export abstract class ScriptNode implements PathElement {
   /**
    * Gets the last pushed time for the script file in UTC format, or `null` if not found
    * in the metadata object.
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-09-29
    */
   public async getLastPushedTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
@@ -218,7 +205,7 @@ export abstract class ScriptNode implements PathElement {
   /**
    * Gets the last pushed time for the script file as a {@link Date}, or `null` if not
    * found in the metadata object.
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-09-29
    */
   public async getLastPushedTime(): Promise<Date | null> {
     const lastPushedStr = await this.getLastPushedTimeStr();
@@ -234,8 +221,8 @@ export abstract class ScriptNode implements PathElement {
    * Be mindful, because it becomes easy to create inconsistencies since the underlying file may not even exist.
    * @param root The new script root
    * @returns The updated script file
-   * @throws {Error} When attempting to overwrite script root of a metadata file
-   * @lastreviewed 2025-09-15
+   * @throws an {@link Err.MetadataFileOperationError} When attempting to overwrite script root of a metadata file
+   * @lastreviewed 2025-09-29
    */
   withScriptRoot(root: ScriptRoot): ScriptNode {
     this.scriptRoot = root;
