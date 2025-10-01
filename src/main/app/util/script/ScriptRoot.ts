@@ -316,7 +316,7 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the contents of the info folder.
+   * Gets the contents of the info  in the draft directory.
    * @lastreviewed 2025-09-15
    */
   public async getInfoFolderContents() {
@@ -324,7 +324,8 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the scripts folder in the draft directory.
+   * Gets the scripts {@link ScriptFolder} in the draft directory.
+   * @lastreviewed 2025-10-01
    */
   public async getScriptsFolder() {
     return this.getDraftFolder().getChildFolder("scripts");
@@ -332,8 +333,8 @@ export class ScriptRoot {
 
 
   /**
-   * Gets the contents of the scripts folder.
-   * @lastreviewed 2025-09-15
+   * Gets the {@link vscode.Uri}s of the scripts folder.
+   * @lastreviewed 2025-10-01
    */
   public async getScriptsFolderContents() {
     return this.getDraftFolderContents("scripts");
@@ -344,8 +345,8 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the contents of the objects folder.
-   * @lastreviewed 2025-09-15
+   * Gets the {@link vscode.Uri}s of the objects folder.
+   * @lastreviewed 2025-10-01
    */
   public async getObjectsFolderContents() {
     return this.getDraftFolderContents("objects");
@@ -355,7 +356,7 @@ export class ScriptRoot {
    * Determines if this script root is for a file that is in good condition.
    * Validates that the info folder contains exactly 3 required files (metadata.json, permissions.json, config.json)
    * and that the objects folder contains exactly one file (imports.ts).
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-10-01
    */
   public async isCopacetic(): Promise<boolean> {
     const infoContent = await this.getInfoFolderContents();
@@ -387,7 +388,7 @@ export class ScriptRoot {
   }
 
   /**
-   * Checks if this ScriptRoot is morally equivalent to another ScriptRoot.
+   * Checks if this {@link ScriptRoot} is morally equivalent to another {@link ScriptRoot}.
    * Compares origin, WebDAV ID, downstairs root path, and upstairs URL.
    * 
    * @param b The other ScriptRoot to compare against
@@ -401,7 +402,7 @@ export class ScriptRoot {
    * Performs the BSJS "snapshot" process which involves compiling the draft folder.
    * This method compiles TypeScript files and prepares the script for deployment.
    * 
-   * @throws {Error} When compilation fails or file system operations encounter errors
+   * @throws an {Error} When compilation fails or file system operations encounter errors
    * @lastreviewed null
    */
   public async snapshot() {
@@ -471,7 +472,7 @@ export class ScriptRoot {
 
     // now we need to delete any files in the build folder(s) that were not emitted by the compiler
     // or copied (like JSON files, js files, etc).
-    //TODO at this time (2024-09-25) this is really only serving as a safety check until
+    //TODO at this time (2024-10-01) this is really only serving as a safety check until
     // we stop starting by wholesale deleting the build folder.
     for (const buildNode of emittedScriptNodes) {
       if (await buildNode.isFolder()) {
@@ -487,11 +488,12 @@ export class ScriptRoot {
     }
     await this.tidyMetadataFile();
   }
+
   /**
    * Removes stale push/pull records from metadata that reference files no longer in the draft folder.
    * This ensures the metadata stays synchronized with the actual file system state.
    * 
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   private async tidyMetadataFile() {
     const draftFolder = this.getDraftFolder();
@@ -504,36 +506,32 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the draft folder within the script root.
-   * @returns A Folder instance representing the draft folder
-   * @lastreviewed null
+   * Gets the draft {@link ScriptFolder} within the script root.
+   * @lastreviewed 2025-10-01
    */
   public getDraftFolder() {
     return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "draft"));
   }
 
   /**
-   * Gets the build folder within the draft folder.
-   * @returns A Folder instance representing the .build folder inside draft
-   * @lastreviewed null
+   * Gets the build {@link ScriptFolder} within the draft folder.
+   * @lastreviewed 2025-10-01
    */
   public getDraftBuildFolder() {
     return this.getDraftFolder().getChildFolder(".build");
   }
 
   /**
-   * Gets the snapshot folder within the script root.
-   * @returns A Folder instance representing the snapshot folder
-   * @lastreviewed null
+   * Gets the snapshot {@link ScriptFolder} within the script root.
+   * @lastreviewed 2025-10-01
    */
   public getSnapshotFolder() {
     return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "snapshot"));
   }
 
   /**
-   * Gets the declarations folder within the script root.
-   * @returns A Folder instance representing the declarations folder
-   * @lastreviewed null
+   * Gets the declarations {@link ScriptFolder} within the script root.
+   * @lastreviewed 2025-10-01
    */
   public getDeclarationsFolder() {
     return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "declarations"));
@@ -542,8 +540,8 @@ export class ScriptRoot {
   /**
    * Finds all tsconfig.json files within the draft folder and its subdirectories.
    * 
-   * @returns A Promise that resolves to an array of TsConfig instances
-   * @lastreviewed null
+   * @returns A Promise that resolves to an array of {@link TsConfig} instances
+   * @lastreviewed 2025-10-01
    */
   public async findTsConfigFiles(): Promise<TsConfig[]> {
     const tsConfigFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.getDraftFolder().uri(), '**/' + TsConfig.NAME));
@@ -554,7 +552,7 @@ export class ScriptRoot {
    * Identifies TypeScript configuration files that are not in a copacetic (valid) state.
    * 
    * @returns A Promise that resolves to an array of file paths for invalid tsconfig.json files
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public async getBadTsFiles(): Promise<string[]> {
 
@@ -567,11 +565,12 @@ export class ScriptRoot {
     }
     return badFiles;
   }
+
   /**
-   * Gets all draft folder files that are eligible for pushing (excludes build folder contents).
+   * Gets all draft folder nodes that are eligible for pushing (excludes build folder contents).
    * 
-   * @returns A Promise that resolves to an array of ScriptNode instances that can be pushed
-   * @lastreviewed null
+   * @returns A {@link Promise} that resolves to an array of {@link ScriptNode} instances that can be pushed
+   * @lastreviewed 2025-10-01
    */
   public async getPushableDraftNodes(): Promise<ScriptNode[]> {
     const flattened = await this.getDraftFolder().flatten();
@@ -583,13 +582,14 @@ export class ScriptRoot {
     }
     return filtered;
   }
+
   /**
    * Performs pre-deployment validation checks on the script root.
    * Verifies the script is copacetic and all TypeScript configuration files are valid.
    * 
    * @returns A Promise that resolves to an empty string if all checks pass, or an error message describing issues
    * @throws {Err.ScriptNotCopaceticError} When the script root is not in a copacetic state
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public async preflightCheck(): Promise<string> {
     if (!(await this.isCopacetic())) {
@@ -599,7 +599,7 @@ export class ScriptRoot {
     if (badTsFiles.length > 0) {
       return `The following tsconfig files are invalid:\n\n${badTsFiles.join("\n")}\n\n
       SPECIFICALLY: ensure that there are no trailing commas in the JSON files; the IDE does not flag this with
-      red squigglies, but it renders the JSON invalid for the BlueStep servers.`;
+      red squigglies, but it renders the JSON invalid and the webapp cannot parse it properly.`;
     }
     return "";
   }
