@@ -403,9 +403,6 @@ export class ScriptRoot {
     await this.compileDraftFolder();
   }
 
-
-
-
   /**
    * Deletes the relevant build folder (e.g. ".build") within the draft directory and its subcomponents.
    * Ignores FileNotFound errors if the folder doesn't exist.
