@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
 import { App } from '../app/App';
 
-
+/**
+ * Performs all startup tasks for the extension.
+ * @param context The VSCode extension context
+ */
 export default function (context: vscode.ExtensionContext) {
-
   try {
     
     App.init(context);
