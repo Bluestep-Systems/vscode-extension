@@ -17,10 +17,10 @@ import { ProgressHelper } from '../util/ui/ProgressHelper';
 /**
  * Pushes a script to a WebDAV location.
  * @param overrideFormulaUri The URI to override the default formula URI.
- * @param sourceOps The source operations to perform.
+ * @param sourceOps The options for oveerriding the source location
  * @returns A promise that resolves when the push is complete.
  */
-export default async function ({ overrideFormulaUri, sourceOps }: { overrideFormulaUri?: string, sourceOps?: SourceOps }): Promise<void> {
+export default async function ({ overrideFormulaUri, sourceOps, skipMessage }: { overrideFormulaUri?: string, sourceOps?: SourceOps, skipMessage?: boolean }): Promise<void> {
   try {
     const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
     if (sourceEditorUri === undefined) {
@@ -69,7 +69,7 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
 
     await cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaOverride);
 
-    if (!sourceOps?.skipMessage) {
+    if (!skipMessage) {
       Alert.popup('Push complete!');
     }
   } catch (e) {

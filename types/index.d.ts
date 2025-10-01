@@ -156,12 +156,12 @@ type ScriptGQLBadResp = {
 }
 
 /**
- * //TODO
+ * Options needed to to override the source in a script operation.
  */
-type SourceOps = { sourceOrigin: string, topId: string, skipMessage?: true };
+type SourceOps = { sourceOrigin: string, topId: string };
 
 /**
- * The metadata for the RemoteScript objects used locally.
+ * The metadata for the Script objects used locally.
  */
 type ScriptMetaData = {
 
@@ -174,6 +174,11 @@ type ScriptMetaData = {
    * The name of the script.
    */
   scriptName: string;
+
+  /**
+   * the org's seqnum
+   */
+  U: string;
 
   /**
    * push/pull records for the script.
@@ -209,7 +214,7 @@ type ScriptMetaData = {
  * 
  * //TODO this is incomplete and is not correct for all Script types
  */
-export type MetaDataJsonFileContent = {
+export type MetaDataDotJsonContent = {
   /**
    * //TODO
    */

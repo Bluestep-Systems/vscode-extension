@@ -58,6 +58,9 @@ export class UpstairsUrlParser {
     this.trailing = trailing;
     this.trailingFolder = trailing?.includes('/') ? trailing.split('/')[0] : undefined;
   }
+  public async getU(): Promise<string> {
+    return Promise.resolve(this.url.hostname.split('.')[0]);
+  }
   private isValidType(type: string): type is typeof UpstairsUrlParser.URL_TYPES[number] {
     return UpstairsUrlParser.URL_TYPES.includes(type as typeof UpstairsUrlParser.URL_TYPES[number]);
   }

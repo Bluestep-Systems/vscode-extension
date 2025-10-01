@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ConfigJsonContent, MetaDataJsonFileContent } from '../../../../../types';
+import { ConfigJsonContent, MetaDataDotJsonContent } from '../../../../../types';
 import { App } from '../../App';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
@@ -275,8 +275,8 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Gets the metadata file for the script.
    * @lastreviewed 2025-09-15
    */
-  public async getMetadataFile(): Promise<MetaDataJsonFileContent> {
-    return this.getConfigurationFile<MetaDataJsonFileContent>('metadata.json');
+  public async getMetadataFile(): Promise<MetaDataDotJsonContent> {
+    return this.getConfigurationFile<MetaDataDotJsonContent>('metadata.json');
   }
 
 

@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import lifeCycle from './lifecycle';
+import start from './lifecycle/start';
+import end from './lifecycle/end';
 
 /**
  * This method is called when the extension is activated. Triggers once on load.
@@ -9,8 +10,8 @@ import lifeCycle from './lifecycle';
  */
 export function activate(context: vscode.ExtensionContext) {
 	try {
-		lifeCycle.start(context);
-	}catch (error) {
+		start(context);
+	} catch (error) {
 		console.trace(error);
 	}
 }
@@ -22,5 +23,5 @@ export function activate(context: vscode.ExtensionContext) {
  * THIS MUST EXIST FOR THE EXTENSION TO WORK
  */
 export function deactivate() {
-	lifeCycle.end();
+	end();
 }

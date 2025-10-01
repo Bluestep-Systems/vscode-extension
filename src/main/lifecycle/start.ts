@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { App } from '../../app/App';
+import { App } from '../app/App';
 
 
 export default function (context: vscode.ExtensionContext) {

@@ -128,8 +128,8 @@ export namespace Util {
   }
 
   /**
-   * Gets the URI for the current file based on the provided source operations.
-   * @param sourceOps The source operations to use for determining the URI.
+   * Gets the URI for the current file based on the provided source options.
+   * @param sourceOps The source options to use for determining the URI.
    * @returns The URI of the current file.
    */
   export async function getDownstairsFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {

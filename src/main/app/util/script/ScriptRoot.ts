@@ -148,6 +148,7 @@ export class ScriptRoot {
       App.logger.warn("Metadata file does not exist or is invalid; creating a new one.");
       contentObj = {
         scriptName: "",
+        U: "",
         webdavId: this.webDavId,
         pushPullRecords: []
       };
