@@ -1,12 +1,15 @@
 import type { SessionData } from "../../../../types";
-import { Auth, AuthManager, AuthObject } from "../authentication";
-import { PrivateKeys, PrivateGenericMap } from "../util/PseudoMaps";
-import { ContextNode } from "../context/ContextNode";
-import { Alert } from "../util/ui/Alert";
-import { Util } from "../util";
 import type { App } from "../App";
-import { ResponseCodes } from "../util/network/StatusCodes";
+import { Auth } from "../authentication";
+import { AuthManager } from "../authentication/AuthManager";
+import { AuthObject } from "../authentication/AuthObject";
+import { ContextNode } from "../context/ContextNode";
+import { Util } from "../util";
 import { Err } from "../util/Err";
+import { HttpClient } from "../util/network/HttpClient";
+import { ResponseCodes } from "../util/network/StatusCodes";
+import { PrivateGenericMap, PrivateKeys } from "../util/PseudoMaps";
+import { Alert } from "../util/ui/Alert";
 
 /**
  * The session manager is responsible for managing individual sessions with BlueStep servers.
@@ -263,14 +266,14 @@ export const SESSION_MANAGER = new class extends ContextNode {
           "Cookie": `JSESSIONID=${sessionData.JSESSIONID}; INGRESSCOOKIE=${sessionData.INGRESSCOOKIE}`,
         }
       };
-      const response = await globalThis.fetch(url, options);
+      const response = await HttpClient.getInstance().fetch(url, options);
       return await this.processResponse(response);
     } else {
       this.parent.logger.info("performing login to:" + url.origin);
       const authLoginBodyValue = await this.authManager.authLoginBodyValue();
       this.parent.isDebugMode() && this.parent.logger.info("login body:" + authLoginBodyValue);
       //TODO have this moved use the proper login servlet instead of this dummy endpoint
-      const response = await globalThis.fetch(url.origin + "/lookup/test", {
+      const response = await HttpClient.getInstance().fetch(url.origin + "/lookup/test", {
         method: "POST",
         headers: {
           "Authorization": `${await this.authManager.authHeaderValue()}`,

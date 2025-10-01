@@ -3,17 +3,17 @@ import * as assert from 'assert';
 //@ts-ignore
 import * as vscode from 'vscode';
 //@ts-ignore
-import { App } from '../main/app/App';
+import { App } from '../../main/app/App';
 //@ts-ignore
-import { SESSION_MANAGER } from '../main/app/b6p_session/SessionManager';
+import { SESSION_MANAGER } from '../../main/app/b6p_session/SessionManager';
 //@ts-ignore
-import { UPDATE_MANAGER } from '../main/app/services/UpdateChecker';
+import { UPDATE_MANAGER } from '../../main/app/services/UpdateChecker';
 //@ts-ignore
-import { FileSystem } from '../main/app/util/fs/FileSystem';
+import { FileSystem } from '../../main/app/util/fs/FileSystem';
 //@ts-ignore
-import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
+import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //@ts-ignore
-import { ScriptFactory } from '../main/app/util/script/ScriptFactory';
+import { ScriptFactory } from '../../main/app/util/script/ScriptFactory';
 
 // suite('Extension Integration Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

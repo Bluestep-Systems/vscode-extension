@@ -3,8 +3,9 @@ import { BasicAuthParams } from "../../../../types";
 import { SESSION_MANAGER } from "../b6p_session/SessionManager";
 import { ContextNode } from "../context/ContextNode";
 import { PrivateKeys, PrivateGenericMap } from "../util/PseudoMaps";
-import { AuthManager, BasicAuth } from "./classes";
 import { Err } from "../util/Err";
+import { AuthManager } from "./AuthManager";
+import { BasicAuth } from "./BasicAuth";
 
 /**
  * Singleton BasicAuth manager for VS Code extension authentication.

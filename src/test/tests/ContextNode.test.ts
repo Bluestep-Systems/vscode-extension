@@ -3,15 +3,15 @@ import * as assert from 'assert';
 //@ts-ignore
 import * as vscode from 'vscode';
 //@ts-ignore
-import { ContextNode } from '../main/app/context/ContextNode';
+import { ContextNode } from '../../main/app/context/ContextNode';
 //@ts-ignore
-import { PseudoMap } from '../main/app/util/PseudoMaps';
+import { PseudoMap } from '../../main/app/util/PseudoMaps';
 //@ts-ignore
-import { Serializable } from '../../types';
+import { Serializable } from '../../../types';
 //@ts-ignore
-import { FileSystem } from '../main/app/util/fs/FileSystem';
+import { FileSystem } from '../../main/app/util/fs/FileSystem';
 //@ts-ignore
-import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
+import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 
 // suite('ContextNode Pattern Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

@@ -3,21 +3,23 @@ import * as assert from 'assert';
 //@ts-ignore
 import * as vscode from 'vscode';
 //@ts-ignore
-import type { SessionData } from '../../types';
+import type { SessionData } from '../../../types';
 //@ts-ignore
-import { App } from '../main/app/App';
+import { App } from '../../main/app/App';
 //@ts-ignore
-import { Auth } from '../main/app/authentication';
+import { Auth } from '../../main/app/authentication';
 //@ts-ignore
-import { SESSION_MANAGER } from '../main/app/b6p_session/SessionManager';
+import { SESSION_MANAGER } from '../../main/app/b6p_session/SessionManager';
 //@ts-ignore
-import { Err } from '../main/app/util/Err';
+import { Err } from '../../main/app/util/Err';
 //@ts-ignore
-import { FileSystem } from '../main/app/util/fs/FileSystem';
+import { FileSystem } from '../../main/app/util/fs/FileSystem';
 //@ts-ignore
-import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
+import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //@ts-ignore
-import { ResponseCodes } from '../main/app/util/network/StatusCodes';
+import { ResponseCodes } from '../../main/app/util/network/StatusCodes';
+//@ts-ignore
+import { HttpClient } from '../../main/app/util/network/HttpClient';
 
 // suite('SessionManager Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;
@@ -35,15 +37,17 @@ import { ResponseCodes } from '../main/app/util/network/StatusCodes';
 //   });
 
 //   suiteTeardown(() => {
-//     // Restore production mode and original fetch
+//     // Restore production mode
 //     FileSystem.enableProductionMode();
-//     globalThis.fetch = originalFetch;
+//     HttpClient.enableProductionMode();
 //   });
 
 //   setup(() => {
 //     // Clear any previous mock data
 //     mockFileSystemProvider.clearMocks();
-//     fetchCalls = [];
+//
+//     // Enable HTTP test mode
+//     const mockHttp = HttpClient.enableTestMode();
 
 //     // Create a comprehensive mock ExtensionContext
 //     mockContext = {

@@ -5,17 +5,17 @@ import * as path from 'path';
 //@ts-ignore
 import * as vscode from 'vscode';
 //@ts-ignore
-import { ScriptMetaData } from '../../types';
+import { ScriptMetaData } from '../../../types';
 //@ts-ignore
-import { App } from '../main/app/App';
+import { App } from '../../main/app/App';
 //@ts-ignore
-import { FileSystem } from '../main/app/util/fs/FileSystem';
+import { FileSystem } from '../../main/app/util/fs/FileSystem';
 //@ts-ignore
-import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
+import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //@ts-ignore
-import { ScriptFactory } from '../main/app/util/script/ScriptFactory';
+import { ScriptFactory } from '../../main/app/util/script/ScriptFactory';
 //@ts-ignore
-import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
+import { ScriptRoot } from '../../main/app/util/script/ScriptRoot';
 
 // suite('ScriptRoot Tests', () => {
 //     let mockFileSystem: MockFileSystem;

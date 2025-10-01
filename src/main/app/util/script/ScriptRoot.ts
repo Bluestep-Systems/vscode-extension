@@ -11,6 +11,7 @@ import { ScriptFactory } from './ScriptFactory';
 import { ScriptFile } from './ScriptFile';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
+import type { ScriptFolder } from './ScriptFolder';
 const fs = FileSystem.getInstance;
 
 /**
@@ -308,6 +309,13 @@ export class ScriptRoot {
   }
 
   /**
+   * Gets the info {@link ScriptFolder} in the draft directory.
+   */
+  public async getInfoFolder() {
+    return this.getDraftFolder().getChildFolder("info");
+  }
+
+  /**
    * Gets the contents of the info folder.
    * @lastreviewed 2025-09-15
    */
@@ -316,11 +324,23 @@ export class ScriptRoot {
   }
 
   /**
+   * Gets the scripts folder in the draft directory.
+   */
+  public async getScriptsFolder() {
+    return this.getDraftFolder().getChildFolder("scripts");
+  }
+
+
+  /**
    * Gets the contents of the scripts folder.
    * @lastreviewed 2025-09-15
    */
   public async getScriptsFolderContents() {
     return this.getDraftFolderContents("scripts");
+  }
+
+  public async getObjectsFolder() {
+    return this.getDraftFolder().getChildFolder("objects");
   }
 
   /**

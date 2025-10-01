@@ -1,9 +1,12 @@
 import * as vscode from 'vscode';
 import { FileSystemProvider, MockFileSystem, VSCodeFileSystem } from './FileSystemProvider';
 import { Err } from '../Err';
+import type { TestableFactoryStatic, TestableFactory } from '../../../../test/TestableFactory';
+
 /**
  * Namespace for managing the file system provider.
  * This allows us to switch between real and mock implementations for testing.
+ * Conforms to the {@link TestableFactory} pattern.
  */
 export namespace FileSystem {
   let instance: FileSystemProvider = new VSCodeFileSystem();
@@ -57,7 +60,7 @@ export namespace FileSystem {
 
   /**
    * Creates a dummy text document from the provided URI. Useful for glob matching.
-   * @param uri 
+   * @param uri
    * @returns a dummy text document.
    */
   export function createDummyTextDocument(uri: vscode.Uri): vscode.TextDocument {
@@ -97,3 +100,10 @@ export namespace FileSystem {
     };
   }
 }
+
+/**
+ * Type assertion to ensure FileSystem conforms to {@link TestableFactory} pattern
+ */
+const _typeCheck: TestableFactoryStatic<FileSystemProvider, MockFileSystem> = FileSystem;
+// Prevent unused variable warning
+void _typeCheck;

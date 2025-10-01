@@ -3,19 +3,19 @@ import * as assert from 'assert';
 //@ts-ignore
 import * as vscode from 'vscode';
 //@ts-ignore
-import { BASIC_AUTH_MANAGER } from '../main/app/authentication/BasicAuthManager';
+import { BASIC_AUTH_MANAGER } from '../../main/app/authentication/BasicAuthManager';
 //@ts-ignore
-import { SESSION_MANAGER } from '../main/app/b6p_session/SessionManager';
+import { SESSION_MANAGER } from '../../main/app/b6p_session/SessionManager';
 //@ts-ignore
-import { BasicAuth } from '../main/app/authentication/classes';
+import { BasicAuth } from '../../main/app/authentication/classes';
 //@ts-ignore
-import { FileSystem } from '../main/app/util/fs/FileSystem';
+import { FileSystem } from '../../main/app/util/fs/FileSystem';
 //@ts-ignore
-import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
+import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //@ts-ignore
-import { Err } from '../main/app/util/Err';
+import { Err } from '../../main/app/util/Err';
 //@ts-ignore
-import type { BasicAuthParams } from '../../types';
+import type { BasicAuthParams } from '../../../types';
 
 // suite('BasicAuthManager Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

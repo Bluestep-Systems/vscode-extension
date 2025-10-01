@@ -1,12 +1,12 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { App } from '../main/app/App';
-import { FileSystem } from '../main/app/util/fs/FileSystem';
-import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
-import { ScriptFactory } from '../main/app/util/script/ScriptFactory';
-import { ScriptNode } from '../main/app/util/script/ScriptNode';
-import { ScriptRoot } from '../main/app/util/script/ScriptRoot';
+import { App } from '../../main/app/App';
+import { FileSystem } from '../../main/app/util/fs/FileSystem';
+import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
+import { ScriptFactory } from '../../main/app/util/script/ScriptFactory';
+import { ScriptNode } from '../../main/app/util/script/ScriptNode';
+import { ScriptRoot } from '../../main/app/util/script/ScriptRoot';
 
 suite('ScriptNode Tests', () => {
   let mockFileSystemProvider: MockFileSystem;

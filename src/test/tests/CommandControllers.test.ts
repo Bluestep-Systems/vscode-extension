@@ -3,19 +3,19 @@ import * as assert from 'assert';
 //@ts-ignore
 import * as vscode from 'vscode';
 //@ts-ignore
-import { App } from '../main/app/App';
+import { App } from '../../main/app/App';
 //@ts-ignore
-import { Auth } from '../main/app/authentication';
+import { Auth } from '../../main/app/authentication';
 //@ts-ignore
-import pullCurrent from '../main/app/ctrl-p-commands/pullCurrent';
+import pullCurrent from '../../main/app/ctrl-p-commands/pullCurrent';
 //@ts-ignore
-import push from '../main/app/ctrl-p-commands/push';
+import push from '../../main/app/ctrl-p-commands/push';
 //@ts-ignore
-import pushCurrent from '../main/app/ctrl-p-commands/pushCurrent';
+import pushCurrent from '../../main/app/ctrl-p-commands/pushCurrent';
 //@ts-ignore
-import { FileSystem } from '../main/app/util/fs/FileSystem';
+import { FileSystem } from '../../main/app/util/fs/FileSystem';
 //@ts-ignore
-import { MockFileSystem } from '../main/app/util/fs/FileSystemProvider';
+import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 
 // suite('Command Controllers Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

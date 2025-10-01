@@ -1,8 +1,8 @@
 import { SESSION_MANAGER } from '../b6p_session/SessionManager';
-import { AuthManager, AuthObject } from './classes';
+import { AuthManager } from './AuthManager';
+import { AuthObject } from './AuthObject';
 import { BASIC_AUTH_MANAGER } from './BasicAuthManager';
 
-export { AuthManager, AuthObject } from './classes';
 /**
  * Namespace for authentication related utilities and functions.
  */

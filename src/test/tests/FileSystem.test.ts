@@ -1,8 +1,8 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { FileSystem } from '../main/app/util/fs/FileSystem';
-import { FileSystemProvider, MockFileSystem, VSCodeFileSystem } from '../main/app/util/fs/FileSystemProvider';
-import { Err } from '../main/app/util/Err';
+import { FileSystem } from '../../main/app/util/fs/FileSystem';
+import { FileSystemProvider, MockFileSystem, VSCodeFileSystem } from '../../main/app/util/fs/FileSystemProvider';
+import { Err } from '../../main/app/util/Err';
 
 suite('FileSystem Factory Tests', () => {
   let originalInstance: FileSystemProvider;
