@@ -5,6 +5,7 @@ import { getDirtyDocs } from '../util/data/getDirtyDocs';
 import { ScriptFactory } from '../util/script/ScriptFactory';
 import { Alert } from '../util/ui/Alert';
 import pushScript from './push';
+import { Err } from '../util/Err';
 
 
 /**
@@ -42,7 +43,9 @@ export default async function (): Promise<void> {
 
     await pushScript({ overrideFormulaUri: fileMetaData.getScriptRoot().toBaseUpstairsString() });
   } catch(e) {
-    
+    if (e instanceof Err.AlreadyAlertedError) {
+      return; // do nothing, already handled
+    }
     if (e instanceof Error) { 
       Alert.error(`Error pushing current file: ${e.message}`);
       App.logger.error(e);

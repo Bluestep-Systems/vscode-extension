@@ -732,7 +732,7 @@ export namespace Err {
   export class AlreadyAlertedError extends Error {
     constructor(message: string) {
       super(message);
-      this.name = "AlreadyLoggedError";
+      this.name = "AlreadyHandledError";
     }
   }
   export class UserCancelledError extends AlreadyAlertedError {

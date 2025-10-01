@@ -1,5 +1,5 @@
 import { Alert } from "../util/ui/Alert";
 
 export default function() {
-  Alert.info("This feature is coming soon!");
+  Alert.popup("This feature is coming soon!");
 }

@@ -186,14 +186,14 @@ export const SESSION_MANAGER = new class extends ContextNode {
         }
         if (e instanceof Err.UnauthorizedError) {
           await this.sessions.delete(origin);
-          Alert.info(e.stack || e.message || String(e), { modal: false });
-          Alert.info("Session expired/etc, attempting to re-authenticate...", { modal: false });
+          Alert.info(e.stack || e.message || String(e));
+          Alert.info("Session expired/etc, attempting to re-authenticate...");
           await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
           return await this.csrfFetch(url, options, retries - 1);
         }
         if (retries > 0) {
           session.lastCsrfToken = null; // force a refresh
-          Alert.info(`Request didn't work, retrying... (${retries} attempts left)`, { modal: false });
+          Alert.info(`Request didn't work, retrying... (${retries} attempts left)`);
           await this.sessions.delete(origin);
           await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
           return await this.csrfFetch(url, options, retries - 1);

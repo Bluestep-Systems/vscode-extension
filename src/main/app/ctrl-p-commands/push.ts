@@ -70,7 +70,7 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
     await cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaOverride);
 
     if (!sourceOps?.skipMessage) {
-      Alert.info('Push complete!');
+      Alert.popup('Push complete!');
     }
   } catch (e) {
     if (!(e instanceof Err.AlreadyAlertedError)) {

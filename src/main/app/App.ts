@@ -38,18 +38,18 @@ export const App = new class extends ContextNode {
       ['bsjs-push-pull.snapshot', vscode.commands.registerCommand('bsjs-push-pull.snapshot', ctrlPCommands.snapshot)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
         //Alert.info("Settings: " + App.settings.toJSON(), { modal: false });
-        Alert.info("NOT IMPLEMENTED YET", { modal: false });
+        Alert.info("NOT IMPLEMENTED YET");
       })],
       ['bsjs-push-pull.clearSettings', vscode.commands.registerCommand('bsjs-push-pull.clearSettings', async () => {
-        Alert.info("Reverting to default settings", { modal: false });
+        Alert.info("Reverting to default settings");
         App.clearMap();
       })],
       ['bsjs-push-pull.clearSessions', vscode.commands.registerCommand('bsjs-push-pull.clearSessions', async () => {
-        Alert.info("Clearing all Sessions", { modal: false });
+        Alert.info("Clearing all Sessions");
         SM.clearMap();
       })],
       ['bsjs-push-pull.clearAll', vscode.commands.registerCommand('bsjs-push-pull.clearAll', async () => {
-        Alert.info("Clearing Sessions, Auth Managers, and Settings", { modal: false });
+        Alert.info("Clearing Sessions, Auth Managers, and Settings");
         App.clearMap(true);
         SM.clearMap();
         Auth.clearManagers();
@@ -149,7 +149,7 @@ export const App = new class extends ContextNode {
 
   public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
-    !alreadyAlerted && Alert.info("Cleared all Settings", { modal: false });
+    !alreadyAlerted && Alert.info("Cleared all Settings");
     this.settings.set('debugMode', { enabled: false });
     
   }
@@ -164,7 +164,7 @@ export const App = new class extends ContextNode {
   public toggleDebugMode() {
     console.log("Toggling debug mode");
     this.settings.set('debugMode', { enabled: !this.settings.get('debugMode').enabled });
-    Alert.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`, { modal: false });
+    Alert.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`);
   }
 
   /**

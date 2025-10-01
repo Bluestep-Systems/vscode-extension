@@ -19,7 +19,7 @@ export default async function checkForUpdates(): Promise<void> {
       progress.report({ increment: 100 });
 
       if (!updateInfo) {
-        Alert.info('You are running the latest version of B6P Extension!');
+        Alert.popup('You are running the latest version of B6P Extension!');
       }
       // If updateInfo exists, the user will already be notified via UPDATE_CHECKER.notifyUser()
     });

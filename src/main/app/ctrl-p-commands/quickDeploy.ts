@@ -57,7 +57,7 @@ export default async function (): Promise<void> {
   });
 
 
-  Alert.info("Quick Deploy complete!");
+  Alert.popup("Quick Deploy complete!");
 }
 
 /**

@@ -23,7 +23,7 @@ export default async function () {
       vscode.commands.executeCommand('workbench.action.files.setActiveEditorReadonlyInSession');
       App.isDebugMode() && App.logger.info(`Set ${activeEditorUri.toString()} to read-only`);
     } else {
-      App.isDebugMode() && App.logger.info(sf.getFileName() + " is not read-only");
+      App.isDebugMode() && App.logger.info(sf.fileName() + " is not read-only");
     }
   } catch (e) {
     App.logger.error("Error checking read-only status:", e);
@@ -37,7 +37,7 @@ export default async function () {
  * @param sf 
  */
 async function determine(sf: ScriptFile) {
-  const curFileName = sf.getFileName();
+  const curFileName = sf.fileName();
   const specialFileNames = [ScriptRoot.METADATA_FILENAME];
   if (specialFileNames.includes(curFileName)) {
     return true;

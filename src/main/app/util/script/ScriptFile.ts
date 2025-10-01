@@ -52,7 +52,7 @@ export class ScriptFile extends ScriptNode {
    * @lastreviewed 2025-09-15
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
-    const response = await SM.fetch(ops?.upstairsOverride || this.toUpstairsURL(), {
+    const response = await SM.fetch(ops?.upstairsOverride || this.upstairsUrl(), {
       method: "HEAD"
     });
     const etagHeader = response.headers.get("etag");
@@ -100,7 +100,7 @@ export class ScriptFile extends ScriptNode {
     const localHash = await this.getHash();
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = localHash === upstairsHash;
-    App.isDebugMode() && console.log("filename:", this.getFileName(), "\n", "matches:", matches, "\n", "local:", localHash, "\n", "upstairs:", upstairsHash);
+    App.isDebugMode() && console.log("filename:", this.fileName(), "\n", "matches:", matches, "\n", "local:", localHash, "\n", "upstairs:", upstairsHash);
     return matches;
   }
 
@@ -117,7 +117,7 @@ export class ScriptFile extends ScriptNode {
     }
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = lastHash === upstairsHash;
-    App.isDebugMode() && console.log("filename:", this.getFileName(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
+    App.isDebugMode() && console.log("filename:", this.fileName(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
     return matches;
   }
 
@@ -135,11 +135,11 @@ export class ScriptFile extends ScriptNode {
   public async download(): Promise<Response> {
     const ignore = await super.isInGitIgnore();
     if (ignore) {
-      App.logger.info(`not downloading \`${this.getFileName()}\` because in .gitignore`);
+      App.logger.info(`not downloading \`${this.fileName()}\` because in .gitignore`);
       await this.deleteFromMetadata();
       return new Response("", { status: ResponseCodes.TEAPOT });
     }
-    const lookupUri = this.toUpstairsURL();
+    const lookupUri = this.upstairsUrl();
     App.logger.info("downloading from:" + lookupUri);
     const response = await SM.fetch(lookupUri, {
       method: "GET",
@@ -208,7 +208,7 @@ export class ScriptFile extends ScriptNode {
  * Gets the file name from the downstairs URI.
  * @lastreviewed 2025-09-15
  */
-  public getFileName(): string {
+  public fileName(): string {
     return path.parse(this.uri().fsPath).base;
   }
   /**
@@ -216,14 +216,14 @@ export class ScriptFile extends ScriptNode {
  * Constructs the appropriate WebDAV {@link URL} based on the file type (root, metadata, declarations, or draft).
  * @lastreviewed 2025-09-15
  */
-  public toUpstairsURL(): URL {
+  public upstairsUrl(): URL {
 
     const upstairsBaseUrl = this.getScriptRoot().toBaseUpstairsUrl();
     const newUrl = new URL(upstairsBaseUrl);
     if (this.parser.type === "root") {
       return newUrl;
     } else if (this.parser.type === "metadata") {
-      const fileName = this.getFileName();
+      const fileName = this.fileName();
       if (fileName === ".b6p_metadata.json") {
         throw new Err.MetadataFileOperationError("convert to upstairs URL");
       }
@@ -250,7 +250,7 @@ export class ScriptFile extends ScriptNode {
     if (this.parser.type === "root") {
       return "Node is the root folder";
     }
-    if (this.getFileName() === ".b6p_metadata.json") {
+    if (this.fileName() === ".b6p_metadata.json") {
       return "Node is a metadata file";
     }
     if (this.isInDeclarations()) {
@@ -282,26 +282,26 @@ export class ScriptFile extends ScriptNode {
    */
   public async isExternalModel(): Promise<boolean> {
     const config = await this.getConfigFile();
-    if (config.models?.map(m => m.name).includes(this.getFileName())) {
+    if (config.models?.map(m => m.name).includes(this.fileName())) {
       return true;
     }
     return false;
   }
 
   public shouldCopyRaw() {
-    return path.extname(this.getFileName()).toLowerCase() !== '.ts';
+    return path.extname(this.fileName()).toLowerCase() !== '.ts';
   }
 
   public copyToSnapshot() {
     console.log("copying file over", this.uri().fsPath);
   }
   public get extension() {
-    return path.extname(this.getFileName()).toLowerCase();
+    return path.extname(this.fileName()).toLowerCase();
   }
   async upload(upstairsUrlOverrideString: string | null = null): Promise<Response | void> {
     App.logger.info("Preparing to send file:", this.uri().fsPath);
     App.logger.info("To target formula URI:", upstairsUrlOverrideString);
-    const upstairsUrlParser = new UpstairsUrlParser(upstairsUrlOverrideString || this.toUpstairsURL().toString());
+    const upstairsUrlParser = new UpstairsUrlParser(upstairsUrlOverrideString || this.upstairsUrl().toString());
     const { webDavId, url: upstairsUrl } = upstairsUrlParser;
     const upstairsOverride = new URL(upstairsUrl);
     const downstairsUri = this.uri();
@@ -317,14 +317,14 @@ export class ScriptFile extends ScriptNode {
       const OVERWRITE = 'Overwrite';
       const CANCEL = 'Cancel';
       const overwrite = await Alert.prompt(
-        "The upstairs file has changed since the last time you pushed or pulled. Do you want to overwrite it?",
+        `The upstairs file (${this.fileName()}) has changed since the last time you pushed or pulled. Do you want to overwrite it?`,
         [
           OVERWRITE,
           CANCEL
         ]
       );
       if (overwrite !== OVERWRITE) {
-        Alert.info("Push cancelled");
+        Alert.popup("Push cancelled");
         throw new Err.UserCancelledError(`User ${overwrite ? overwrite + "ed" : "cancelled"} push due to upstairs file change`);
       }
     }
@@ -368,7 +368,7 @@ export class ScriptFile extends ScriptNode {
   }
 
   public isTsConfig(): boolean {
-    return this.getFileName() === "tsconfig.json";
+    return this.fileName() === "tsconfig.json";
   }
 
   public isMarkdown(): boolean {

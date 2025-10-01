@@ -134,7 +134,7 @@ export class ScriptFolder extends ScriptNode {
    * @throws an {@link Err.MethodNotImplementedError} 
    * @lastreviewed 2025-09-29
    */
-  toUpstairsURL(): URL {
+  upstairsUrl(): URL {
     throw new Err.MethodNotImplementedError();
   }
 }

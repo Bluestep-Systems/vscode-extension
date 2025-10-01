@@ -101,7 +101,7 @@ suite('ScriptNode Tests', () => {
       const scriptFile = ScriptFactory.createFile(metadataUri);
 
       assert.throws(() => {
-        scriptFile.toUpstairsURL();
+        scriptFile.upstairsUrl();
       }, /MetadataFileOperationError: Cannot convert to upstairs URL metadata file/);
     });
   });

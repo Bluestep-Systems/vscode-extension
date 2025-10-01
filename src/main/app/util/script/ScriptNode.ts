@@ -49,7 +49,7 @@ export abstract class ScriptNode implements PathElement {
    * Meant to convert the current node to a matching upstairs {@link URL}.
    * @lastreviewed 2025-09-29
    */
-  abstract toUpstairsURL(): URL;
+  abstract upstairsUrl(): URL;
 
   /**
    * Gets the downstairs (local) {@link vscode.Uri} for this file
@@ -74,7 +74,7 @@ export abstract class ScriptNode implements PathElement {
    */
   public async getUpstairsLastModified(): Promise<Date> {
 
-    const response = await SM.fetch(this.toUpstairsURL(), {
+    const response = await SM.fetch(this.upstairsUrl(), {
       method: "HEAD"
     });
     const lastModifiedHeaderValue = response.headers.get("Last-Modified");
@@ -91,7 +91,7 @@ export abstract class ScriptNode implements PathElement {
    * @lastreviewed 2025-09-15
    */
   public async getUpstairsContent(): Promise<string> {
-    const response = await SM.fetch(this.toUpstairsURL(), {
+    const response = await SM.fetch(this.upstairsUrl(), {
       method: "GET",
       headers: {
         "Accept": "*/*",
@@ -361,7 +361,7 @@ export abstract class ScriptNode implements PathElement {
    * @lastreviewed 2025-09-15
    */
   public getRest(): string {
-    return this.toUpstairsURL().pathname;
+    return this.upstairsUrl().pathname;
   }
 
 
