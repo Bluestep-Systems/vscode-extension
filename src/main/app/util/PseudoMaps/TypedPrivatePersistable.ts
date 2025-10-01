@@ -12,23 +12,17 @@ import { Err } from "../Err";
  * not be stored in workspace state.
  * 
  * @template T The type of the object being persisted
- * @lastreviewed null
+ * @lastreviewed 2025-10-01
  */
-export class TypedPrivatePersistable<T extends Record<string, Serializable>> extends TypedPersistable<T> {
+export class PrivateTypedPersistable<T extends Record<string, Serializable>> extends TypedPersistable<T> {
   private isInitialized: boolean = false;
   /**
-   * Constructor for TypedPrivatePersistable.
-   * 
-   * Left empty for implementation. Should handle:
-   * - Private key assignment
-   * - Extension context setup
-   * - Secret storage initialization
-   * - Default value handling
+   * Constructor for {@link PrivateTypedPersistable}.
    * 
    * @param key The private persistence key for secret storage
    * @param context The VS Code extension context
    * @param defaultValue The default value if no stored data exists
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   constructor({ key, context, defaultValue }: { key: PrivateKeys; context: vscode.ExtensionContext; defaultValue: T }) {
     // Call super with a dummy public key since we'll override the behavior
@@ -45,12 +39,12 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
    * Throws an error if not initialized. While this doesn't provide compile-time
    * type narrowing, it ensures runtime safety for all map operations.
    * 
-   * @throws Error if the map is not fully initialized
-   * @lastreviewed null
+   * @throws an {@link Err.PersistenceNotInitializedError} if the map is not fully initialized
+   * @lastreviewed 2025-10-01
    */
-  private checkIsInitialized(): this is TypedPrivatePersistable<T> & { isInitialized: true } {
+  private checkIsInitialized(): this is PrivateTypedPersistable<T> & { isInitialized: true } {
     if (!this.isInitialized) {
-      throw new Err.PersistenceNotInitializedError("TypedPrivatePersistable", this.key);
+      throw new Err.PersistenceNotInitializedError("PrivateTypedPersistable", this.key);
     }
     return true;
   }
@@ -62,7 +56,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
    * @param value The value to set
    * @param update Whether to immediately store the updated map
    * @returns This instance for chaining
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   set<K extends keyof T & string>(key: K, value: T[K]): this {
     this.checkIsInitialized();
@@ -77,7 +71,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
    * @param key The key to get
    * @param defaultValue The default value if key doesn't exist
    * @returns The value or default value
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public get<K extends keyof T & string>(key: K, defaultValue: T[K]): T[K];
   public get<K extends keyof T & string>(key: K): T[K] | undefined;
@@ -91,7 +85,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @param key The key to check
    * @returns True if the key exists
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public has<K extends keyof T>(key: K): boolean {
     this.checkIsInitialized();
@@ -103,7 +97,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @param key The key to delete
    * @returns This instance for method chaining
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public delete<K extends keyof T & string>(key: K) {
     this.checkIsInitialized();
@@ -114,7 +108,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
    * Iterates over all key-value pairs in the map.
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @param callback Function to call for each key-value pair
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public forEach<K extends keyof T>(callback: (value: T[K], key: K, map: this) => void): void {
     this.checkIsInitialized();
@@ -124,8 +118,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
   /**
    * Returns an array of all keys in the map.
    * Ensures the map is fully initialized before delegating to parent implementation.
-   * @returns Array of keys
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public keys(): (keyof T & string)[] {
     this.checkIsInitialized();
@@ -135,8 +128,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
   /**
    * Returns an array of all values in the map.
    * Ensures the map is fully initialized before delegating to parent implementation.
-   * @returns Array of values
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public values(): T[keyof T][] {
     this.checkIsInitialized();
@@ -146,8 +138,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
   /**
    * Returns an array of all key-value pairs.
    * Ensures the map is fully initialized before delegating to parent implementation.
-   * @returns Array of [key, value] tuples
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public entries(): [keyof T & string, T[keyof T]][] {
     this.checkIsInitialized();
@@ -157,8 +148,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
   /**
    * Returns the number of key-value pairs in the map.
    * Ensures the map is fully initialized before delegating to parent implementation.
-   * @returns The size of the map
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public get size(): number {
     this.checkIsInitialized();
@@ -168,7 +158,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
   /**
    * Removes all key-value pairs from the map.
    * Ensures the map is fully initialized before delegating to parent implementation.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public clear(): void {
     this.checkIsInitialized();
@@ -178,8 +168,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
   /**
    * Converts the map to a JSON string.
    * Ensures the map is fully initialized before delegating to parent implementation.
-   * @returns JSON string representation of the map
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   toJSON(): string {
     this.checkIsInitialized();
@@ -189,8 +178,7 @@ export class TypedPrivatePersistable<T extends Record<string, Serializable>> ext
   /**
    * Stores the current state using VS Code's secret storage.
    * Ensures the map is fully initialized before delegating to parent implementation.
-   * @returns Promise that resolves when storage is complete
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   store(): Thenable<void> {
     this.checkIsInitialized();

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { PathElement } from '../script/PathElement';
+import type { ScriptPathElement } from '../script/PathElement';
 import type { ScriptFolder } from '../script/ScriptFolder';
 import { Err } from '../Err';
 
@@ -124,7 +124,7 @@ export interface FileSystemProvider {
    * await fs.delete(vscode.Uri.file('/path/to/file.txt'), { useTrash: true });
    * ```
    */
-  delete(element: PathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void>;
+  delete(element: ScriptPathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void>;
 
   /**
    * Create a directory.
@@ -259,7 +259,7 @@ export class VSCodeFileSystem implements FileSystemProvider {
   async readDirectory(folder: ScriptFolder): Promise<[string, vscode.FileType][]> {
     return vscode.workspace.fs.readDirectory(folder.uri());
   }
-  async delete(element: PathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
+  async delete(element: ScriptPathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
     return vscode.workspace.fs.delete(element.uri(), { recursive: options?.recursive ?? true, useTrash: options?.useTrash ?? false });
   }
   async createDirectory(uri: vscode.Uri): Promise<void> {
@@ -625,7 +625,7 @@ export class MockFileSystem implements FileSystemProvider {
     return entries;
   }
 
-  async delete(element: PathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
+  async delete(element: ScriptPathElement, options?: { recursive?: boolean; useTrash?: boolean }): Promise<void> {
     const key = element.uri().toString();
 
     // In a more sophisticated mock, we could handle recursive deletion of directories

@@ -8,7 +8,7 @@ import { AuthManager } from "./AuthManager";
 import { BasicAuth } from "./BasicAuth";
 
 /**
- * Singleton BasicAuth manager for VS Code extension authentication.
+ * Singleton {@link BasicAuth} manager for VS Code extension authentication.
  * 
  * This manager handles Basic Authentication credentials for BlueStep WebDAV operations.
  * It supports multiple authentication "flags" (profiles) to manage different sets of
@@ -34,25 +34,23 @@ import { BasicAuth } from "./BasicAuth";
  * };
  * ```
  * 
- * @lastreviewed null
+ * @lastreviewed 2025-10-01
  */
 
 export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
 
   /**
-   * Internal persistence map storing BasicAuth credentials by flag.
+   * Internal persistence map storing {@link BasicAuth} credentials by flag.
    * Uses VS Code's secret storage for secure credential persistence.
    * Initialized during init() call and remains null until then.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   private _flagMap: PrivateGenericMap<BasicAuthParams> | null = null;
 
   /**
-   * Provides the persistence map for the ContextNode base class.
-   * Required by ContextNode architecture for credential storage management.
+   * Provides the persistence map for the {@link ContextNode} base class.
    * @returns The flag map for credential persistence
-   * @throws Error if manager not initialized
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   protected map() {
     return this.flagMap;
@@ -61,27 +59,27 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   /**
    * Current authentication flag used for operations.
    * Defaults to DEFAULT_FLAG and can be changed via setFlag().
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   private CUR_FLAG: string = this.DEFAULT_FLAG;
 
   /**
-   * Parent context node reference (SESSION_MANAGER).
+   * Parent context node reference ({@link SESSION_MANAGER}).
    * Private field to ensure proper initialization and context hierarchy.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   private _parent: ContextNode | null = null;
 
   /**
-   * Initializes the BasicAuth manager with SESSION_MANAGER as parent.
+   * Initializes the {@link BasicAuth} manager with {@link SESSION_MANAGER} as parent.
    * 
    * Sets up the private credential storage and establishes the context hierarchy.
    * Must be called exactly once during extension startup.
    * 
-   * @param parent The SESSION_MANAGER instance providing context and lifecycle management
+   * @param parent The {@link SESSION_MANAGER} instance providing context and lifecycle management
    * @returns This instance for method chaining
-   * @throws Error if already initialized (prevents double initialization)
-   * @lastreviewed null
+   * @throws an {@link Err.DuplicateInitializationError} if already initialized
+   * @lastreviewed 2025-10-01
    */
   public init(parent: typeof SESSION_MANAGER) {
     this._parent = parent;
@@ -93,11 +91,9 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   }
 
   /**
-   * Gets the parent context node (SESSION_MANAGER).
-   * Required by ContextNode architecture for context hierarchy.
-   * @returns The parent ContextNode instance
-   * @throws Error if manager not initialized
-   * @lastreviewed null
+   * Gets the parent context node ({@link SESSION_MANAGER}).
+   * @throws an {@link Err.ManagerNotInitializedError} if manager not initialized
+   * @lastreviewed 2025-10-01
    */
   public get parent() {
     if (!this._parent) {
@@ -107,11 +103,10 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   }
 
   /**
-   * Gets the VS Code extension context for persistence operations.
+   * Gets the {@link vscode.ExtensionContext} context for persistence operations.
    * Delegates to parent's context following the ContextNode pattern.
-   * @returns The VS Code ExtensionContext
-   * @throws Error if manager or parent not initialized
-   * @lastreviewed null
+   * @throws an {@link Err.ManagerNotInitializedError} if manager or parent not initialized
+   * @lastreviewed 2025-10-01
    */
   public get context() {
     if (!this.parent.context) {
@@ -123,8 +118,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   /**
    * Initializes child components. 
    * No-op for BasicAuthManager as it has no child components.
-   * Required by ContextNode architecture.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public initChildren(): void {
     return void 0;
@@ -133,9 +127,9 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   /**
    * Gets the credential storage map.
    * Private accessor ensuring initialization before use.
-   * @returns The initialized PrivateGenericMap for credential storage
-   * @throws Error if manager not initialized
-   * @lastreviewed null
+   * @returns The initialized {@link PrivateGenericMap} for credential storage
+   * @throws an {@link Err.ManagerNotInitializedError} if manager not initialized
+   * @lastreviewed 2025-10-01
    */
   private get flagMap() {
     if (!this._flagMap) {
@@ -147,7 +141,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   /**
    * Clears all stored authentication credentials.
    * Removes all credential data from persistent storage.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public clearMap() {
     this.flagMap.clear();
@@ -157,7 +151,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * Sets the current authentication flag for subsequent operations.
    * Changes which credential profile will be used by default.
    * @param flag The authentication flag/profile to set as current
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public setFlag(flag: string) {
     this.CUR_FLAG = flag;
@@ -172,9 +166,9 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * 
    * @param flag The authentication flag/profile to retrieve (defaults to current flag)
    * @param createIfNotPresent Whether to create new credentials if none exist
-   * @returns Promise resolving to BasicAuth object with credentials
-   * @throws AuthError if no credentials found and createIfNotPresent is false
-   * @lastreviewed null
+   * @returns a {@link Promise} resolving to {@link BasicAuth} object with credentials
+   * @throws an {@link Err.AuthenticationError} if no credentials found and createIfNotPresent is false
+   * @lastreviewed 2025-10-01
    */
   public async getAuthObject(flag: string = this.CUR_FLAG, createIfNotPresent: boolean = true): Promise<BasicAuth> {
     const existingAuth = this.flagMap.get(flag);
@@ -198,8 +192,8 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * - If credentials exist: prompts user to update them
    * - If no credentials: creates new ones from user input
    * 
-   * @returns Promise resolving to BasicAuth object with current credentials
-   * @lastreviewed null
+   * @returns Promise resolving to {@link BasicAuth} object with current credentials
+   * @lastreviewed 2025-10-01
    */
   public async createOrUpdate(): Promise<BasicAuth> {
     const flag = this.determineFlag();
@@ -216,8 +210,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   /**
    * Checks if authentication credentials exist for the specified flag.
    * @param flag The authentication flag/profile to check (defaults to current flag)
-   * @returns True if credentials exist for the specified flag
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public hasAuth(flag: string = this.CUR_FLAG): boolean {
     return this.flagMap.has(flag);
@@ -226,27 +219,27 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
   /**
    * Sets the authentication object for the specified flag.
    * 
-   * Stores the provided BasicAuth credentials in persistent storage
+   * Stores the provided {@link BasicAuth} credentials in persistent storage
    * associated with the given flag.
    * 
-   * @param auth The BasicAuth object containing credentials to store
+   * @param auth The {@link BasicAuth} object containing credentials to store
    * @param flag The authentication flag/profile to associate with credentials
    * @returns The auth object for method chaining
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public setAuthObject(auth: BasicAuth, flag: string = this.CUR_FLAG) {
-    this.flagMap.set(flag, auth.toSavableObject());
+    this.flagMap.set(flag, auth.toSerializableObject());
     return auth;
   }
 
   /**
    * Retrieves default authentication credentials.
    * 
-   * Returns the BasicAuth object for the default flag (DEFAULT_FLAG).
+   * Returns the {@link BasicAuth} object for the default flag (DEFAULT_FLAG).
    * Used for scenarios requiring default system credentials.
    * 
-   * @returns Promise resolving to BasicAuth object with default credentials
-   * @lastreviewed null
+   * @returns a {@link Promise} resolving to {@link BasicAuth} object with default credentials
+   * @lastreviewed 2025-10-01
    */
   public async getDefaultAuth(): Promise<BasicAuth> {
     return (await this.getAuthObject(this.DEFAULT_FLAG));
@@ -261,7 +254,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * 
    * @param flag The authentication flag/profile to use (defaults to current flag)
    * @returns Promise resolving to "Basic {base64(username:password)}" header value
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public async authHeaderValue(flag: string = this.CUR_FLAG) {
     const auth = await this.getAuthObject(flag);
@@ -276,11 +269,11 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * 
    * @param flag The authentication flag/profile to use (defaults to current flag)
    * @returns Promise resolving to login body object with username and password
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public async authLoginBodyValue(flag: string = this.CUR_FLAG) {
     const auth = await this.getAuthObject(flag);
-    const params = auth.toSavableObject();
+    const params = auth.toSerializableObject();
     return `_postEvent=commit&_postFormClass=myassn.user.UserLoginWebView&rememberMe=false&myUserName=${encodeURIComponent(params.username)}&myPassword=${encodeURIComponent(params.password)}`;
   }
 
@@ -292,8 +285,8 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * no existing credentials are found for the given flag.
    * 
    * @param flag The authentication flag/profile to create credentials for
-   * @returns Promise resolving to newly created BasicAuth object
-   * @lastreviewed null
+   * @returns Promise resolving to newly created {@link BasicAuth} object
+   * @lastreviewed 2025-10-01
    */
   public async createNewCredentials(flag: string = this.CUR_FLAG) {
     const authObj = await BasicAuth.generateNew();
@@ -309,7 +302,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    * for the current operation.
    * 
    * @returns The flag to use for the operation
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
 
   public determineFlag() {

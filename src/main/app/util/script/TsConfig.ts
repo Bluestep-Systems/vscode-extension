@@ -2,14 +2,14 @@ import * as vscode from "vscode";
 import { readFileText } from "../data/readFile";
 import { Err } from "../Err";
 import { FileSystem } from "../fs/FileSystem";
-import { PathElement } from "./PathElement";
+import { ScriptPathElement } from "./PathElement";
 import { ScriptFactory } from "./ScriptFactory";
 import { ScriptFile } from "./ScriptFile";
 import type { ScriptFolder } from "./ScriptFolder";
 const fs = FileSystem.getInstance;
 
 /**
- * A specialized {@link PathElement} representing a tsconfig.json file.
+ * A specialized {@link ScriptPathElement} representing a tsconfig.json file.
  * 
  * We want this to extend {@link ScriptFile} for cleanliness (since it truly is the same thing),
  * but there were some circular dependency issues that were difficult to resolve. If at some point
@@ -17,7 +17,7 @@ const fs = FileSystem.getInstance;
  * 
  * Instead, TsConfig merely wraps a ScriptFile and delegates relevant methods to it.
  */
-export class TsConfig implements PathElement {
+export class TsConfig implements ScriptPathElement {
   /**
    * The standard name for tsconfig files.
    */

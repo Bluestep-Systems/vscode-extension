@@ -7,7 +7,7 @@ import { TypedMap } from "./TypedMap";
 import { Persistable } from "./Persistable";
 
 /**
- * A wrapper around the vscode settings to provide typed access and modification.
+ * A wrapper around the vscode settings for this extension to provide typed access and modification.
  * 
  * A convention is used where the settings key in vscode is `bsjs-push-pull.<settingKey>`
  * and nested keys are represented with dot notation, e.g. `bsjs-push-pull.nested.key`.
@@ -16,7 +16,7 @@ import { Persistable } from "./Persistable";
  * so that we can ensure that the settings are always in sync with the appropriate context variables
  * that we use for UI responsiveness.
  * 
- * @lastreviewed null
+ * @lastreviewed 2025-10-01
  */
 export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
   public static readonly DEFAULT: Settings = {
@@ -91,7 +91,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
    * This reads the current settings from VSCode and updates the internal state accordingly.
    * It also removes any obsolete settings that are no longer present in the VSCode configuration.
    * 
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   sync(): void {
     // Read the effective configuration value (includes recent updates)

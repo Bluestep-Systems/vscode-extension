@@ -2,20 +2,25 @@ import * as vscode from 'vscode';
 
 /**
  * Interface representing an element with a file system path and URI.
- * @lastreviewed null
+ * 
+ * This is very specifically NOT a {@link vscode.TreeItem}, because the element it represents
+ * is required to neither exist on the local filesystem, nor have an extant counterpart upstairs.
+ * 
+ * @lastreviewed 2025-10-01
  */
-export interface PathElement {
+export interface ScriptPathElement {
+
   /**
    * Gets the file system path of this element.
    * @returns The file system path as a string
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   path(): string;
   
   /**
    * Gets the URI of this element.
    * @returns The VS Code URI
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   uri(): vscode.Uri;
   
@@ -23,9 +28,9 @@ export interface PathElement {
    * Checks if this element is equal to another element of the same type.
    * @param other The element to compare with
    * @returns True if the elements are equal, false otherwise
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
-  equals(other: PathElement): boolean;
+  equals(other: ScriptPathElement): boolean;
   
   
 }

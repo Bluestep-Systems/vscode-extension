@@ -17,12 +17,8 @@ const fs = FileSystem.getInstance;
 /**
  * Object representing the root of an individual script on the filesystem.
  * 
- * We originally wanted this to extend Folder, however there were some Typescript circular
- * dependency issues in that were difficult to resolve. If at some point in the future
- * Folder is refactored such that it isn't an issue, we can revisit this.
- *
  * This originally was the webdavid root file.
- * @lastreviewed null
+ * @lastreviewed 2025-09-15
  */
 export class ScriptRoot {
   private static readonly ScriptContentFolders = ["info", "scripts", "objects"] as const;
@@ -238,10 +234,10 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the URI for the downstairs organization folder.
+   * Gets the {@link vscode.Uri Uri} for the downstairs organization folder.
    *
    * @todo This will be replaced when we update the org file to use a metadata file
-   * @lastreviewed null
+   * @lastreviewed 2025-09-15
    */
   public getOrgUri() {
     return vscode.Uri.file(this.downstairsRootOrgPath.dir + path.sep + this.downstairsRootOrgPath.base);
@@ -399,11 +395,7 @@ export class ScriptRoot {
   }
 
   /**
-   * Performs the BSJS "snapshot" process which involves compiling the draft folder.
-   * This method compiles TypeScript files and prepares the script for deployment.
-   * 
-   * @throws an {Error} When compilation fails or file system operations encounter errors
-   * @lastreviewed null
+   * // TODO this is not complete
    */
   public async snapshot() {
     //TODO do a safety check on the hash to prevent deleted files needlessly
@@ -415,11 +407,10 @@ export class ScriptRoot {
 
 
   /**
-   * Deletes the relevant build folder (e.g. ".build") within the draft directory.
+   * Deletes the relevant build folder (e.g. ".build") within the draft directory and its subcomponents.
    * Ignores FileNotFound errors if the folder doesn't exist.
    * 
-   * @throws {Error} For file system errors other than FileNotFound (e.g., permission issues)
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public async deleteBuildFolder() {
     try {
@@ -430,7 +421,7 @@ export class ScriptRoot {
         console.log("Build folder doesn't exist (this is fine)");
         return;
       }
-      // Re-throw other errors (like permission issues)
+      // Re-throw other unknown errors (like permission issues)
       throw error;
     }
   }
@@ -439,11 +430,10 @@ export class ScriptRoot {
    * Compiles all TypeScript files in the draft folder and copies non-TypeScript files to its 
    * respective build folder.
    * 
-   * Deletes the existing build folder first, then compiles TypeScript files using ScriptCompiler,
+   * Deletes the existing build folder first, then compiles TypeScript files using {@link ScriptCompiler},
    * copies other relevant files, and cleans up any orphaned files in the build directory.
    * 
-   * @throws {Error} When compilation fails or file system operations encounter errors
-   * @lastreviewed null
+   * @lastreviewed 2025-09-15
    */
   public async compileDraftFolder(): Promise<void> {
     //TODO see if we can optimize this to only compile changed files

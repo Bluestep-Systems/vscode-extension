@@ -1,7 +1,7 @@
 /**
  * Centralized error namespace containing all custom error types used throughout the application.
- * All error classes extend Error and have descriptive names that indicate why the error was thrown.
- * @lastreviewed null
+ * All error classes extend {@link Error} and have descriptive names that indicate why the error was thrown.
+ * @lastreviewed 2025-10-01
  */
 export namespace Err {
 

@@ -3,22 +3,22 @@ import { BasicAuthParams } from "../../../../types";
 import { AuthObject } from "./AuthObject";
 
 /**
- * Basic authentication implementation of the AuthObject.
+ * Basic authentication implementation of the {@link AuthObject}.
  * Handles username/password authentication with Base64 encoding support.
- * @lastreviewed null
+ * @lastreviewed 2025-10-01
  */
 export class BasicAuth extends AuthObject {
   /**
    * Override the generic type of the parent to indicate that this child object
-   * will always have BasicAuthParams shape with username and password properties.
-   * @lastreviewed null
+   * will always have {@link BasicAuthParams} shape with username and password properties.
+   * @lastreviewed 2025-10-01
    */
   declare sObj: BasicAuthParams;
 
   /**
-   * Constructs a BasicAuth object containing the given username and password.
+   * Constructs a {@link BasicAuth} object containing the given username and password.
    * @param credentials Object containing username and password properties
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   constructor({ username, password }: BasicAuthParams) {
     super({ username, password });
@@ -26,18 +26,16 @@ export class BasicAuth extends AuthObject {
 
   //#region Overrides
   /**
-   * Returns the internal BasicAuthParams object for persistence.
-   * @returns The serializable BasicAuthParams object
-   * @lastreviewed null
+   * Returns the internal {@link BasicAuthParams} object for persistence.
+   * @lastreviewed 2025-10-01
    */
-  public toSavableObject() {
+  public toSerializableObject() {
     return this.sObj;
   }
 
   /**
    * Returns a JSON representation with password masked for security.
-   * @returns JSON string with username visible and password masked as "***"
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public toJSON() {
     return JSON.stringify({ username: this.sObj.username, password: "***" });
@@ -46,8 +44,7 @@ export class BasicAuth extends AuthObject {
   /**
    * Updates the username and/or password by prompting the user.
    * Shows input boxes for new credentials, allowing empty input to keep current values.
-   * @returns Promise that resolves when the update is complete
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public async update(): Promise<void> {
     const oldUsername = this.sObj.username;
@@ -81,18 +78,16 @@ export class BasicAuth extends AuthObject {
 
   /**
    * Generates the Base64 encoded username:password string for HTTP Basic Authentication.
-   * @returns The Base64 encoded credentials string in the format required by Authorization header
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public toBase64() {
     return Buffer.from(`${this.sObj.username}:${this.sObj.password}`).toString('base64');
   }
 
   /**
-   * Creates a new BasicAuth instance by prompting the user for credentials.
+   * Creates a new {@link BasicAuth} instance by prompting the user for credentials.
    * Shows input boxes for username and password, with password input masked.
-   * @returns Promise that resolves to a new BasicAuth instance with user-provided credentials
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   static async generateNew(): Promise<BasicAuth> {
     const username = await vscode.window.showInputBox({ prompt: 'Enter your username' })

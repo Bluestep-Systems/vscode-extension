@@ -10,7 +10,7 @@ const fs = FileSystem.getInstance;
 /**
  * Compiler for TypeScript files in script projects.
  * Manages compilation of multiple TypeScript files organized by their tsconfig.json files.
- * @lastreviewed null
+ * @lastreviewed 2025-10-01
  */
 export class ScriptCompiler {
   private projects: Map<string, ScriptNode[]> = new Map();
@@ -34,7 +34,7 @@ export class ScriptCompiler {
 
   /**
    * Creates a new ScriptCompiler instance.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   constructor() { }
 
@@ -43,7 +43,7 @@ export class ScriptCompiler {
    * @param sf The file to get default options for
    * @returns Default TypeScript compiler options
    * @throws an {@link Err.InvalidStateError} Always throws as this method is deprecated
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   private getDefaultOptions(sf: ScriptNode): ts.CompilerOptions {
     throw new Err.InvalidStateError("did not find a tsconfig for " + sf.path() + ".");
@@ -54,9 +54,9 @@ export class ScriptCompiler {
 
   /**
    * Gets TypeScript compiler options from the closest tsconfig.json file.
-   * @param sn The file to get compiler options for
+   * @param sn The node to get compiler options for
    * @returns A Promise that resolves to TypeScript compiler options
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   private async getCompilerOptions(sn: ScriptNode): Promise<ts.CompilerOptions> {
     const tsConfigFile = await sn.getClosestTsConfigFile();
@@ -93,27 +93,37 @@ export class ScriptCompiler {
   }
 
   /**
-   * Adds a script file to the compilation queue.
-   * Files are grouped by their associated tsconfig.json file.
-   * @param sf The ScriptFile to add for compilation
+   * Adds a {@link ScriptNode} to the compilation queue. Duplicates, 
+   * or nodes that happen to be folders, will be ignored.
+   * 
+   * NOTE: Added nodes need not be siblings, nor share a common ancestor.
    * @throws an {@link Err.ScriptNotCopaceticError} when the file is not in a good state.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
-  public async addFile(sf: ScriptNode) {
-    if (!(await sf.isCopacetic())) {
+  public async addFile(sn: ScriptNode): Promise<void> {
+    if (await sn.isFolder()) {
+      App.logger.warn("Ignoring folder node in ScriptCompiler.addFile:", sn.path());
+      return void 0;
+    }
+    if (!(await sn.isCopacetic())) {
       throw new Err.ScriptNotCopaceticError();
     }
-    const newTsConfigFile = await sf.getClosestTsConfigFile();
-    const existingVals = this.projects.get(newTsConfigFile.path()) || [];
-    this.projects.set(newTsConfigFile.path(), [...existingVals, sf]);
+    const newTsConfigFile = await sn.getClosestTsConfigFile();
+    const vals = this.projects.get(newTsConfigFile.path()) || [];
+    if (!vals.some(existingSn => existingSn.path() === sn.path())) {
+      vals.push(sn);
+    } else {
+      App.logger.warn("Ignoring duplicate file in ScriptCompiler.addFile:", sn.path());
+    }
+    this.projects.set(newTsConfigFile.path(), vals);
   }
 
   /**
    * Compiles all added TypeScript files grouped by their tsconfig.json configurations.
    * Shows compilation results and diagnostics to the user.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
-  public async compile() {
+  public async compile(): Promise<string[]> {
     const emittedFiles: string[] = [];
     for (const [tsConfigPath, sfList] of this.projects.entries()) {
       if (sfList.length === 0) {

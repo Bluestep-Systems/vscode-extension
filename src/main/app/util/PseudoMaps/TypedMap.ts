@@ -4,8 +4,8 @@ import { Err } from "../Err";
 
 /**
  * A typed map that ensures type safety for object property access with string keys.
- * Extends PseudoMap to provide strongly-typed persistence storage.
- * @lastreviewed null
+ * Extends {@link PseudoMap} to provide strongly-typed persistence storage.
+ * @lastreviewed 2025-10-01
  */
 export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<keyof T & string, T[keyof T]> {
 
@@ -21,7 +21,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * @param key The key to set
    * @param value The value to set
    * @returns This instance for method chaining
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public set<K extends keyof T & string>(key: K, value: T[K]) {
     this.obj[key] = value;
@@ -32,7 +32,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * @param key The key to get
    * @param defaultValue The default value if key doesn't exist
    * @returns The value or default value
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public get<K extends keyof T & string>(key: K, defaultValue: T[K]): T[K];
   public get<K extends keyof T & string>(key: K): T[K] | undefined;
@@ -45,7 +45,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * Checks if the map has the specified key.
    * @param key The key to check
    * @returns True if the key exists
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public has<K extends keyof T>(key: K): boolean {
     return key in this.obj;
@@ -55,7 +55,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * Deletes the specified key from the map.
    * @param key The key to delete
    * @returns This instance for method chaining
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public delete<K extends keyof T & string>(key: K) {
     if (key in this.obj) {
@@ -68,7 +68,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
   /**
    * Iterates over all key-value pairs in the map.
    * @param callback Function to call for each key-value pair
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public forEach<K extends keyof T>(callback: (value: T[K], key: K, map: this) => void): void {
     for (const k in this.obj) {
@@ -79,8 +79,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
 
   /**
    * Returns an array of all keys in the map.
-   * @returns Array of keys
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public keys(): (keyof T & string)[] {
     return Object.keys(this.obj) as (keyof T & string)[];
@@ -88,17 +87,15 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
 
   /**
    * Returns an array of all values in the map.
-   * @returns Array of values
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public values(): T[keyof T][] {
     return Object.values(this.obj).filter(v => v !== undefined) as T[keyof T][];
   }
 
   /**
-   * Returns an array of all key-value pairs.
-   * @returns Array of [key, value] tuples
-   * @lastreviewed null
+   * @returns An array of [key, value] tuples
+   * @lastreviewed 2025-10-01
    */
   public entries(): [keyof T & string, T[keyof T]][] {
     return this.keys().map(key => [key, this.obj[key]!]);
@@ -107,7 +104,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
   /**
    * Returns the number of key-value pairs in the map.
    * @returns The size of the map
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public get size(): number {
     return this.keys().length;
@@ -115,7 +112,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
 
   /**
    * Removes all key-value pairs from the map.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public clear(): void {
     Object.keys(this.obj).forEach(key => delete this.obj[key]);

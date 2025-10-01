@@ -9,7 +9,7 @@ import { readFileText } from '../data/readFile';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
-import { PathElement } from './PathElement';
+import { ScriptPathElement } from './PathElement';
 import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
@@ -21,7 +21,7 @@ const fs = FileSystem.getInstance;
  *
  * @lastreviewed 2025-09-15
  */
-export abstract class ScriptNode implements PathElement {
+export abstract class ScriptNode implements ScriptPathElement {
 
   /**
    * The parser for the downstairs URI of this file.
@@ -239,7 +239,7 @@ export abstract class ScriptNode implements PathElement {
    * @param other The other element to compare against
    * @lastreviewed 2025-09-29
    */
-  public equals(other: PathElement): boolean {
+  public equals(other: ScriptPathElement): boolean {
     return this.path() === other.path();
   }
 
@@ -367,9 +367,8 @@ export abstract class ScriptNode implements PathElement {
 
 
   /**
-   * Gets the URI of the folder containing this file.
-   * @returns The URI of the parent directory
-   * @lastreviewed null
+   * Gets the {@link vscode.Uri Uri} of the folder containing this file.
+   * @lastreviewed 2025-10-01
    */
   public folder(): ScriptFolder {
     const fileUri = this.uri();
@@ -391,8 +390,8 @@ export abstract class ScriptNode implements PathElement {
   /**
    * 
    * @returns The matching tsconfig.json file as a TsConfigFile instance
-   * @throws {Error} When no tsconfig.json file is found
-   * @lastreviewed null
+   * @throws an {@link Err.ConfigFileError} When no tsconfig.json file is found
+   * @lastreviewed 2025-10-01
    */
   public async getClosestTsConfigFile() {
     const tsConfigUri = await this.getClosestTsConfigUri();

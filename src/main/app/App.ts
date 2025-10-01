@@ -169,8 +169,7 @@ export const App = new class extends ContextNode {
 
   /**
    * Gets the current extension version from VS Code extension API
-   * @returns The version string from the extension's package.json
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public getVersion(): string {
     try {

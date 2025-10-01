@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { flattenDirectory } from '../data/flattenDirectory';
 import { Err } from '../Err';
 import { ResponseCodes } from '../network/StatusCodes';
-import { PathElement } from './PathElement';
+import { ScriptPathElement } from './PathElement';
 import { ScriptFactory } from './ScriptFactory';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
@@ -89,11 +89,11 @@ export class ScriptFolder extends ScriptNode {
 
   /**
    * Checks if this folder contains another PathElement by comparing their paths.
-   * @param other The {@link PathElement} to check if it's contained within this folder
+   * @param other The {@link ScriptPathElement} to check if it's contained within this folder
    * @returns True if the other element's path is within this folder's path, false otherwise
    * @lastreviewed 2025-09-29
    */
-  public contains(other: PathElement): boolean {
+  public contains(other: ScriptPathElement): boolean {
     return other.path().includes(this.path());
   }
 

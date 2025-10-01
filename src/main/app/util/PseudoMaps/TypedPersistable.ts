@@ -5,8 +5,9 @@ import { Persistable } from "./Persistable";
 import { PrivateKeys, PublicKeys } from "./PersistenceKeys";
 
 /**
- * A typed persistable pseudomap.
- * @lastreviewed null
+ * A persistable version of {@link TypedMap} that automatically handles loading and storing
+ * from the VSCode extension context's workspace state.
+ * @lastreviewed 2025-10-01
  */
 export class TypedPersistable<T extends Record<string, Serializable>> extends TypedMap<T> implements Persistable {
   public readonly key: PublicKeys | PrivateKeys;
@@ -26,7 +27,7 @@ export class TypedPersistable<T extends Record<string, Serializable>> extends Ty
    * @param update Whether to immediately store the updated map. This is primarily intended to allow you to await store() after multiple sets
    * so it doesn't get called multiple times in a row.
    * @returns This instance for chaining
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   set<K extends keyof T & string>(key: K, value: T[K]): this
   set<K extends keyof T & string>(key: K, value: T[K], update: boolean = true): this {
@@ -39,7 +40,6 @@ export class TypedPersistable<T extends Record<string, Serializable>> extends Ty
   toJSON(): string {
     return JSON.stringify(this.obj);
   }
-
   
   store(): Thenable<void> {
     return this.context!.workspaceState.update(this.key, JSON.stringify(this.obj));
