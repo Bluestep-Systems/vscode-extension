@@ -8,7 +8,13 @@ import { ResponseCodes } from "../network/StatusCodes";
 import { ScriptFactory } from "./ScriptFactory";
 import { ScriptNode } from "./ScriptNode";
 import { Alert } from '../ui/Alert';
+import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
+
+/**
+ * Represents a script file within the system. This is very similar to the webapps "RemoteObject" concept
+ * where this object is only a shell around the concept of the file, but does not actually contain the file data itself.
+ */
 export class ScriptFile extends ScriptNode {
 
   /**
@@ -25,6 +31,7 @@ export class ScriptFile extends ScriptNode {
    * Regex for "weak" etags (SHA-512 hashes).
    */
   private static WeakEtagPattern = /^W\/"[a-f0-9]{128}"$/;
+
   /**
    * Gets the lowercased SHA-512 hash of the local file.
    * @lastreviewed 2025-09-15
@@ -41,6 +48,7 @@ export class ScriptFile extends ScriptNode {
     }
     return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
   }
+
   /**
    * Gets the hash of the upstairs file, or `null` if it doesn't exist.
    * Extracts SHA-512 hash from the ETag header, handling both standard and weak ETags.
@@ -205,17 +213,17 @@ export class ScriptFile extends ScriptNode {
   }
 
   /**
- * Gets the file name from the downstairs URI.
- * @lastreviewed 2025-09-15
- */
+   * Gets the file name from the downstairs URI.
+   * @lastreviewed 2025-10-01
+   */
   public fileName(): string {
     return path.parse(this.uri().fsPath).base;
   }
   /**
- * Returns the {@link URL} for the proper upstairs file.
- * Constructs the appropriate WebDAV {@link URL} based on the file type (root, metadata, declarations, or draft).
- * @lastreviewed 2025-09-15
- */
+   * Returns the {@link URL} for the proper upstairs file.
+   * Constructs the appropriate WebDAV {@link URL} based on the file type (root, metadata, declarations, or draft).
+   * @lastreviewed 2025-10-01
+   */
   public upstairsUrl(): URL {
 
     const upstairsBaseUrl = this.getScriptRoot().toBaseUpstairsUrl();
@@ -368,7 +376,7 @@ export class ScriptFile extends ScriptNode {
   }
 
   public isTsConfig(): boolean {
-    return this.fileName() === "tsconfig.json";
+    return this.fileName() === TsConfig.NAME;
   }
 
   public isMarkdown(): boolean {

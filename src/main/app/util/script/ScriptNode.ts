@@ -397,7 +397,7 @@ export abstract class ScriptNode implements PathElement {
   public async getClosestTsConfigFile() {
     const tsConfigUri = await this.getClosestTsConfigUri();
     if (!tsConfigUri) {
-      throw new Err.ConfigFileError("tsconfig.json", 0);
+      throw new Err.ConfigFileError(TsConfig.NAME, 0);
     }
     return ScriptFactory.createTsConfig(() => tsConfigUri);
   }
