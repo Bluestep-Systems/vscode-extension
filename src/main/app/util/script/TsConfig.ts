@@ -5,6 +5,7 @@ import { FileSystem } from "../fs/FileSystem";
 import { PathElement } from "./PathElement";
 import { ScriptFactory } from "./ScriptFactory";
 import { ScriptFile } from "./ScriptFile";
+import type { ScriptFolder } from "./ScriptFolder";
 const fs = FileSystem.getInstance;
 
 /**
@@ -25,8 +26,8 @@ export class TsConfig implements PathElement {
   /**
    * Creates a new TsConfig instance wrapping a ScriptFile.
    * @param sf The ScriptFile representing the tsconfig.json file
-   * @throws {Error} When the ScriptFile does not point to a tsconfig.json file
-   * @lastreviewed null
+   * @throws an {@link Error} When the ScriptFile does not point to a tsconfig.json file
+   * @lastreviewed 2025-10-01
    */
   constructor(protected readonly rawUri: vscode.Uri) {
     this.sf = ScriptFactory.createFile(rawUri);
@@ -38,8 +39,7 @@ export class TsConfig implements PathElement {
   /**
    * Checks if this TsConfig is equal to another TsConfig by comparing their underlying ScriptFiles.
    * @param other The TsConfig to compare with
-   * @returns True if the TsConfigs are equal, false otherwise
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public equals(other: TsConfig): boolean {
     if (!(other instanceof TsConfig)) {
@@ -50,8 +50,7 @@ export class TsConfig implements PathElement {
 
   /**
    * Gets the file system path of this tsconfig.json file.
-   * @returns The file system path as a string
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public path(): string {
     return this.rawUri.fsPath;
@@ -59,8 +58,7 @@ export class TsConfig implements PathElement {
 
   /**
    * Gets the URI of this tsconfig.json file.
-   * @returns The VS Code URI
-   * @lastreviewed null
+   * @lastreviewed 2025-10-01
    */
   public uri(): vscode.Uri {
     return this.rawUri;
@@ -68,8 +66,8 @@ export class TsConfig implements PathElement {
 
   /**
    * Gets the folder containing this tsconfig.json file.
-   * @returns The parent Folder instance
-   * @lastreviewed null
+   * @returns The parent {@link ScriptFolder} instance
+   * @lastreviewed 2025-10-01
    */
   public folder() {
     return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rawUri, ".."));
@@ -77,8 +75,8 @@ export class TsConfig implements PathElement {
 
   /**
    * Checks if this tsconfig.json file is in a valid/copacetic state.
-   * @returns A Promise that resolves to true if the file is copacetic, false otherwise
-   * @lastreviewed null
+   * @returns A {@link Promise} that resolves to `true` if the file is copacetic, `false` otherwise
+   * @lastreviewed 2025-10-01
    */
   public async isCopacetic(): Promise<boolean> {
     const exists = await this.sf.exists();
@@ -101,14 +99,11 @@ export class TsConfig implements PathElement {
   }
 
   /**
-   * Returns this TsConfig instance as it is already the closest tsconfig.json file to itself.
-   * @returns A Promise that resolves to this TsConfig instance
-   * @lastreviewed null
+   * 
+   * @returns A {@link Promise} that resolves to a {@link ScriptFolder} representing the build output folder as specified in the tsconfig.json's outDir.
+   * @throws an {@link Err.MissingConfigurationError} When the outDir is not specified in the tsconfig.json
+   * @lastreviewed 2025-10-01
    */
-  public async getClosestTsConfigFile(): Promise<TsConfig> {
-    return this;
-  }
-
   public async getBuildFolder() {
     const fileContents = await readFileText(this.uri());
     const config = JSON.parse(fileContents);
