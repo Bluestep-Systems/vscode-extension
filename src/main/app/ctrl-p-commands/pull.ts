@@ -119,7 +119,7 @@ async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sour
     }
   } else {
     const sf = ScriptFactory.createFile(ultimatePath);
-    if (await sf.exists() && await sf.integrityMatches()) {
+    if (await sf.exists() && await sf.currentIntegrityMatches()) {
       App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
       await sf.touch("lastPulled");
       return sf.uri();

@@ -73,7 +73,9 @@ export default async function ({ overrideFormulaUri, sourceOps }: { overrideForm
       Alert.info('Push complete!');
     }
   } catch (e) {
-    Alert.error(`Error pushing files: ${e}`);
+    if (!(e instanceof Err.AlreadyAlertedError)) {
+      Alert.error(`Error pushing files: ${e}`);
+    }
     throw e;
   }
 }

@@ -728,4 +728,17 @@ export namespace Err {
       this.name = "InvalidStateError";
     }
   }
+
+  export class AlreadyAlertedError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "AlreadyLoggedError";
+    }
+  }
+  export class UserCancelledError extends AlreadyAlertedError {
+    constructor(message: string) {
+      super(message);
+      this.name = "UserCancelledError";
+    }
+  }
 }

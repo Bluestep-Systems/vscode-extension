@@ -2,6 +2,7 @@ import path from 'path';
 import * as vscode from 'vscode';
 import { flattenDirectory } from '../data/flattenDirectory';
 import { Err } from '../Err';
+import { ResponseCodes } from '../network/StatusCodes';
 import { PathElement } from './PathElement';
 import { ScriptFactory } from './ScriptFactory';
 import { ScriptNode } from './ScriptNode';
@@ -17,12 +18,22 @@ export class ScriptFolder extends ScriptNode {
    * automatically create parent folders upstairs, so this really should only be called when
    * the folder is empty. We are not going to bother uploading empty folders right now, so this is a no-op
    * as of this time.
-   * @lastreviewed 2025-09-29
-   * @param _upstairsUrlOverrideString 
-   * @returns 
+   * @lastreviewed 2025-10-01
+   * @param _upstairsUrlOverrideString NOT USED
    */
   public async upload(_upstairsUrlOverrideString: string | null): Promise<Response | void> {
     return;
+  }
+
+  /**
+   * The download method is required to be implemented for {@link ScriptFolder} since individual files
+   * automatically create their (real) downstairs parent folders, so this really should only be called when
+   * the folder is empty. We are not going to bother downloading empty folders right now, so this is a no-op
+   * as of this time.
+   * @lastreviewed 2025-10-01
+   */
+  public async download(): Promise<Response> {
+    return new Response(null, { status: ResponseCodes.TEAPOT, statusText: "No Content" });
   }
 
   /**
@@ -114,7 +125,7 @@ export class ScriptFolder extends ScriptNode {
    * @throws an {@link Err.MethodNotImplementedError} 
    * @lastreviewed 2025-09-29
    */
-  public integrityMatches(_ops?: { upstairsOverride?: URL; }): Promise<boolean> {
+  public currentIntegrityMatches(_ops?: { upstairsOverride?: URL; }): Promise<boolean> {
     throw new Err.MethodNotImplementedError();
   }
 

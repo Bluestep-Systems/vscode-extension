@@ -7,6 +7,7 @@ import { FileSystem } from "../fs/FileSystem";
 import { ResponseCodes } from "../network/StatusCodes";
 import { ScriptFactory } from "./ScriptFactory";
 import { ScriptNode } from "./ScriptNode";
+import { Alert } from '../ui/Alert';
 const fs = FileSystem.getInstance;
 export class ScriptFile extends ScriptNode {
 
@@ -79,13 +80,23 @@ export class ScriptFile extends ScriptNode {
   }
 
   /**
+   * Gets the last verified hash from the metadata for this node, or `null` if not found.
+   */
+  public async getLastVerifiedHash(): Promise<string | null> {
+    const md = await this.getScriptRoot().getMetaData();
+    const record = md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath);
+    return record ? record.lastVerifiedHash : null;
+  }
+
+
+  /**
    * Checks if the local file's integrity matches the upstairs file.
    * Compares SHA-512 hashes between local and remote versions.
    * 
    * @param ops.upstairsOverride Optional override {@link URL} to check against instead of the default upstairs {@link URL}
    * @lastreviewed 2025-09-15
    */
-  public async integrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
+  public async currentIntegrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
     const localHash = await this.getHash();
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = localHash === upstairsHash;
@@ -94,14 +105,33 @@ export class ScriptFile extends ScriptNode {
   }
 
   /**
-     * Downloads the file from the upstairs location and writes it to the local file system.
-     * Performs integrity verification using ETag headers and updates the lastPulled timestamp.
-     * Skips download if the file is in .gitignore and removes it from metadata instead.
-     * 
-     * @returns Response object with status 418 if file is in .gitignore, otherwise the actual HTTP response
-     * @throws {Error} When the download fails, integrity verification fails, or ETag parsing fails
-     * @lastreviewed 2025-09-15
-     */
+   * Checks if the last verified hash from metadata matches the upstairs file's hash; this is to allow us to check
+   * if the upstairs file was changed since the last time we touched it.
+   * @param ops Optional override {@link URL} to check against instead of the default upstairs {@link URL}
+   * @returns Whether the old integrity matches
+   */
+  public async oldIntegrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
+    const lastHash = await this.getLastVerifiedHash();
+    if (!lastHash) {
+      return false;
+    }
+    const upstairsHash = await this.getUpstairsHash(ops);
+    const matches = lastHash === upstairsHash;
+    App.isDebugMode() && console.log("filename:", this.getFileName(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
+    return matches;
+  }
+
+  /**
+   * Downloads the file from the upstairs location and writes it to the local file system.
+   * Performs integrity verification using ETag headers and updates the lastPulled timestamp.
+   * Skips download if the file is in .gitignore and removes it from metadata instead.
+   * 
+   * @returns Response object with status 418 if file is in .gitignore, otherwise the actual HTTP response
+   * @throws an {@link Err.HttpResponseError} When the download fails due to a bad response
+   * @throws an {@link Err.FileIntegrityError} When the downloaded file's integrity check fails
+   * @throws an {@link Err.EtagParsingError} When the ETag header cannot be parsed
+   * @lastreviewed 2025-10-01
+   */
   public async download(): Promise<Response> {
     const ignore = await super.isInGitIgnore();
     if (ignore) {
@@ -215,7 +245,7 @@ export class ScriptFile extends ScriptNode {
    * @returns Empty string if the file can be pushed, otherwise a descriptive reason why not
    * @lastreviewed 2025-09-15
    */
-  public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string> {
+  public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string | null> {
 
     if (this.parser.type === "root") {
       return "Node is the root folder";
@@ -238,10 +268,10 @@ export class ScriptFile extends ScriptNode {
     if (await this.isFolder()) {
       return "Node is a folder";
     }
-    if ((await this.isFile()) && await this.integrityMatches(ops)) {
+    if ((await this.isFile()) && await this.currentIntegrityMatches(ops)) {
       return "File integrity matches";
     }
-    return "";
+    return null;
   }
 
   /**
@@ -283,7 +313,23 @@ export class ScriptFile extends ScriptNode {
       throw new Err.DestinationPathError(downstairsUri.fsPath);
     }
     upstairsOverride.pathname = `/files/${webDavId}${desto}`;
+    if (!(await this.oldIntegrityMatches())) {
+      const OVERWRITE = 'Overwrite';
+      const CANCEL = 'Cancel';
+      const overwrite = await Alert.prompt(
+        "The upstairs file has changed since the last time you pushed or pulled. Do you want to overwrite it?",
+        [
+          OVERWRITE,
+          CANCEL
+        ]
+      );
+      if (overwrite !== OVERWRITE) {
+        Alert.info("Push cancelled");
+        throw new Err.UserCancelledError(`User ${overwrite ? overwrite + "ed" : "cancelled"} push due to upstairs file change`);
+      }
+    }
     const reason = await this.getReasonToNotPush({ upstairsOverride });
+
     if (reason) {
       App.logger.info(`${reason}; not pushing file:`, downstairsUri.fsPath);
       return;

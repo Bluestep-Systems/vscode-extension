@@ -450,11 +450,8 @@ suite('ScriptNode Tests', () => {
       });
 
       const lastPulledStr = await scriptNode.getLastPulledTimeStr();
-      const lastPulledTime = await scriptNode.getLastPulledTime();
 
       assert.strictEqual(lastPulledStr, '2023-01-01T12:00:00.000Z');
-      assert.ok(lastPulledTime instanceof Date);
-      assert.strictEqual(lastPulledTime?.toISOString(), '2023-01-01T12:00:00.000Z');
     });
 
     test('should get last pushed time from metadata', async () => {

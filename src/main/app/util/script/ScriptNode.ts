@@ -86,17 +86,6 @@ export abstract class ScriptNode implements PathElement {
 
 
   /**
-   * Determines if the upstairs file matches the local file in terms of integrity.
-   * Compares the hash of the local file with the hash stored in the metadata.
-   * @param _ops 
-   * @returns 
-   * @lastreviewed 2025-09-29
-   */
-  public abstract integrityMatches(_ops?: { upstairsOverride?: URL }): Promise<boolean>;
-
-
-
-  /**
    * Gets the content of the upstairs file as text.
    * @throws an {@link Err.HttpResponseError} When the upstairs file returns a 400+ status code
    * @lastreviewed 2025-09-15
@@ -438,7 +427,24 @@ export abstract class ScriptNode implements PathElement {
     return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), "draft").fsPath, this.uri().fsPath);
   }
 
+  /**
+   * Attempts to upload the current node to its upstairs location.
+   * If an upstairs URL override string is provided, it will be used instead of the default upstairs location.
+   * 
+   * @param upstairsUrlOverrideString An optional upstairs URL override string
+   * @returns A {@link Response} object if the upload was successful, or `void` if no upload was necessary
+   * @throws an {@link Err.FileSendError} when there is an error sending the file to the upstairs location
+   * @throws an {@link Err.DestinationPathError} When the upstairs URL (or override) is invalid
+   * @throws an {@link Err.UserCancelledError} When the user cancels the upload due to some issue that required user intervention
+   * @lastreviewed 2025-10-01
+   */
   abstract upload(upstairsUrlOverrideString: string | null): Promise<Response | void> ;
+
+  /**
+   * Downloads the upstairs node and writes it to the local file system.
+   * @returns A {@link Response} object if the download was successful
+   */
+  abstract download(): Promise<Response>;
 
   /**
    * 
