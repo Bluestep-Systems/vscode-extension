@@ -185,4 +185,8 @@ export const App = new class extends ContextNode {
       throw error;
     }
   }
+
+  public runConverts() {
+    Alert.info("Not implemented yet");
+  }
 }();

@@ -7,6 +7,7 @@ import { ScriptPathElement } from './PathElement';
 import { ScriptFactory } from './ScriptFactory';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
+import type { ScriptFile } from './ScriptFile';
 
 /**
  * Represents a folder in the script project structure.
@@ -140,9 +141,24 @@ export class ScriptFolder extends ScriptNode {
   }
 
   /**
-   * This may not be needed
+   * Gets an immediate child node (file or folder) by name.
    */
-  public async getHash(): Promise<string | null> {
-    return null;
+  getImmediateChildNode(name: string): ScriptNode {
+    return ScriptFactory.createNode(vscode.Uri.joinPath(this.uri(), name));
   }
+
+  /**
+   * Gets an immediate child file by name.
+   */
+  getImmediateChildFile(name: string): ScriptFile {
+    return ScriptFactory.createFile(vscode.Uri.joinPath(this.uri(), name));
+  }
+
+  /**
+   * Gets an immediate child folder by name.
+   */
+  getImmediateChildFolder(name: string): ScriptFolder {
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.uri(), name));
+  }
+
 }

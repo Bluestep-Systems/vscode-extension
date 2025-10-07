@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { App } from '../app/App';
+import { runConverts } from '../conversions';
 
 /**
  * Performs all startup tasks for the extension.
@@ -9,6 +10,7 @@ export default function (context: vscode.ExtensionContext) {
   try {
     
     App.init(context);
+    runConverts();
     App.isDebugMode() && console.log("B6P: App initialized in debug mode");
     App.logger.info("B6P: App initialized");
   } catch (error) {

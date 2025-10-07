@@ -2,17 +2,18 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
-import { App } from '../../App';
 import { FolderNames, SpecialFiles } from '../../../resources/constants';
+import { App } from '../../App';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
+import { OrgWorker } from '../data/OrgWorker';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ScriptCompiler } from './ScriptCompiler';
 import { ScriptFactory } from './ScriptFactory';
 import { ScriptFile } from './ScriptFile';
+import type { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
-import type { ScriptFolder } from './ScriptFolder';
 const fs = FileSystem.getInstance;
 
 /**
@@ -147,9 +148,10 @@ export class ScriptRoot {
         throw e;
       }
       App.logger.warn("Metadata file does not exist or is invalid; creating a new one.");
+      const metaDataDotJson = await this.getAsFolder().getMetadataFile();
       contentObj = {
-        scriptName: "",
-        U: "",
+        scriptName: metaDataDotJson.displayName || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })(),
+        U: await new OrgWorker(this.toScriptBaseUpstairsUrl()).getU(),
         webdavId: this.webDavId,
         pushPullRecords: []
       };
@@ -267,6 +269,9 @@ export class ScriptRoot {
     return this.downstairsRootOrgPath.base;
   }
 
+  public getAsFolder(): ScriptFolder {
+    return ScriptFactory.createFolder(() => this.getRootUri());
+  }
 
   /**
    * Returns a base URL string suitable for pull and push operations.

@@ -724,8 +724,11 @@ suite('ScriptNode Tests', () => {
       });
 
       // Should handle gracefully and return null
-      const lastPulled = await scriptNode.getLastPulledTimeStr();
-      assert.strictEqual(lastPulled, null, 'Should return null for corrupted metadata');
+      await assert.rejects(
+        () => scriptNode.getLastPulledTimeStr(),
+        /SyntaxError: /,
+        'Should propagate syntax errors'
+      );
     });
 
 
