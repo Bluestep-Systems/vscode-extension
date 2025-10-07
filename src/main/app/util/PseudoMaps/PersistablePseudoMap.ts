@@ -32,7 +32,7 @@ export abstract class PersistablePseudoMap<T extends Serializable> extends Pseud
 
   /**
    * An iterator over the key-value pairs in the map.
-   * @lastreviewed null
+   * @lastreviewed 2025-10-07
    */
   [Symbol.iterator](): Iterator<[string, T]> {
     return Object.entries(this.obj)[Symbol.iterator]();
@@ -40,9 +40,7 @@ export abstract class PersistablePseudoMap<T extends Serializable> extends Pseud
 
   /**
    * Sets the value associated with the given key. will also save the result when called
-   * @param key The key to set.
-   * @param value The value to associate with the key.
-   * @returns The PersistableMap instance.
+   * @lastreviewed 2025-10-07
    */
   async set(key: string, value: T) {
     super.set(key, value);
@@ -51,6 +49,7 @@ export abstract class PersistablePseudoMap<T extends Serializable> extends Pseud
 
   /**
    * Clears all entries in the map and persists the change.
+   * @lastreviewed 2025-10-07
    */
   async clear(): Promise<void> {
     super.clear();
