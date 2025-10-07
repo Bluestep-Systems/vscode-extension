@@ -9,6 +9,7 @@ export default function (context: vscode.ExtensionContext) {
   try {
     
     App.init(context);
+    App.isDebugMode() && console.log("B6P: App initialized in debug mode");
     App.logger.info("B6P: App initialized");
   } catch (error) {
     vscode.window.showErrorMessage('Failed to initialize extension: ' + (error instanceof Error ? error.stack : error), { modal: true });

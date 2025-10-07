@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { BasicAuthParams } from "../../../../types";
 import { SESSION_MANAGER } from "../b6p_session/SessionManager";
+import { AuthTypes } from "../../resources/constants";
 import { ContextNode } from "../context/ContextNode";
 import { PrivateKeys, PrivateGenericMap } from "../util/PseudoMaps";
 import { Err } from "../util/Err";
@@ -258,7 +259,7 @@ export const BASIC_AUTH_MANAGER = new class extends AuthManager<BasicAuth> {
    */
   public async authHeaderValue(flag: string = this.CUR_FLAG) {
     const auth = await this.getAuthObject(flag);
-    return `Basic ${auth ? auth.toBase64() : ''}`;
+    return `${AuthTypes.BASIC_PREFIX}${auth ? auth.toBase64() : ''}`;
   }
 
   /**

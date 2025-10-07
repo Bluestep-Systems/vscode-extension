@@ -741,4 +741,11 @@ export namespace Err {
       this.name = "UserCancelledError";
     }
   }
+
+  export class BlueHqHelperEndpointError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "BlueHqHelperEndpointError";
+    }
+  }
 }

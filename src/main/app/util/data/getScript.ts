@@ -2,6 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
+import { ApiEndpoints, FolderNames, HttpHeaders, HttpMethods, WebDAVElements } from "../../../resources/constants";
 import { Alert } from "../ui/Alert";
 import { UpstairsUrlParser } from "./UpstairsUrlParser";
 
@@ -14,7 +15,7 @@ type RawFiles = { upstairsPath: string; downstairsPath: string; trailing?: strin
  */
 export async function getScript({ url, webDavId }: GetScriptArg): Promise<GetScriptRet> {
   try {
-    url.pathname = `/files/${webDavId}/`;
+    url.pathname = `${ApiEndpoints.FILES}${webDavId}/`;
     App.logger.info("Fetching script from URL:", url.href);
     return await getSubScript(url);
   } catch (e) {
@@ -28,13 +29,13 @@ async function getSubScript(url: URL, repository: RawFiles = []): Promise<RawFil
     const response = await SM.fetch(url, {
       //TODO review these
       "headers": {
-        "accept": "*/*",
-        "accept-language": "en-US,en;q=0.9",
-        "cache-control": "no-cache",
-        "pragma": "no-cache",
-        "upgrade-insecure-requests": "1",
+        [HttpHeaders.ACCEPT]: HttpHeaders.ACCEPT_ALL,
+        [HttpHeaders.ACCEPT_LANGUAGE]: HttpHeaders.ACCEPT_LANGUAGE_EN_US,
+        [HttpHeaders.CACHE_CONTROL]: HttpHeaders.NO_CACHE,
+        [HttpHeaders.PRAGMA]: HttpHeaders.NO_CACHE,
+        [HttpHeaders.UPGRADE_INSECURE_REQUESTS]: "1",
       },
-      "method": "PROPFIND"
+      "method": HttpMethods.PROPFIND
     });
     if (!response.ok) {
       Alert.error(`Failed to fetch sub-script at ${url.href}: ${response.status} ${response.statusText}`);
@@ -42,22 +43,22 @@ async function getSubScript(url: URL, repository: RawFiles = []): Promise<RawFil
     }
     const parser = new XMLParser();
     const responseObj: XMLResponse = parser.parse(await response.text());
-    const dResponses = responseObj["D:multistatus"]["D:response"];
+    const dResponses = responseObj[WebDAVElements.MULTISTATUS][WebDAVElements.RESPONSE];
     if (!dResponses.filter) {
       //this happens when we call for a folder and there are no files in it, so we just short-circuit.
       return repository;
     }
     const firstLayer: RawFiles = dResponses
-      .map(terminal => new UpstairsUrlParser(terminal["D:href"]))
+      .map(terminal => new UpstairsUrlParser(terminal[WebDAVElements.HREF]))
       .filter(parser => {
         let { trailing, trailingFolder } = parser;
         // this is the folder itself, not a file or subfolder so it is meaningless to us
         if (trailing === undefined) {
-          return false; 
+          return false;
         }
         // don't pull snapshot elements
-        if (trailingFolder === "snapshot") {
-          return false; 
+        if (trailingFolder === FolderNames.SNAPSHOT) {
+          return false;
         }
         return true;
       })

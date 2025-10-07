@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { type ReadOnlyMap } from '../../../types';
 import { Auth } from './authentication';
 import { SESSION_MANAGER as SM } from './b6p_session/SessionManager';
+import { OutputChannels, SettingsKeys } from '../resources/constants';
 import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
@@ -16,7 +17,7 @@ export const App = new class extends ContextNode {
   private _context: vscode.ExtensionContext | null = null;
   private _settings: SettingsWrapper | null = null;
   private _outputChannel: vscode.LogOutputChannel | null = null;
-  public readonly appKey = "bsjs-push-pull";
+  public readonly appKey = SettingsKeys.APP_KEY;
   parent: ContextNode | null = null;
 
   /**
@@ -116,7 +117,7 @@ export const App = new class extends ContextNode {
     // for some reason we can't perform the truncated version of this. I.Err.
     // `.forEach(context.subscriptions.push)`
     this.disposables.forEach(disposable => this.context.subscriptions.push(disposable));
-    this._outputChannel = vscode.window.createOutputChannel("B6P", {
+    this._outputChannel = vscode.window.createOutputChannel(OutputChannels.B6P, {
       log: true,
     });
     this.context.subscriptions.push(this._outputChannel);

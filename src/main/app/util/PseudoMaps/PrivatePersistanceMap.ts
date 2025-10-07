@@ -69,10 +69,10 @@ export class PrivateGenericMap<T extends Serializable> extends PersistablePseudo
   }
 
   
-  clear() {
+  async clear() {
     this.requiresInit();
     super.clear();
-    return this.store();
+    return await this.store();
   }
 
   

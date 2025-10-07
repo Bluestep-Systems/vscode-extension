@@ -31,4 +31,9 @@ export enum PublicKeys {
    * Key for the data we persist for the GitHub state
    */
   GITHUB_STATE = 'b6p:public_github_state',
+
+  /**
+   * Key for the data we persist for the org cache
+   */
+  U_CACHE = 'b6p:u_cache'
 }

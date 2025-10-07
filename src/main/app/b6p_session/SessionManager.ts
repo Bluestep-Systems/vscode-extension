@@ -4,6 +4,7 @@ import { Auth } from "../authentication";
 import { AuthManager } from "../authentication/AuthManager";
 import { AuthObject } from "../authentication/AuthObject";
 import { ContextNode } from "../context/ContextNode";
+import { ApiEndpoints, CookieNames, HttpHeaders, HttpMethods } from "../../resources/constants";
 import { Util } from "../util";
 import { Err } from "../util/Err";
 import { HttpClient } from "../util/network/HttpClient";
@@ -42,7 +43,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
   /**
    * The name of the CSRF token header used by BlueStep.
    */
-  private readonly B6P_CSRF_TOKEN = 'b6p-csrf-token'; // lower case is important here because the response headers are lower-cased
+  private readonly B6P_CSRF_TOKEN = HttpHeaders.B6P_CSRF_TOKEN; // lower case is important here because the response headers are lower-cased
 
   /**
    * The AuthManager used for authentication.
@@ -137,7 +138,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     url = new URL(url);
     const origin = url.origin;
     if (!this.sessions.has(origin)) {
-      await this.sessions.set(origin, { lastCsrfToken: null, INGRESSCOOKIE: null, JSESSIONID: null, lastTouched: Date.now() });
+      await this.sessions.set(origin, { lastCsrfToken: null, [CookieNames.INGRESSCOOKIE]: null, [CookieNames.JSESSIONID]: null, lastTouched: Date.now() });
     }
     const session = this.sessions.get(origin);
     if (!session) {
@@ -147,7 +148,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     try {
       //TODO figure out why we it will sometimes error out with this if-check
       //if (!session.lastCsrfToken || session.lastTouched < (Date.now() - this.MAX_CSRF_TOKEN_AGE)) {
-      const tokenValue = await this.fetch(`${origin}/csrf-token`).then(r => r.text());
+      const tokenValue = await this.fetch(`${origin}${ApiEndpoints.CSRF_TOKEN}`).then(r => r.text());
       session.lastCsrfToken = tokenValue;
       await this.sessions.set(origin, session);
       await this.sessions.store(); // TODO find why this keeps being needed
@@ -215,16 +216,16 @@ export const SESSION_MANAGER = new class extends ContextNode {
     if (response.status === ResponseCodes.FORBIDDEN) {
       throw new Err.UnauthorizedError(`HTTP Error: ${response.status} ${response.statusText}`);
     }
-    const cookies = response.headers.get("set-cookie");
+    const cookies = response.headers.get(HttpHeaders.SET_COOKIE);
     const responderUrl = new URL(response.url);
     if (cookies) {
       const cookieMap = this.parseCookies(response.headers);
       const sessionData: SessionData = {
         lastTouched: Date.now(),
-        JSESSIONID: cookieMap.get("JSESSIONID")
+        [CookieNames.JSESSIONID]: cookieMap.get(CookieNames.JSESSIONID)
           || this.sessions.get(responderUrl.origin)?.JSESSIONID
           || (() => { throw new Err.SessionIdMissingError(); })(),
-        INGRESSCOOKIE: cookieMap.get("INGRESSCOOKIE")
+        [CookieNames.INGRESSCOOKIE]: cookieMap.get(CookieNames.INGRESSCOOKIE)
           || this.sessions.get(responderUrl.origin)?.INGRESSCOOKIE
           || null,
         lastCsrfToken: response.headers.get(this.B6P_CSRF_TOKEN)
@@ -263,7 +264,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         ...options,
         headers: {
           ...options?.headers,
-          "Cookie": `JSESSIONID=${sessionData.JSESSIONID}; INGRESSCOOKIE=${sessionData.INGRESSCOOKIE}`,
+          [HttpHeaders.COOKIE]: `${CookieNames.JSESSIONID}=${sessionData.JSESSIONID}; ${CookieNames.INGRESSCOOKIE}=${sessionData.INGRESSCOOKIE}`,
         }
       };
       const response = await HttpClient.getInstance().fetch(url, options);
@@ -273,10 +274,10 @@ export const SESSION_MANAGER = new class extends ContextNode {
       const authLoginBodyValue = await this.authManager.authLoginBodyValue();
       this.parent.isDebugMode() && this.parent.logger.info("login body:" + authLoginBodyValue);
       //TODO have this moved use the proper login servlet instead of this dummy endpoint
-      const response = await HttpClient.getInstance().fetch(url.origin + "/lookup/test", {
-        method: "POST",
+      const response = await HttpClient.getInstance().fetch(url.origin + ApiEndpoints.LOOKUP_TEST, {
+        method: HttpMethods.POST,
         headers: {
-          "Authorization": `${await this.authManager.authHeaderValue()}`,
+          [HttpHeaders.AUTHORIZATION]: `${await this.authManager.authHeaderValue()}`,
         }
       });
       this.parent.logger.info("login status:" + response.status);

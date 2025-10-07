@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
 import type { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
+import { AuthTypes, FileExtensions, GitHubUrls, HttpHeaders, HttpMethods, SettingsKeys } from '../../resources/constants';
 import { FileSystem } from '../util/fs/FileSystem';
 import { PrivateKeys, TypedPersistable } from '../util/PseudoMaps';
 import { PrivateTypedPersistable } from '../util/PseudoMaps/TypedPrivatePersistable';
@@ -104,15 +105,15 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private async getGitHubHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
-      'User-Agent': 'B6P-VSCode-Extension',
-      'Accept': 'application/vnd.github.v3+json'
+      [HttpHeaders.USER_AGENT]: HttpHeaders.USER_AGENT_B6P,
+      [HttpHeaders.ACCEPT]: HttpHeaders.GITHUB_API_ACCEPT
     };
 
     const githubToken = await this.getGithubToken();
     if (!githubToken) {
       throw new Err.GitHubTokenNotAvailableError();
     }
-    headers['Authorization'] = `Bearer ${githubToken}`;
+    headers[HttpHeaders.AUTHORIZATION] = `${AuthTypes.BEARER_PREFIX}${githubToken}`;
 
     return headers;
   }
@@ -198,10 +199,10 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private async getLatestRelease(): Promise<GithubRelease | null> {
     try {
-      const url = `https://api.github.com/repos/${this.REPO_OWNER}/${this.REPO_NAME}/releases/latest`;
+      const url = `${GitHubUrls.API_BASE}${GitHubUrls.REPOS_PATH}${this.REPO_OWNER}/${this.REPO_NAME}${GitHubUrls.RELEASES_LATEST_PATH}`;
 
       const response = await fetch(url, {
-        method: 'GET',
+        method: HttpMethods.GET,
         headers: await this.getGitHubHeaders(),
         signal: AbortSignal.timeout(10_000) // 10 second timeout
       });
@@ -277,13 +278,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private getDownloadUrl(release: GithubRelease): string {
     // Look for .vsix file in assets
-    const vsixAsset = release.assets.find(asset => asset.name.endsWith('.vsix'));
+    const vsixAsset = release.assets.find(asset => asset.name.endsWith(FileExtensions.VSIX));
     if (vsixAsset) {
       return vsixAsset.browser_download_url;
     }
 
     // Fallback to release page
-    return `https://github.com/${this.REPO_OWNER}/${this.REPO_NAME}/releases/tag/${release.tag_name}`;
+    return `${GitHubUrls.BASE}/${this.REPO_OWNER}/${this.REPO_NAME}/releases/tag/${release.tag_name}`;
   }
 
     /**
@@ -344,7 +345,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
         progress.report({ increment: 0, message: "Downloading..." });
 
         // Check if the download URL is a .vsix file
-        if (!updateInfo.downloadUrl.endsWith('.vsix')) {
+        if (!updateInfo.downloadUrl.endsWith(FileExtensions.VSIX)) {
           throw new Err.AutoInstallRequiresDirectLinkError();
         }
 
@@ -391,9 +392,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   private async downloadVsixFile(downloadUrl: string, version: string): Promise<string> {
     try {
       const response = await fetch(downloadUrl, {
-        method: 'GET',
+        method: HttpMethods.GET,
         headers: {
-          'User-Agent': 'B6P-VSCode-Extension',
+          [HttpHeaders.USER_AGENT]: HttpHeaders.USER_AGENT_B6P,
         },
         signal: AbortSignal.timeout(30000) // 30 second timeout
       });
@@ -404,7 +405,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
       // Create temporary file path
       const tempDir = this.context.globalStorageUri.fsPath;
-      const tempFileName = `bsjs-push-pull-${version}.vsix`;
+      const tempFileName = `${SettingsKeys.APP_KEY}-${version}${FileExtensions.VSIX}`;
       const tempFilePath = vscode.Uri.joinPath(this.context.globalStorageUri, tempFileName);
 
       // Ensure the directory exists
@@ -560,8 +561,8 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   public async getAllReleases(includePrerelease = false): Promise<GithubRelease[]> {
     try {
-      const response = await fetch(`https://api.github.com/repos/${this.REPO_OWNER}/${this.REPO_NAME}/releases`, {
-        method: 'GET',
+      const response = await fetch(`${GitHubUrls.API_BASE}${GitHubUrls.REPOS_PATH}${this.REPO_OWNER}/${this.REPO_NAME}${GitHubUrls.RELEASES_PATH}`, {
+        method: HttpMethods.GET,
         headers: await this.getGitHubHeaders(),
       });
 

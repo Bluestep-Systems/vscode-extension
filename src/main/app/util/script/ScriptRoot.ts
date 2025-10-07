@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { App } from '../../App';
+import { FolderNames, SpecialFiles } from '../../../resources/constants';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
@@ -21,9 +22,9 @@ const fs = FileSystem.getInstance;
  * @lastreviewed 2025-09-15
  */
 export class ScriptRoot {
-  private static readonly ScriptContentFolders = ["info", "scripts", "objects"] as const;
-  public static readonly METADATA_FILENAME = ".b6p_metadata.json";
-  public static readonly GITIGNORE_FILENAME = ".gitignore";
+  private static readonly ScriptContentFolders = [FolderNames.INFO, FolderNames.SCRIPTS, FolderNames.OBJECTS] as const;
+  public static readonly METADATA_FILENAME = SpecialFiles.B6P_METADATA;
+  public static readonly GITIGNORE_FILENAME = SpecialFiles.GITIGNORE;
   readonly downstairsRootPath: path.ParsedPath;
   readonly downstairsRootOrgPath: path.ParsedPath;
   public readonly rootUri: vscode.Uri;
@@ -61,7 +62,7 @@ export class ScriptRoot {
    */
   private getGitIgnoreFileUri() {
     const downstairsRoot = this.getRootUri();
-    return vscode.Uri.joinPath(downstairsRoot, ".gitignore");
+    return vscode.Uri.joinPath(downstairsRoot, SpecialFiles.GITIGNORE);
   }
 
   /**

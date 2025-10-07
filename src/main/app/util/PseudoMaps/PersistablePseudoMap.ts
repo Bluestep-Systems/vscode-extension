@@ -7,7 +7,7 @@ import { Persistable } from "./Persistable";
  * A persistable version of a pseudomap. Extending classes must implement an initializer
  * that will load the data from the appropriate source, and a storage method.
  */
-export abstract class PersistablePseudoMap<T extends Serializable> extends PseudoMap<string, T> implements Persistable {
+export abstract class PersistablePseudoMap<T extends Serializable> extends PseudoMap<string, T> implements Persistable, Iterable<[string, T]> {
 
   /**
    * The key used for persisting the map in the vscode context.
@@ -31,6 +31,14 @@ export abstract class PersistablePseudoMap<T extends Serializable> extends Pseud
   }
 
   /**
+   * An iterator over the key-value pairs in the map.
+   * @lastreviewed null
+   */
+  [Symbol.iterator](): Iterator<[string, T]> {
+    return Object.entries(this.obj)[Symbol.iterator]();
+  }
+
+  /**
    * Sets the value associated with the given key. will also save the result when called
    * @param key The key to set.
    * @param value The value to associate with the key.
@@ -44,9 +52,9 @@ export abstract class PersistablePseudoMap<T extends Serializable> extends Pseud
   /**
    * Clears all entries in the map and persists the change.
    */
-  clear(): void {
+  async clear(): Promise<void> {
     super.clear();
-    this.store();
+    await this.store();
   }
 
   /**

@@ -1,6 +1,7 @@
 import * as path from 'path';
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
+import { ApiEndpoints, CryptoAlgorithms, FileExtensions, HttpHeaders, HttpMethods, MimeTypes, SpecialFiles } from '../../../resources/constants';
 import { UpstairsUrlParser } from "../data/UpstairsUrlParser";
 import { Err } from "../Err";
 import { FileSystem } from "../fs/FileSystem";
@@ -41,7 +42,7 @@ export class ScriptFile extends ScriptNode {
       return null;
     }
     const bufferSource = await fs().readFile(this.uri());
-    const localHashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
+    const localHashBuffer = await crypto.subtle.digest(CryptoAlgorithms.SHA_512, bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
     if (hexArray.length !== 64) {
       throw new Err.HashCalculationError();
@@ -61,9 +62,9 @@ export class ScriptFile extends ScriptNode {
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
     const response = await SM.fetch(ops?.upstairsOverride || this.upstairsUrl(), {
-      method: "HEAD"
+      method: HttpMethods.HEAD
     });
-    const etagHeader = response.headers.get("etag");
+    const etagHeader = response.headers.get(HttpHeaders.ETAG);
 
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
     let etag: string | null = null;
@@ -150,9 +151,9 @@ export class ScriptFile extends ScriptNode {
     const lookupUri = this.upstairsUrl();
     App.logger.info("downloading from:" + lookupUri);
     const response = await SM.fetch(lookupUri, {
-      method: "GET",
+      method: HttpMethods.GET,
       headers: {
-        "Accept": "*/*",
+        [HttpHeaders.ACCEPT]: HttpHeaders.ACCEPT_ALL,
       }
     });
     if (response.status >= ResponseCodes.BAD_REQUEST) {
@@ -161,7 +162,7 @@ export class ScriptFile extends ScriptNode {
     }
     const buffer = await response.arrayBuffer();
     await this.writeContent(buffer);
-    const etagHeader = response.headers.get("etag");
+    const etagHeader = response.headers.get(HttpHeaders.ETAG);
 
     //TODO merge this with the other etag parsing code elsewhere in this class
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
@@ -232,7 +233,7 @@ export class ScriptFile extends ScriptNode {
       return newUrl;
     } else if (this.parser.type === "metadata") {
       const fileName = this.fileName();
-      if (fileName === ".b6p_metadata.json") {
+      if (fileName === SpecialFiles.B6P_METADATA) {
         throw new Err.MetadataFileOperationError("convert to upstairs URL");
       }
       newUrl.pathname = upstairsBaseUrl.pathname + fileName;
@@ -258,7 +259,7 @@ export class ScriptFile extends ScriptNode {
     if (this.parser.type === "root") {
       return "Node is the root folder";
     }
-    if (this.fileName() === ".b6p_metadata.json") {
+    if (this.fileName() === SpecialFiles.B6P_METADATA) {
       return "Node is a metadata file";
     }
     if (this.isInDeclarations()) {
@@ -297,7 +298,7 @@ export class ScriptFile extends ScriptNode {
   }
 
   public shouldCopyRaw() {
-    return path.extname(this.fileName()).toLowerCase() !== '.ts';
+    return path.extname(this.fileName()).toLowerCase() !== FileExtensions.TYPESCRIPT;
   }
 
   public copyToSnapshot() {
@@ -320,7 +321,7 @@ export class ScriptFile extends ScriptNode {
     if (typeof desto === 'undefined') {
       throw new Err.DestinationPathError(downstairsUri.fsPath);
     }
-    upstairsOverride.pathname = `/files/${webDavId}${desto}`;
+    upstairsOverride.pathname = `${ApiEndpoints.FILES}${webDavId}${desto}`;
     if (!(await this.oldIntegrityMatches())) {
       const OVERWRITE = 'Overwrite';
       const CANCEL = 'Cancel';
@@ -348,9 +349,9 @@ export class ScriptFile extends ScriptNode {
     //TODO investigate if this can be done via streaming
     const fileContents = await fs().readFile(downstairsUri);
     const resp = await SM.fetch(upstairsOverride, {
-      method: 'PUT',
+      method: HttpMethods.PUT,
       headers: {
-        'Content-Type': 'application/json',
+        [HttpHeaders.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
       },
       body: fileContents
     });
@@ -380,7 +381,7 @@ export class ScriptFile extends ScriptNode {
   }
 
   public isMarkdown(): boolean {
-    return this.extension === '.md';
+    return this.extension === FileExtensions.MARKDOWN;
   }
 
   /**

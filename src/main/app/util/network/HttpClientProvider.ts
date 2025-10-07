@@ -1,3 +1,5 @@
+import { HttpHeaders, MimeTypes } from "../../../resources/constants";
+
 /**
  * Interface defining HTTP client operations needed for network requests.
  * This allows us to create both real and mock implementations for testing.
@@ -88,7 +90,7 @@ export class MockHttpClient implements HttpClientProvider {
     const response = new Response(JSON.stringify(data), {
       status,
       headers: {
-        'Content-Type': 'application/json',
+        [HttpHeaders.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
         ...headers
       }
     });
@@ -116,7 +118,7 @@ export class MockHttpClient implements HttpClientProvider {
     const response = new Response(text, {
       status,
       headers: {
-        'Content-Type': 'text/plain',
+        [HttpHeaders.CONTENT_TYPE]: MimeTypes.TEXT_PLAIN,
         ...headers
       }
     });

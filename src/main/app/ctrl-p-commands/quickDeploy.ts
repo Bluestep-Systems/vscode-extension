@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { SESSION_MANAGER as SM } from "../b6p_session/SessionManager";
+import { ApiEndpoints, HttpHeaders, HttpMethods, MimeTypes } from "../../resources/constants";
 import { Alert } from "../util/ui/Alert";
 import { ProgressHelper } from "../util/ui/ProgressHelper";
 import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../types";
@@ -36,8 +37,8 @@ export default async function (): Promise<void> {
           const webDavId = await getScriptWebdavId(origin, topId);
           if (webDavId !== null) {
             await push(
-              { 
-                overrideFormulaUri: `${origin}/files/${webDavId}/`, 
+              {
+                overrideFormulaUri: `${origin}${ApiEndpoints.FILES}${webDavId}/`,
                 sourceOps: { sourceOrigin, topId },
                 skipMessage: true
             });
@@ -72,11 +73,11 @@ async function getScriptWebdavId(origin: string, topId: string): Promise<string 
   const gqlBody = (topId: string) => `{\"query\":\"query ObjectData($id: String!) {\\n  children(parentId: $id) {\\n    ... on Parent {\\n      children {\\n        items {\\n          id\\n        }\\n      }\\n    }\\n  }\\n}\",\"variables\":{\"id\":\"${topId}\"},\"operationName\":\"ObjectData\"}`;
 
   try {
-    const GQL_RESP = await SM.csrfFetch(originUrl.origin + "/gql", {
-      method: "POST",
+    const GQL_RESP = await SM.csrfFetch(originUrl.origin + ApiEndpoints.GQL, {
+      method: HttpMethods.POST,
       headers: {
-        "Accept": "*/*",
-        "Content-Type": "application/json"
+        [HttpHeaders.ACCEPT]: HttpHeaders.ACCEPT_ALL,
+        [HttpHeaders.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON
       },
       body: gqlBody(topId)
     }).then((res: Response) => res.json()).catch(e => {

@@ -42,7 +42,7 @@ export type PrimitiveNestedObject = {
  * const example6: Serializable = { k1: "v1", k2: 2, k3: [true, 5], k4: { nestedKey: "something" } };
  */
 export type Serializable =
-  | Primitive
+   Primitive
   | Serializable[]
   | { [key: string]: Serializable };
 
@@ -663,3 +663,7 @@ export type TsConfig = {
     excludeFiles?: string[];
   };
 };
+
+export type BlueHqAnyUrlResp = {
+  orgUrl: string;
+}

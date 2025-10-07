@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { ConfigJsonContent, MetaDataDotJsonContent } from '../../../../../types';
 import { App } from '../../App';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
+import { CryptoAlgorithms, FolderNames, HttpHeaders, HttpMethods, SpecialFiles } from '../../../resources/constants';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
 import { readFileText } from '../data/readFile';
@@ -75,7 +76,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   public async getUpstairsLastModified(): Promise<Date> {
 
     const response = await SM.fetch(this.upstairsUrl(), {
-      method: "HEAD"
+      method: HttpMethods.HEAD
     });
     const lastModifiedHeaderValue = response.headers.get("Last-Modified");
     if (!lastModifiedHeaderValue) {
@@ -92,9 +93,9 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async getUpstairsContent(): Promise<string> {
     const response = await SM.fetch(this.upstairsUrl(), {
-      method: "GET",
+      method: HttpMethods.GET,
       headers: {
-        "Accept": "*/*",
+        [HttpHeaders.ACCEPT]: HttpHeaders.ACCEPT_ALL,
       }
     });
     if (response.status >= ResponseCodes.BAD_REQUEST) {
@@ -266,7 +267,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @lastreviewed 2025-09-29
    */
   public async getConfigFile(): Promise<ConfigJsonContent> {
-    return this.getConfigurationFile<ConfigJsonContent>('config.json');
+    return this.getConfigurationFile<ConfigJsonContent>(SpecialFiles.CONFIG);
   }
 
 
@@ -276,7 +277,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @lastreviewed 2025-09-15
    */
   public async getMetadataFile(): Promise<MetaDataDotJsonContent> {
-    return this.getConfigurationFile<MetaDataDotJsonContent>('metadata.json');
+    return this.getConfigurationFile<MetaDataDotJsonContent>(SpecialFiles.METADATA);
   }
 
 
@@ -423,7 +424,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   public pathWithRespectToDraftRoot() {
-    return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), "draft").fsPath, this.uri().fsPath);
+    return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), FolderNames.DRAFT).fsPath, this.uri().fsPath);
   }
 
   /**
@@ -549,7 +550,7 @@ export abstract class ScriptNode implements ScriptPathElement {
       }
 
       const fileContent = await fs().readFile(this.uri());
-      const hashBuffer = await crypto.subtle.digest('SHA-512', fileContent);
+      const hashBuffer = await crypto.subtle.digest(CryptoAlgorithms.SHA_512, fileContent);
       const hexArray = Array.from(new Uint8Array(hashBuffer));
       return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
     } catch (error) {
