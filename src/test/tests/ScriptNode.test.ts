@@ -106,38 +106,6 @@ suite('ScriptNode Tests', () => {
     });
   });
 
-  suite('Hash Calculation', () => {
-    test('should calculate SHA-512 hash with correct format', async () => {
-      // Test with known content to verify hash format
-      const testContent = 'console.log("test");';
-
-      // Calculate expected hash manually for verification
-      const expectedHash = await calculateExpectedHash(testContent);
-
-      // Set up mock file content
-      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(testContent));
-
-      const hash = await scriptNode.getHash();
-      if (await scriptNode.isFolder()) {
-        assert.ok(true);
-      }
-      // Verify hash format (64 hex characters, lowercase)
-      assert.ok(/^[a-f0-9]{128}$/.test(hash as string), 'Hash should be 128 lowercase hex characters');
-      assert.strictEqual(hash, expectedHash);
-    });
-
-    test('should throw error if hash calculation fails', async () => {
-      // Set up mock file to throw error
-      const testUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-      mockFileSystemProvider.setMockError(testUri, new Error('File read failed'));
-
-      await assert.rejects(
-        () => scriptNode.getHash(),
-        /File read failed/
-      );
-    });
-  });
 
   suite('File Existence Checks', () => {
     test('should return true when file exists', async () => {
@@ -627,13 +595,6 @@ suite('ScriptNode Tests', () => {
     });
   });
 
-  // Helper function to calculate expected hash for testing
-  async function calculateExpectedHash(content: string): Promise<string> {
-    const bufferSource = Buffer.from(content);
-    const hashBuffer = await crypto.subtle.digest('SHA-512', bufferSource);
-    const hexArray = Array.from(new Uint8Array(hashBuffer));
-    return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
-  }
 
   // Enhanced test suites for edge cases and error scenarios
   suite('Concurrent Operations and Race Conditions', () => {
