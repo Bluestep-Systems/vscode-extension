@@ -41,7 +41,7 @@ export default async function (): Promise<void> {
       }
     }
 
-    await pushScript({ overrideFormulaUri: fileMetaData.getScriptRoot().toBaseUpstairsString() });
+    await pushScript({ overrideFormulaUri: fileMetaData.getScriptRoot().toScriptBaseUpstairsString() });
   } catch(e) {
     if (e instanceof Err.AlreadyAlertedError) {
       return; // do nothing, already handled

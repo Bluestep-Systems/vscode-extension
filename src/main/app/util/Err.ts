@@ -729,12 +729,19 @@ export namespace Err {
     }
   }
 
+  /**
+   * Error thrown when an error has already been alerted to the user and we should know to not trigger another alert.
+   */
   export class AlreadyAlertedError extends Error {
     constructor(message: string) {
       super(message);
       this.name = "AlreadyHandledError";
     }
   }
+
+  /**
+   * Error thrown when user cancels an operation and we should know to not alert them again.
+   */
   export class UserCancelledError extends AlreadyAlertedError {
     constructor(message: string) {
       super(message);
@@ -742,10 +749,30 @@ export namespace Err {
     }
   }
 
+  /**
+   * Error thrown when BlueHq helper endpoint has any sort of problem.
+   */
   export class BlueHqHelperEndpointError extends Error {
     constructor(message: string) {
       super(message);
       this.name = "BlueHqHelperEndpointError";
+    }
+  }
+
+  /**
+   * Error thrown when OrgWorker encounters an issue.
+   */
+  export class OrgWorkerError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "OrgWorkerError";
+    }
+  }
+
+  export class OrgCacheError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "OrgCacheError";
     }
   }
 }

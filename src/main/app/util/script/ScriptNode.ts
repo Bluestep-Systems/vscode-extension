@@ -1,9 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigJsonContent, MetaDataDotJsonContent } from '../../../../../types';
-import { App } from '../../App';
+import { FolderNames, HttpHeaders, HttpMethods, SpecialFiles } from '../../../resources/constants';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
-import { CryptoAlgorithms, FolderNames, HttpHeaders, HttpMethods, SpecialFiles } from '../../../resources/constants';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
 import { readFileText } from '../data/readFile';
@@ -11,10 +10,10 @@ import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
 import { ScriptPathElement } from './PathElement';
+import { ScriptFactory } from './ScriptFactory';
 import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
-import { ScriptFactory } from './ScriptFactory';
 const fs = FileSystem.getInstance;
 
 /**
@@ -270,8 +269,6 @@ export abstract class ScriptNode implements ScriptPathElement {
     return this.getConfigurationFile<ConfigJsonContent>(SpecialFiles.CONFIG);
   }
 
-
-
   /**
    * Gets the metadata file for the script.
    * @lastreviewed 2025-09-15
@@ -279,8 +276,6 @@ export abstract class ScriptNode implements ScriptPathElement {
   public async getMetadataFile(): Promise<MetaDataDotJsonContent> {
     return this.getConfigurationFile<MetaDataDotJsonContent>(SpecialFiles.METADATA);
   }
-
-
 
   /**
    * Checks if the script file is in the declarations folder.
@@ -403,26 +398,40 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * 
    * @returns The {@link vscode.Uri} of the closest tsconfig.json file
    */
   private async getClosestTsConfigUri() {
     return await fs().closest(this.uri(), TsConfig.NAME);
   }
 
-  public closest(fileName: string) {
-    return fs().closest(this.uri(), fileName);
+  /**
+   * Gets the closest uri with the given name in the current folder or any parent folder.
+   */
+  public closest(name: string) {
+    return fs().closest(this.uri(), name);
   }
+
+  /**
+   * @returns Whether the current node is in its respective build folder
+   */
   public async isInItsRespectiveBuildFolder() {
     const buildFolder = await this.getBuildFolder();
+    //TODO there are cases where the build-folder is legitimately the same folder as the original file.
+    // this needs to be accounted for.
     return buildFolder.contains(this);
   }
 
+  /**
+   * Gets the build folder associated with the current node.
+   */
   public async getBuildFolder() {
     const tsConfig = await this.getMatchingTsConfigFile();
     return await tsConfig.getBuildFolder();
   }
 
+  /**
+   * Gets the path of the current node relative to the draft root folder
+   */
   public pathWithRespectToDraftRoot() {
     return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), FolderNames.DRAFT).fsPath, this.uri().fsPath);
   }
@@ -438,7 +447,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @throws an {@link Err.UserCancelledError} When the user cancels the upload due to some issue that required user intervention
    * @lastreviewed 2025-10-01
    */
-  abstract upload(upstairsUrlOverrideString: string | null): Promise<Response | void> ;
+  abstract upload(upstairsUrlOverrideString: string | null): Promise<Response | void>;
 
   /**
    * Downloads the upstairs node and writes it to the local file system.
@@ -447,7 +456,6 @@ export abstract class ScriptNode implements ScriptPathElement {
   abstract download(): Promise<Response>;
 
   /**
-   * 
    * @returns Whether the current node is a folder
    */
   public async isFolder() {
@@ -463,13 +471,15 @@ export abstract class ScriptNode implements ScriptPathElement {
     }
   }
 
+  /**
+   * Alias for the inverse of {@link isFolder}
+   */
   public async isFile() {
     return !(await this.isFolder());
   }
 
   /**
    * Converts the current node to a Folder instance if can be represented by one
-   * @returns 
    */
   public async toFolder(): Promise<ScriptFolder> {
     if (await this.isFolder()) {
@@ -479,39 +489,14 @@ export abstract class ScriptNode implements ScriptPathElement {
     }
   }
 
+
+
   /**
-   * Touches a file by updating its last pulled or pushed timestamp.
-   * Updates the metadata to track when the file was last synchronized and its hash.
-   * 
-   * @param file The file to touch
-   * @param touchType The type of touch to perform - either "lastPulled" or "lastPushed"
-   * @lastreviewed 2025-09-15
+   * Copies the current draft file to its respective build folder.
+   * @throws an {@link Err.BuildFolderOperationError} When the current node is already in its respective build folder
+   * @throws an {@link Err.ScriptNotCopaceticError} When the current node is not in a copacetic state
+   * @lastreviewed 2025-10-07
    */
-  async touch(touchType: "lastPulled" | "lastPushed"): Promise<void> {
-    const lastHash = await this.getHash();
-    const metaData = await this.getScriptRoot().modifyMetaData(md => {
-      const downstairsPath = this.uri().fsPath;
-      const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
-      if (existingEntryIndex !== -1) {
-        const newDateString = new Date().toUTCString();
-
-        md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
-        md.pushPullRecords[existingEntryIndex].lastVerifiedHash = lastHash;
-      } else {
-
-        const now = new Date().toUTCString();
-        md.pushPullRecords.push({
-          downstairsPath,
-          lastPushed: touchType === "lastPushed" ? now : null,
-          lastPulled: touchType === "lastPulled" ? now : null,
-          lastVerifiedHash: lastHash
-        });
-      }
-    });
-    App.isDebugMode() && console.log("Updated metadata:", metaData);
-    return void 0;
-  }
-
   public async copyDraftFileToBuild() {
     if (await this.isInItsRespectiveBuildFolder()) {
       throw new Err.BuildFolderOperationError("copy");
@@ -527,10 +512,16 @@ export abstract class ScriptNode implements ScriptPathElement {
     await this.copyTo(buildUri);
   }
 
+  /**
+   * Gets the contents of the current node as a byte array.
+   */
   public async readContents(): Promise<Uint8Array<ArrayBufferLike>> {
     return await fs().readFile(this.uri());
   }
 
+  /**
+   * copies the current node to the given uri.
+   */
   public async copyTo(uri: vscode.Uri): Promise<void> {
     if (await this.isInItsRespectiveBuildFolder()) {
       throw new Err.BuildFolderOperationError("copy");
@@ -541,23 +532,11 @@ export abstract class ScriptNode implements ScriptPathElement {
     await fs().copy(this.uri(), uri, { overwrite: true });
   }
 
-
-
-  public async getHash(): Promise<string | null> {
-    try {
-      if (await this.isFolder()) {
-        return null; // Folders don't have hashes
-      }
-
-      const fileContent = await fs().readFile(this.uri());
-      const hashBuffer = await crypto.subtle.digest(CryptoAlgorithms.SHA_512, fileContent);
-      const hexArray = Array.from(new Uint8Array(hashBuffer));
-      return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
-    } catch (error) {
-      throw new Error(`Error reading downstairs file: ${error}`);
-    }
-  }
-
+  /**
+   * Deletes the current node if it is in a copacetic state.
+   * @throws an {@link Err.ScriptNotCopaceticError} When the current node is not in a copacetic state
+   * @lastreviewed 2025-10-07
+   */
   public async delete(): Promise<void> {
     if (await this.isCopacetic()) {
       await fs().delete(this, { useTrash: true, recursive: true });

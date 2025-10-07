@@ -1,6 +1,4 @@
 import { Err } from "../Err";
-import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
-import { ApiEndpoints } from "../../../resources/constants";
 
 
 export class UpstairsUrlParser {
@@ -60,25 +58,6 @@ export class UpstairsUrlParser {
     this.trailingFolder = trailing?.includes('/') ? trailing.split('/')[0] : undefined;
   }
   
-  /**
-   * Simply calls the org to get the U associated with the URL; this requires that the org is reachable.
-   * @throws an {@link Err.UrlParsingError} if the fetch fails or the response is not OK.
-   */
-  public async getU(): Promise<string> {
-    const url = new URL(this.url);
-    url.pathname = ApiEndpoints.APPINFO_U;
-    try {
-      const response = await SM.fetch(url);
-      if (!response.ok) {
-        throw new Err.UrlParsingError(`Failed to fetch user info from URL: ${url.toString()}. Status: ${response.status}`);
-      }
-      return await response.text();
-    } catch (error) {
-      console.error("Error fetching user info:", error);
-      throw new Err.UrlParsingError(`Error fetching user info from URL: ${url.toString()}. ${error}`);
-    }
-  }
-
   /**
    * Checks to see if the provided type is on the list of valid types.
    */

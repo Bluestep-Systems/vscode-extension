@@ -13,6 +13,7 @@ import { TsConfig } from './TsConfig';
  */
 export class ScriptFolder extends ScriptNode {
 
+
   /**
    * The upload method is not implemented for {@link ScriptFolder} since individual files
    * automatically create parent folders upstairs, so this really should only be called when
@@ -136,5 +137,12 @@ export class ScriptFolder extends ScriptNode {
    */
   upstairsUrl(): URL {
     throw new Err.MethodNotImplementedError();
+  }
+
+  /**
+   * This may not be needed
+   */
+  public async getHash(): Promise<string | null> {
+    return null;
   }
 }

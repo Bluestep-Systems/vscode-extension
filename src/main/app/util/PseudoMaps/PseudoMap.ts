@@ -78,4 +78,25 @@ export class PseudoMap<K extends string, V> {
   toJSON(): string {
     return JSON.stringify(this.obj);
   }
+
+  /**
+   * Keys of the PseudoMap.
+   */
+  keys(): K[] {
+    return Object.keys(this.obj) as K[];
+  }
+
+  /**
+   * Values of the PseudoMap.
+   */
+  values(): V[] {
+    return Object.values(this.obj);
+  }
+
+  /**
+   * Entries of the PseudoMap
+   */
+  entries(): [K, V][] {
+    return Object.entries(this.obj) as [K, V][];
+  }
 }

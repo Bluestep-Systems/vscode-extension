@@ -664,6 +664,24 @@ export type TsConfig = {
   };
 };
 
+/**
+ * An element in the OrgCache, representing a known host and the last access time.
+ */
+type OrgCacheElement = {
+  /**
+   * a list of known hosts for this org
+   */
+  host: string;
+
+  /**
+   * the last time this entry was accessed
+   */
+  lastAccess: number;
+}
+
+/**
+ * The response from the BlueHQ endpoint when calling for any domain.
+ */
 export type BlueHqAnyUrlResp = {
   orgUrl: string;
 }

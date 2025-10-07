@@ -22,3 +22,5 @@ export { OutputChannels } from './OutputChannels';
 export { SpecialFiles } from './SpecialFiles';
 export { SettingsKeys } from './SettingsKeys';
 export { WebDAVElements } from './WebDAVElements';
+export { HttpSchemes } from './HttpSchemes';
+export { Numerical } from './Numerical';

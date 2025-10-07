@@ -272,7 +272,7 @@ export class ScriptRoot {
    * Returns a base URL string suitable for pull and push operations.
    * @lastreviewed 2025-09-15
    */
-  public toBaseUpstairsString() {
+  public toScriptBaseUpstairsString() {
     return `https://${this.origin}/files/${this.webDavId}/`;
   }
 
@@ -280,8 +280,8 @@ export class ScriptRoot {
    * Returns a base {@link URL} suitable for pull and push operations.
    * @lastreviewed 2025-09-15
    */
-  public toBaseUpstairsUrl(): URL {
-    return new URL(this.toBaseUpstairsString());
+  public toScriptBaseUpstairsUrl(): URL {
+    return new URL(this.toScriptBaseUpstairsString());
   }
 
   /**
@@ -363,7 +363,7 @@ export class ScriptRoot {
     if (infoContent.length !== 3) {
       reasonsWhyBad.push("`info` folder must have 3 elements");
     }
-    ["metadata.json", "permissions.json", "config.json"].forEach(expectedFile => {
+    SpecialFiles.SCRIPT_FILES.forEach(expectedFile => {
       if (!infoContent.some(file => file.path.endsWith(expectedFile))) {
         reasonsWhyBad.push(`Info folder is missing expected file: ${expectedFile}`);
       }
@@ -371,7 +371,7 @@ export class ScriptRoot {
     if (objectsContent.length !== 1) {
       reasonsWhyBad.push("`objects` folder must have exactly one file");
     }
-    if (!objectsContent[0]?.path.endsWith("imports.ts")) {
+    if (!objectsContent.map(v => v.path).some(path => path.endsWith("imports.ts"))) {
       reasonsWhyBad.push("`objects` folder must contain an imports.ts file");
     }
     if (reasonsWhyBad.length > 0) {

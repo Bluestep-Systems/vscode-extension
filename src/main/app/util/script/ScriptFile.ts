@@ -1,14 +1,13 @@
 import * as path from 'path';
+import { ApiEndpoints, CryptoAlgorithms, FileExtensions, HttpHeaders, HttpMethods, MimeTypes, SpecialFiles } from '../../../resources/constants';
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
-import { ApiEndpoints, CryptoAlgorithms, FileExtensions, HttpHeaders, HttpMethods, MimeTypes, SpecialFiles } from '../../../resources/constants';
 import { UpstairsUrlParser } from "../data/UpstairsUrlParser";
 import { Err } from "../Err";
 import { FileSystem } from "../fs/FileSystem";
 import { ResponseCodes } from "../network/StatusCodes";
-import { ScriptFactory } from "./ScriptFactory";
-import { ScriptNode } from "./ScriptNode";
 import { Alert } from '../ui/Alert';
+import { ScriptNode } from "./ScriptNode";
 import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
 
@@ -227,7 +226,7 @@ export class ScriptFile extends ScriptNode {
    */
   public upstairsUrl(): URL {
 
-    const upstairsBaseUrl = this.getScriptRoot().toBaseUpstairsUrl();
+    const upstairsBaseUrl = this.getScriptRoot().toScriptBaseUpstairsUrl();
     const newUrl = new URL(upstairsBaseUrl);
     if (this.parser.type === "root") {
       return newUrl;
@@ -314,7 +313,6 @@ export class ScriptFile extends ScriptNode {
     const { webDavId, url: upstairsUrl } = upstairsUrlParser;
     const upstairsOverride = new URL(upstairsUrl);
     const downstairsUri = this.uri();
-    const scriptNode = ScriptFactory.createNode(() => downstairsUri);
 
     const desto = downstairsUri.fsPath
       .split(upstairsUrl.host + "/" + webDavId)[1];
@@ -359,7 +357,7 @@ export class ScriptFile extends ScriptNode {
       const details = await getDetails(resp);
       throw new Err.FileSendError(details);
     }
-    await scriptNode.touch("lastPushed");
+    await this.touch("lastPushed");
     App.logger.info("File sent successfully:", downstairsUri.fsPath);
     return resp;
     async function getDetails(resp: Response) {
@@ -401,5 +399,38 @@ export class ScriptFile extends ScriptNode {
       }
       throw new Err.FileReadError(`Error reading downstairs file: ${e}`);
     }
+  }
+
+  /**
+   * Touches a file by updating its last pulled or pushed timestamp.
+   * Updates the metadata to track when the file was last synchronized and its hash.
+   * 
+   * @param file The file to touch
+   * @param touchType The type of touch to perform - either "lastPulled" or "lastPushed"
+   * @lastreviewed 2025-09-15
+   */
+  async touch(touchType: "lastPulled" | "lastPushed"): Promise<void> {
+    const lastHash = await this.getHash();
+    const metaData = await this.getScriptRoot().modifyMetaData(md => {
+      const downstairsPath = this.uri().fsPath;
+      const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
+      if (existingEntryIndex !== -1) {
+        const newDateString = new Date().toUTCString();
+
+        md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
+        md.pushPullRecords[existingEntryIndex].lastVerifiedHash = lastHash;
+      } else {
+
+        const now = new Date().toUTCString();
+        md.pushPullRecords.push({
+          downstairsPath,
+          lastPushed: touchType === "lastPushed" ? now : null,
+          lastPulled: touchType === "lastPulled" ? now : null,
+          lastVerifiedHash: lastHash
+        });
+      }
+    });
+    App.isDebugMode() && console.log("Updated metadata:", metaData);
+    return void 0;
   }
 }
