@@ -14,6 +14,7 @@ import { ScriptFile } from './ScriptFile';
 import type { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
+import { ORG_CACHE as OC } from '../../cache/OrgCache';
 const fs = FileSystem.getInstance;
 
 /**
@@ -26,8 +27,6 @@ export class ScriptRoot {
   private static readonly ScriptContentFolders = [FolderNames.INFO, FolderNames.SCRIPTS, FolderNames.OBJECTS] as const;
   public static readonly METADATA_FILENAME = SpecialFiles.B6P_METADATA;
   public static readonly GITIGNORE_FILENAME = SpecialFiles.GITIGNORE;
-  readonly downstairsRootPath: path.ParsedPath;
-  readonly downstairsRootOrgPath: path.ParsedPath;
   public readonly rootUri: vscode.Uri;
   /**
    * Creates a script root utilizing any of the children in said script.
@@ -41,11 +40,7 @@ export class ScriptRoot {
   constructor(public readonly uri: vscode.Uri) {
     const parser = new DownstairsUriParser(uri);
     const shavedName = parser.getShavedName();
-    const scriptPath = path.parse(shavedName);                  // { root: '/', dir: '/home/brendan/test/extensiontest/configbeh.bluestep.net', base: '1466960', ext: '', name: '1466960'}
-    const parentDirBase = path.parse(path.dirname(shavedName)); // { root: '/', dir: '/home/brendan/test/extensiontest', base: 'configbeh.bluestep.net', ext: '.net', name: 'configbeh.bluestep' }
     this.rootUri = vscode.Uri.file(shavedName);
-    this.downstairsRootPath = scriptPath;
-    this.downstairsRootOrgPath = parentDirBase;
   }
 
   /**
@@ -148,11 +143,11 @@ export class ScriptRoot {
         throw e;
       }
       App.logger.warn("Metadata file does not exist or is invalid; creating a new one.");
-      const metaDataDotJson = await this.getAsFolder().getMetadataFile();
+      const metaDataDotJson = await this.getAsFolder().getMetadataDotJson();
       contentObj = {
         scriptName: metaDataDotJson.displayName || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })(),
-        U: await new OrgWorker(this.toScriptBaseUpstairsUrl()).getU(),
-        webdavId: this.webDavId,
+        U: await new OrgWorker(await this.toScriptBaseUpstairsUrl()).getU(),
+        webdavId: await this.webDavId(),
         pushPullRecords: []
       };
       modified = true;
@@ -192,7 +187,6 @@ export class ScriptRoot {
       try {
         await fs().stat(gitIgnoreUri);
       } catch (e) {
-        console.trace("downstairs root path:", this.downstairsRootPath);
         throw new Err.FileNotFoundError("Gitignore file does not exist at: `" + gitIgnoreUri.fsPath + "`");
       }
       const fileContents = await fs().readFile(gitIgnoreUri);
@@ -244,7 +238,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-09-15
    */
   public getOrgUri() {
-    return vscode.Uri.file(this.downstairsRootOrgPath.dir + path.sep + this.downstairsRootOrgPath.base);
+    return vscode.Uri.joinPath(this.getRootUri(), "..");
   }
 
   /**
@@ -254,39 +248,49 @@ export class ScriptRoot {
    * not be so trivial.
    * @lastreviewed 2025-09-15
    */
-  get webDavId() {
-    return this.downstairsRootPath.base;
+  async webDavId() {
+    const metadata = await this.getMetaData();
+    return metadata.webdavId || (() => { throw new Err.InvalidStateError("Missing webdavId in metadata"); })();
+  }
+
+  async getU() {
+    const metadata = await this.getMetaData();
+    return metadata.U || (() => { throw new Err.InvalidStateError("Missing origin in metadata"); })();
   }
 
   /**
    * The domain extracted from the file path.
    *
-   * Eventually when this structure is refactored to use a metadata file, so this will
-   * not be so trivial.
-   * @lastreviewed 2025-09-15
+   * @lastreviewed null
    */
-  public get origin() {
-    return this.downstairsRootOrgPath.base;
+  public async anyOrigin() {
+    if (App.isDebugMode()) {
+      return new URL(App.settings.get("debugMode").anyDomainOverrideUrl);
+    }
+    return await OC.getAnyBaseUrl(await this.getU());
   }
 
   public getAsFolder(): ScriptFolder {
-    return ScriptFactory.createFolder(() => this.getRootUri());
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.getRootUri(),"/"));
   }
 
   /**
    * Returns a base URL string suitable for pull and push operations.
    * @lastreviewed 2025-09-15
    */
-  public toScriptBaseUpstairsString() {
-    return `https://${this.origin}/files/${this.webDavId}/`;
+  public async toScriptBaseUpstairsString() {
+    const origin = await this.anyOrigin();
+    const webdavId = await this.webDavId();
+    return `${origin.toString()}files/${webdavId}/`;
   }
 
   /**
    * Returns a base {@link URL} suitable for pull and push operations.
    * @lastreviewed 2025-09-15
    */
-  public toScriptBaseUpstairsUrl(): URL {
-    return new URL(this.toScriptBaseUpstairsString());
+  public async toScriptBaseUpstairsUrl(): Promise<URL> {
+    const urlString = await this.toScriptBaseUpstairsString();
+    return new URL(urlString);
   }
 
   /**
@@ -475,7 +479,7 @@ export class ScriptRoot {
       if (
         !emittedEntries.includes(buildNode.path()) &&
         !copiedFiles.includes(buildNode.path()
-          .replace(path.sep + (await buildNode.getBuildFolder()).folderName() + path.sep, path.sep))) {
+          .replace(path.sep + (await buildNode.getBuildFolder()).name() + path.sep, path.sep))) {
         App.logger.warn("file detected for deletion" + buildNode.path());
         await buildNode.delete();
       }

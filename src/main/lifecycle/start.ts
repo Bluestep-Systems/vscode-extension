@@ -8,7 +8,6 @@ import { runConverts } from '../conversions';
  */
 export default function (context: vscode.ExtensionContext) {
   try {
-    
     App.init(context);
     runConverts();
     App.isDebugMode() && console.log("B6P: App initialized in debug mode");

@@ -147,6 +147,11 @@ export const ORG_CACHE = new class extends ContextNode {
    * adding it to the cache before returning it.
    */
   public async getAnyBaseUrl(u: string): Promise<URL> {
+    // step zero is to validate the U format
+    if (!/^U\d{6}$/.test(u)) {
+      throw new Err.OrgCacheError("Invalid U format: " + u);
+    }
+    // first we clean duplicates to ensure the cache is in a good state
     this.cleanDuplicates();
     if (this.map().has(u)) {
       const cacheElement = this.map().get(u);
@@ -157,13 +162,13 @@ export const ORG_CACHE = new class extends ContextNode {
       }
     }
 
-    const resp = await this.parent.fetch(BlueHQ.getAnyDomainUrl());
+    const resp = await this.parent.fetch(BlueHQ.getAnyDomainUrl(u));
     if (!resp.ok) {
       throw new Err.BlueHqHelperEndpointError("Failed to fetch any domain from BlueHQ: " + resp.status + " " + resp.statusText);
     }
     const json = await resp.json() as BlueHqAnyUrlResp;
     const retUrl = new URL(json.orgUrl);
-    this.map().set(u, [{ host: json.orgUrl, lastAccess: Date.now() }]);
+    this.map().set(u, [{ host: retUrl.host, lastAccess: Date.now() }]);
     return retUrl;
   }
 

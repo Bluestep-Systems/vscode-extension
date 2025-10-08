@@ -5,10 +5,9 @@ import { Err } from '../Err';
 import { ResponseCodes } from '../network/StatusCodes';
 import { ScriptPathElement } from './PathElement';
 import { ScriptFactory } from './ScriptFactory';
+import type { ScriptFile } from './ScriptFile';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
-import type { ScriptFile } from './ScriptFile';
-
 /**
  * Represents a folder in the script project structure.
  */
@@ -118,7 +117,7 @@ export class ScriptFolder extends ScriptNode {
   /**
    * Gets the name of this folder. Literally just its own name.
    */
-  public folderName(): string {
+  public name(): string {
     return path.basename(this.path());
   }
 
@@ -136,7 +135,7 @@ export class ScriptFolder extends ScriptNode {
    * @throws an {@link Err.MethodNotImplementedError} 
    * @lastreviewed 2025-09-29
    */
-  upstairsUrl(): URL {
+  upstairsUrl(): Promise<URL> {
     throw new Err.MethodNotImplementedError();
   }
 

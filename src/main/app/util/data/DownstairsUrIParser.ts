@@ -1,8 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ScriptRoot } from '../script/ScriptRoot';
 import { Err } from '../Err';
-
+import { ScriptRoot } from '../script/ScriptRoot';
 
 /**
  * A utility class to parse downstairs URIs into their components.
@@ -13,8 +12,7 @@ export class DownstairsUriParser {
   /**
    * Regex to match and extract components from a downstairs URI.
    */
-  private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)[\/\\](\d+)[\/\\]?(draft|declarations|snapshot|\.b6p_metadata\.json|\.gitignore)?(?:[\/\\](.*))?$/;
-
+    private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)[\/\\]([\w ]+)[\/\\](draft|declarations|snapshot|\.b6p_metadata\.json|\.gitignore)?(?:[\/\\](.*))?$/;
   /**
    * The type of the downstairs file: "draft", "declarations", or "metadata" (for .b6p_metadata.json files)
    */
@@ -33,14 +31,13 @@ export class DownstairsUriParser {
   public readonly prependingPath: string;
 
   /**
-   * the WebDAV ID portion of the path
+   * the scriptName portion of the path
    * 
    * This is the numeric ID that comes after the prepending path and before the type folder
-   * e.g. in /some/path/12345/draft/script.b6p, the WebDAV ID is "12345"
+   * e.g. in /some/path/12345/draft/script.b6p, the scriptName is "12345"
    * 
-   * //TODO this will ultimately replaced with the name of the folder in order to clean up the readability of the user's filesystem
    */
-  public readonly webDavId: string;
+  public readonly scriptName: string;
 
   constructor(downstairsUri: vscode.Uri) {
     const cleanPath = downstairsUri.fsPath;
@@ -52,7 +49,8 @@ export class DownstairsUriParser {
     }
 
     this.prependingPath = match[1]; // Extract the path before the WebDAV ID
-    this.webDavId = match[2]; // Extract the WebDAV ID
+    this.scriptName = match[2]; // Extract the WebDAV ID
+    
     const typeStr = match[3] as "draft" | "declarations" | ".b6p_metadata.json" | ".gitignore" | "snapshot" || undefined; // Extract the type string
     this.rest = match[4] || ""; // Extract the relative path after the type
 
@@ -77,7 +75,7 @@ export class DownstairsUriParser {
    * This reconstructs the path using the extracted components instead of substring operations
    */
   public getShavedName(): string {
-    return this.prependingPath + path.sep + this.webDavId;
+    return this.prependingPath + path.sep + this.scriptName;
   }
 
   /**
@@ -87,7 +85,7 @@ export class DownstairsUriParser {
    */
   public equals(other: DownstairsUriParser): boolean {
     return this.prependingPath === other.prependingPath &&
-      this.webDavId === other.webDavId &&
+      this.scriptName === other.scriptName &&
       this.type === other.type &&
       this.rest === other.rest;
   }

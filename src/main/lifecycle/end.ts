@@ -7,5 +7,5 @@
   * So for now, this is a no-op.
   */
 export default function () {
-
+  console.log("B6P: Shutdown hook called");
 }

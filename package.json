@@ -23,7 +23,7 @@
     "Other"
   ],
   "activationEvents": [
-    "workspaceContains:**/.b6p_u_metadata.json"
+    "workspaceContains:**/.b6p_metadata.json"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -44,6 +44,11 @@
           "type": "boolean",
           "description": "Enable debug mode",
           "default": false
+        },
+        "bsjs-push-pull.debugMode.anyDomainOverrideUrl": {
+          "type": "string",
+          "description": "Override the domain used for 'anyDomain' lookups in debug mode",
+          "default": "https://templateassisted.myassn.com/"
         }
       }
     },
@@ -119,8 +124,7 @@
         {
           "icon": "src/main/resources/bluestepLogo.svg",
           "id": "b6pMenuView",
-          "name": "Menu",
-          "when": "workspaceContains:**/.b6p_u_metadata.json"
+          "name": "Menu"
         }
       ]
     },

@@ -151,7 +151,7 @@ export const App = new class extends ContextNode {
   public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
     !alreadyAlerted && Alert.info("Cleared all Settings");
-    this.settings.set('debugMode', { enabled: false });
+    this.settings.set('debugMode', { enabled: false, anyDomainOverrideUrl: "https://templateassisted.myassn.com/" });
     
   }
 
@@ -164,7 +164,7 @@ export const App = new class extends ContextNode {
 
   public toggleDebugMode() {
     console.log("Toggling debug mode");
-    this.settings.set('debugMode', { enabled: !this.settings.get('debugMode').enabled });
+    this.settings.set('debugMode', { enabled: !this.settings.get('debugMode').enabled, anyDomainOverrideUrl: this.settings.get('debugMode').anyDomainOverrideUrl });
     Alert.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`);
   }
 

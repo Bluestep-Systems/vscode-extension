@@ -1,18 +1,13 @@
 import { Util } from '../util';
+import * as vscode from 'vscode';
 import { ScriptFactory } from '../util/script/ScriptFactory';
-//@ts-ignore
-import { ScriptFile } from '../util/script/ScriptFile';
-//import { FileSystem } from "../util/fs/FileSystemFactory";
-/**
- * TypeScript compiler worker that compiles the current file using TypeScript's programmatic API.
- * Outputs compiled JavaScript and declaration files to a specified location.
- */
-//const fs = FileSystem.getInstance;
+import { ORG_CACHE } from '../cache/OrgCache';
+
 export default async function () {
   const activeUri = await Util.getDownstairsFileUri();
   const sf = ScriptFactory.createFile(activeUri);
-  console.log("folderUri", sf.folder().path());
-  // console.log(sf.pathWithRespectToDraftRoot());
-  // const compiler = new ScriptCompiler(sf);
-  // await compiler.compile();
+  const layerUp = vscode.Uri.joinPath(sf.getScriptRoot().getAsFolder().uri(), "..");
+  console.log("Test Task: Layer up is ", layerUp.toString());
+  await ORG_CACHE.clearCache();
+  console.log("CACHE MAP:", ORG_CACHE.map());
 }

@@ -37,9 +37,7 @@ export class ScriptFile extends ScriptNode {
    * @lastreviewed 2025-09-15
    */
   public async getHash(): Promise<string | null> {
-    if (await this.isFolder()) {
-      return null;
-    }
+    await this.requireExists();
     const bufferSource = await fs().readFile(this.uri());
     const localHashBuffer = await crypto.subtle.digest(CryptoAlgorithms.SHA_512, bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
@@ -60,7 +58,7 @@ export class ScriptFile extends ScriptNode {
    * @lastreviewed 2025-09-15
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
-    const response = await SM.fetch(ops?.upstairsOverride || this.upstairsUrl(), {
+    const response = await SM.fetch(ops?.upstairsOverride || await this.upstairsUrl(), {
       method: Http.Methods.HEAD
     });
     const etagHeader = response.headers.get(Http.Headers.ETAG);
@@ -91,6 +89,7 @@ export class ScriptFile extends ScriptNode {
    * Gets the last verified hash from the metadata for this node, or `null` if not found.
    */
   public async getLastVerifiedHash(): Promise<string | null> {
+    await this.requireExists();
     const md = await this.getScriptRoot().getMetaData();
     const record = md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath);
     return record ? record.lastVerifiedHash : null;
@@ -108,7 +107,7 @@ export class ScriptFile extends ScriptNode {
     const localHash = await this.getHash();
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = localHash === upstairsHash;
-    App.isDebugMode() && console.log("filename:", this.fileName(), "\n", "matches:", matches, "\n", "local:", localHash, "\n", "upstairs:", upstairsHash);
+    App.isDebugMode() && console.log("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", localHash, "\n", "upstairs:", upstairsHash);
     return matches;
   }
 
@@ -125,7 +124,7 @@ export class ScriptFile extends ScriptNode {
     }
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = lastHash === upstairsHash;
-    App.isDebugMode() && console.log("filename:", this.fileName(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
+    App.isDebugMode() && console.log("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
     return matches;
   }
 
@@ -143,11 +142,11 @@ export class ScriptFile extends ScriptNode {
   public async download(): Promise<Response> {
     const ignore = await super.isInGitIgnore();
     if (ignore) {
-      App.logger.info(`not downloading \`${this.fileName()}\` because in .gitignore`);
+      App.logger.info(`not downloading \`${this.name()}\` because in .gitignore`);
       await this.deleteFromMetadata();
       return new Response("", { status: ResponseCodes.TEAPOT });
     }
-    const lookupUri = this.upstairsUrl();
+    const lookupUri = await this.upstairsUrl();
     App.logger.info("downloading from:" + lookupUri);
     const response = await SM.fetch(lookupUri, {
       method: Http.Methods.GET,
@@ -216,7 +215,7 @@ export class ScriptFile extends ScriptNode {
    * Gets the file name from the downstairs URI.
    * @lastreviewed 2025-10-01
    */
-  public fileName(): string {
+  public name(): string {
     return path.parse(this.uri().fsPath).base;
   }
   /**
@@ -224,14 +223,15 @@ export class ScriptFile extends ScriptNode {
    * Constructs the appropriate WebDAV {@link URL} based on the file type (root, metadata, declarations, or draft).
    * @lastreviewed 2025-10-01
    */
-  public upstairsUrl(): URL {
+  public async upstairsUrl(): Promise<URL> {
 
-    const upstairsBaseUrl = this.getScriptRoot().toScriptBaseUpstairsUrl();
+    const upstairsBaseUrl = await this.getScriptRoot().toScriptBaseUpstairsUrl();
+    console.log("base upstairs URL:", upstairsBaseUrl.toString());
     const newUrl = new URL(upstairsBaseUrl);
     if (this.parser.type === "root") {
       return newUrl;
     } else if (this.parser.type === "metadata") {
-      const fileName = this.fileName();
+      const fileName = this.name();
       if (fileName === SpecialFiles.B6P_METADATA) {
         throw new Err.MetadataFileOperationError("convert to upstairs URL");
       }
@@ -258,7 +258,7 @@ export class ScriptFile extends ScriptNode {
     if (this.parser.type === "root") {
       return "Node is the root folder";
     }
-    if (this.fileName() === SpecialFiles.B6P_METADATA) {
+    if (this.name() === SpecialFiles.B6P_METADATA) {
       return "Node is a metadata file";
     }
     if (this.isInDeclarations()) {
@@ -289,22 +289,22 @@ export class ScriptFile extends ScriptNode {
    * @lastreviewed 2025-09-15
    */
   public async isExternalModel(): Promise<boolean> {
-    const config = await this.getConfigFile();
-    if (config.models?.map(m => m.name).includes(this.fileName())) {
+    const config = await this.getConfigDotJson();
+    if (config.models?.map(m => m.name).includes(this.name())) {
       return true;
     }
     return false;
   }
 
   public shouldCopyRaw() {
-    return path.extname(this.fileName()).toLowerCase() !== FileExtensions.TYPESCRIPT;
+    return path.extname(this.name()).toLowerCase() !== FileExtensions.TYPESCRIPT;
   }
 
   public copyToSnapshot() {
     console.log("copying file over", this.uri().fsPath);
   }
   public get extension() {
-    return path.extname(this.fileName()).toLowerCase();
+    return path.extname(this.name()).toLowerCase();
   }
   async upload(upstairsUrlOverrideString: string | null = null): Promise<Response | void> {
     App.logger.info("Preparing to send file:", this.uri().fsPath);
@@ -324,7 +324,7 @@ export class ScriptFile extends ScriptNode {
       const OVERWRITE = 'Overwrite';
       const CANCEL = 'Cancel';
       const overwrite = await Alert.prompt(
-        `The upstairs file (${this.fileName()}) has changed since the last time you pushed or pulled. Do you want to overwrite it?`,
+        `The upstairs file (${this.name()}) has changed since the last time you pushed or pulled. Do you want to overwrite it?`,
         [
           OVERWRITE,
           CANCEL
@@ -375,7 +375,7 @@ export class ScriptFile extends ScriptNode {
   }
 
   public isTsConfig(): boolean {
-    return this.fileName() === TsConfig.NAME;
+    return this.name() === TsConfig.NAME;
   }
 
   public isMarkdown(): boolean {
@@ -387,6 +387,7 @@ export class ScriptFile extends ScriptNode {
  * @lastreviewed 2025-09-15
  */
   public async getDownstairsContent(): Promise<string> {
+    await this.requireExists();
     const downstairsUri = this.uri();
     try {
       const fileData = await fs().readFile(downstairsUri);
@@ -410,6 +411,7 @@ export class ScriptFile extends ScriptNode {
    * @lastreviewed 2025-09-15
    */
   async touch(touchType: "lastPulled" | "lastPushed"): Promise<void> {
+    await this.requireExists();
     const lastHash = await this.getHash();
     const metaData = await this.getScriptRoot().modifyMetaData(md => {
       const downstairsPath = this.uri().fsPath;
@@ -432,5 +434,16 @@ export class ScriptFile extends ScriptNode {
     });
     App.isDebugMode() && console.log("Updated metadata:", metaData);
     return void 0;
+  }
+
+  /**
+   * Common function to ensure the file exists before performing operations.
+   * @throws {Err.FileNotFoundError} When the file does not exist
+   * @lastreviewed 2025-10-08
+   */
+  private async requireExists(): Promise<void> {
+    if (!await this.exists()) {
+      throw new Err.FileNotFoundError(this.uri().fsPath);
+    }
   }
 }

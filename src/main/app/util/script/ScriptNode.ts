@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ConfigJsonContent, MetaDataDotJsonContent } from '../../../../../types';
+import { ConfigJsonContent as ConfigDotJsonContent, MetaDataDotJsonContent } from '../../../../../types';
 import { FolderNames, Http, SpecialFiles } from '../../../resources/constants';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
@@ -14,6 +14,7 @@ import { ScriptFactory } from './ScriptFactory';
 import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
+import { App } from '../../App';
 const fs = FileSystem.getInstance;
 
 /**
@@ -49,7 +50,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Meant to convert the current node to a matching upstairs {@link URL}.
    * @lastreviewed 2025-09-29
    */
-  abstract upstairsUrl(): URL;
+  abstract upstairsUrl(): Promise<URL>;
 
   /**
    * Gets the downstairs (local) {@link vscode.Uri} for this file
@@ -74,7 +75,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async getUpstairsLastModified(): Promise<Date> {
 
-    const response = await SM.fetch(this.upstairsUrl(), {
+    const response = await SM.fetch(await this.upstairsUrl(), {
       method: Http.Methods.HEAD
     });
     const lastModifiedHeaderValue = response.headers.get("Last-Modified");
@@ -91,7 +92,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @lastreviewed 2025-09-15
    */
   public async getUpstairsContent(): Promise<string> {
-    const response = await SM.fetch(this.upstairsUrl(), {
+    const response = await SM.fetch(await this.upstairsUrl(), {
       method: Http.Methods.GET,
       headers: {
         [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
@@ -113,7 +114,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Determines if the node exists and corresponds to an actual, real file on disk.
+   * Determines if the node exists and corresponds to an actual, real file/folder on disk.
    * @lastreviewed 2025-09-29
    */
   public async exists(): Promise<boolean> {
@@ -244,14 +245,14 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Generic method to find and parse a JSON configuration file.
+   * Generic method to find and parse a JSON configuration file in the draft/info folder.
    * @param fileName The name of the file to search for
    * @returns The parsed JSON content
    * @throws an {@link Err.ConfigFileError} When the file is not found or multiple files are found
    * @lastreviewed 2025-09-29
    */
-  private async getConfigurationFile<T>(fileName: string): Promise<T> {
-    const files = await fs().findFiles(new vscode.RelativePattern(this.scriptRoot.getRootUri(), `**/${fileName}`));
+  private async getInfoFile<T>(fileName: string): Promise<T> {
+    const files = await fs().findFiles(new vscode.RelativePattern(this.scriptRoot.getRootUri(), `draft/info/${fileName}`));
     if (!files || files.length !== 1) {
       throw new Err.ConfigFileError(fileName, files ? files.length : 0);
     }
@@ -265,16 +266,16 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Gets the configuration file for the script.
    * @lastreviewed 2025-09-29
    */
-  public async getConfigFile(): Promise<ConfigJsonContent> {
-    return this.getConfigurationFile<ConfigJsonContent>(SpecialFiles.CONFIG);
+  public async getConfigDotJson(): Promise<ConfigDotJsonContent> {
+    return this.getInfoFile<ConfigDotJsonContent>(SpecialFiles.CONFIG);
   }
 
   /**
    * Gets the metadata file for the script.
    * @lastreviewed 2025-09-15
    */
-  public async getMetadataFile(): Promise<MetaDataDotJsonContent> {
-    return this.getConfigurationFile<MetaDataDotJsonContent>(SpecialFiles.METADATA);
+  public async getMetadataDotJson(): Promise<MetaDataDotJsonContent> {
+    return this.getInfoFile<MetaDataDotJsonContent>(SpecialFiles.METADATA);
   }
 
   /**
@@ -334,7 +335,7 @@ export abstract class ScriptNode implements ScriptPathElement {
 
   /**
    * Checks if the script file is in a valid state.
-   * Currently only checks if the file exists.
+   * Currently only checks if the node exists.
    * @lastreviewed 2025-09-15
    */
   public async isCopacetic(): Promise<boolean> {
@@ -356,8 +357,8 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Gets the URL pathname for the upstairs file.
    * @lastreviewed 2025-09-15
    */
-  public getRest(): string {
-    return this.upstairsUrl().pathname;
+  public async getRest(): Promise<string> {
+    return (await this.upstairsUrl() ).pathname;
   }
 
 
@@ -489,8 +490,6 @@ export abstract class ScriptNode implements ScriptPathElement {
     }
   }
 
-
-
   /**
    * Copies the current draft file to its respective build folder.
    * @throws an {@link Err.BuildFolderOperationError} When the current node is already in its respective build folder
@@ -506,7 +505,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     }
     const buildUri = vscode.Uri.joinPath(
       (await this.getClosestTsConfigFile()).folder().uri(),
-      (await this.getBuildFolder()).folderName(),
+      (await this.getBuildFolder()).name(),
       this.pathWithRespectToDraftRoot()
     );
     await this.copyTo(buildUri);
@@ -543,6 +542,25 @@ export abstract class ScriptNode implements ScriptPathElement {
     } else {
       throw new Err.ScriptNotCopaceticError();
     }
+  }
+
+  /**
+   * Gets the name of this node. For files, this is the file name. For folders, this is the folder name.
+   */
+  abstract name(): string;
+
+  /**
+   * Renames the current node to something new; operation is aborted if the new name is the same as the current name.
+   */
+  async rename(newName: string): Promise<void> {
+    await this.isCopacetic();
+    if (this.name() === newName) {
+      App.logger.info("Ignoring rename operation; new name is the same as the current name.");
+      return;
+    }
+    const parent = vscode.Uri.joinPath(this.uri(), "..");
+    const newUri = vscode.Uri.joinPath(parent, newName);
+    await fs().rename(this.uri(), newUri);
   }
 }
 

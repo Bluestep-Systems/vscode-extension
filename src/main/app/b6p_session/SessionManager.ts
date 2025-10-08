@@ -11,6 +11,7 @@ import { HttpClient } from "../util/network/HttpClient";
 import { ResponseCodes } from "../util/network/StatusCodes";
 import { PrivateGenericMap, PrivateKeys } from "../util/PseudoMaps";
 import { Alert } from "../util/ui/Alert";
+import { ORG_CACHE as OC } from "../cache/OrgCache";
 
 /**
  * The session manager is responsible for managing individual sessions with BlueStep servers.
@@ -76,6 +77,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     this._sessions = new PrivateGenericMap<SessionData>(PrivateKeys.SESSIONS, this.context);
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
     Auth.initManagers(this);
+    OC.init(this);
     this._authManager = Auth.determineManager();
     return this;
   }

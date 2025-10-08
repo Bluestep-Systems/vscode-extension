@@ -1,30 +1,32 @@
 import { ApiEndpoints, Http } from "../../../resources/constants";
-import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
 import { Err } from "../Err";
+import { HttpClient } from "../network/HttpClient";
 
 /**
  * Helper class for getting info from the org associated with a given URL.
  */
 export class OrgWorker {
-  
-  constructor(private readonly rawUrl: URL) { }
-  
+
+  constructor(private readonly rawUrl: URL) {}
+
   /**
-   * Simply calls the org to get the U associated with the URL; this requires that the org is reachable.
-   * @throws an {@link Err.BlueHqHelperEndpointError} if the fetch fails or the response is not OK.
+   * Simply calls the org (sans session management) to get the U associated with the URL; this requires that the org is reachable.
+   * @throws an {@link Err.OrgWorkerError} if the fetch fails or the response is not OK.
    */
   async getU(): Promise<string> {
     const newUrl = new URL(this.rawUrl);
     newUrl.pathname = ApiEndpoints.APPINFO_U;
     try {
-      const response = await SM.fetch(newUrl);
+      // we use the HttpClient here directly because we don't want to involve session management
+      // because it would automatically pass auth headers and thus create a potential security risk.
+      const response = await HttpClient.getInstance().fetch(newUrl);
       if (!response.ok) {
-        throw new Err.BlueHqHelperEndpointError(`Failed to fetch user info from URL: ${newUrl.toString()}. Status: ${response.status}`);
+        throw new Err.OrgWorkerError(`Failed to fetch user info from URL: ${newUrl.toString()}. Status: ${response.status}`);
       }
       return await response.text();
     } catch (error) {
       console.error("Error fetching user info:", error);
-      throw new Err.BlueHqHelperEndpointError(`Error fetching user info from URL: ${newUrl.toString()}. ${error}`);
+      throw new Err.OrgWorkerError(`Error fetching user info from URL: ${newUrl.toString()}\n ${error}`);
     }
   }
 
@@ -44,7 +46,7 @@ export class OrgWorker {
   static fromHost(host: string): OrgWorker {
     const VALID_HOST_REGEX = /^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)?$/;
     if (!VALID_HOST_REGEX.test(host)) {
-      throw new Err.BlueHqHelperEndpointError(`Invalid host: ${host}`);
+      throw new Err.OrgWorkerError(`Invalid host: ${host}`);
     }
     const url = new URL(`${Http.Schemes.HTTPS}${host}`);
     return new OrgWorker(url);

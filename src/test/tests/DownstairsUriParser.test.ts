@@ -13,7 +13,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       assert.strictEqual(parser.prependingPath, '/workspace');
-      assert.strictEqual(parser.webDavId, '12345');
+      assert.strictEqual(parser.scriptName, '12345');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, '');
       assert.strictEqual(parser.rawUri, uri);
@@ -24,7 +24,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       assert.strictEqual(parser.prependingPath, '/workspace');
-      assert.strictEqual(parser.webDavId, '67890');
+      assert.strictEqual(parser.scriptName, '67890');
       assert.strictEqual(parser.type, 'declarations');
       assert.strictEqual(parser.rest, '');
     });
@@ -34,7 +34,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       assert.strictEqual(parser.prependingPath, '/workspace');
-      assert.strictEqual(parser.webDavId, '11111');
+      assert.strictEqual(parser.scriptName, '11111');
       assert.strictEqual(parser.type, 'metadata');
       assert.strictEqual(parser.rest, '');
     });
@@ -44,7 +44,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       assert.strictEqual(parser.prependingPath, '/workspace');
-      assert.strictEqual(parser.webDavId, '22222');
+      assert.strictEqual(parser.scriptName, '22222');
       assert.strictEqual(parser.type, 'metadata');
       assert.strictEqual(parser.rest, '');
     });
@@ -54,7 +54,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       assert.strictEqual(parser.prependingPath, '/workspace');
-      assert.strictEqual(parser.webDavId, '44444');
+      assert.strictEqual(parser.scriptName, '44444');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, 'subfolder/script.js');
     });
@@ -64,7 +64,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       assert.strictEqual(parser.prependingPath, '/workspace');
-      assert.strictEqual(parser.webDavId, '55555');
+      assert.strictEqual(parser.scriptName, '55555');
       assert.strictEqual(parser.type, 'declarations');
       assert.strictEqual(parser.rest, 'types/interfaces.d.ts');
     });
@@ -74,7 +74,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       assert.strictEqual(parser.prependingPath, '/very/deep/nested/workspace/folder');
-      assert.strictEqual(parser.webDavId, '66666');
+      assert.strictEqual(parser.scriptName, '66666');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, 'file.js');
     });
@@ -84,40 +84,24 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       assert.strictEqual(parser.prependingPath, '');
-      assert.strictEqual(parser.webDavId, '77777');
+      assert.strictEqual(parser.scriptName, '77777');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, '');
     });
   });
 
   suite('Constructor - Error Cases', () => {
-    
-    test('should throw error for URI without WebDAV ID', () => {
-      const uri = vscode.Uri.file('/workspace/draft/file.js');
-      
-      assert.throws(() => {
-        new DownstairsUriParser(uri);
-      }, /The provided URI does not conform to expected structure/);
-    });
-
-    test('should throw error for non-numeric WebDAV ID', () => {
-      const uri = vscode.Uri.file('/workspace/abc123/draft');
-      
-      assert.throws(() => {
-        new DownstairsUriParser(uri);
-      }, /The provided URI does not conform to expected structure/);
-    });
 
     test('should throw error for empty path', () => {
       const uri = vscode.Uri.file('');
-      
+
       assert.throws(() => {
         new DownstairsUriParser(uri);
       }, /The provided URI does not conform to expected structure/);
     });
 
     test('should throw error for unrecognized type folder', () => {
-      const uri = vscode.Uri.file('/workspace/not-a-number/unknown');
+      const uri = vscode.Uri.file('/workspace/12345/unknown');
 
       assert.throws(() => {
         new DownstairsUriParser(uri);
@@ -367,7 +351,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('C:\\workspace\\12345\\draft\\file.js');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.webDavId, '12345');
+      assert.strictEqual(parser.scriptName, '12345');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, 'file.js');
     });
@@ -376,7 +360,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('D:\\projects\\67890\\declarations\\types\\index.d.ts');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.webDavId, '67890');
+      assert.strictEqual(parser.scriptName, '67890');
       assert.strictEqual(parser.type, 'declarations');
       assert.strictEqual(parser.rest, 'types\\index.d.ts');
     });

@@ -30,7 +30,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     // Create tasks for progress helper
     const pullTasks = rawFilePaths.map(path => ({
       execute: async () => {
-        const createdUri = await createOrUpdateIndividualFileOrFolder(path.downstairsPath, url);
+        const createdUri = await createOrUpdateIndividualNode(path.downstairsPath, url);
         ultimateUris.push(createdUri);
         return createdUri;
       },
@@ -93,7 +93,7 @@ async function getStartingURL(overrideFormulaUri?: string) {
   return new UpstairsUrlParser(formulaURI);
 }
 
-async function createOrUpdateIndividualFileOrFolder(downstairsRest: string, sourceUrl: URL): Promise<vscode.Uri> {
+async function createOrUpdateIndividualNode(downstairsRest: string, sourceUrl: URL): Promise<vscode.Uri> {
   const activeFolder = vscode.workspace.workspaceFolders?.[0];
   if (!activeFolder) {
     vscode.window.showErrorMessage('No active file found');
