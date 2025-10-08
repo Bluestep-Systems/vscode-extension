@@ -4,7 +4,7 @@ import { Auth } from "../authentication";
 import { AuthManager } from "../authentication/AuthManager";
 import { AuthObject } from "../authentication/AuthObject";
 import { ContextNode } from "../context/ContextNode";
-import { ApiEndpoints, CookieNames, HttpHeaders, HttpMethods } from "../../resources/constants";
+import { ApiEndpoints, Http } from "../../resources/constants";
 import { Util } from "../util";
 import { Err } from "../util/Err";
 import { HttpClient } from "../util/network/HttpClient";
@@ -39,11 +39,6 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * //TODO: re-enable this once we have a better sense of how often tokens actually expire.
    */
   //private readonly MAX_CSRF_TOKEN_AGE = this.MILLIS_IN_A_MINUTE * 1; // 1 minutes
-
-  /**
-   * The name of the CSRF token header used by BlueStep.
-   */
-  private readonly B6P_CSRF_TOKEN = HttpHeaders.B6P_CSRF_TOKEN; // lower case is important here because the response headers are lower-cased
 
   /**
    * The AuthManager used for authentication.
@@ -125,20 +120,18 @@ export const SESSION_MANAGER = new class extends ContextNode {
     return this._sessions;
   }
 
-
   /**
    * Performs the normal managed fetch, however, wraps it with additional CSRF management,
    * complete with retries.
    * @param url 
    * @param options 
-   * @param retries 
-   * @returns 
+   * @param retries  the number of retries left. defaults to {@link MAX_RETRY_ATTEMPTS}
    */
   public async csrfFetch(url: string | URL, options?: RequestInit, retries = this.MAX_RETRY_ATTEMPTS): Promise<Response> {
     url = new URL(url);
     const origin = url.origin;
     if (!this.sessions.has(origin)) {
-      await this.sessions.set(origin, { lastCsrfToken: null, [CookieNames.INGRESSCOOKIE]: null, [CookieNames.JSESSIONID]: null, lastTouched: Date.now() });
+      await this.sessions.set(origin, { lastCsrfToken: null, [Http.Cookies.INGRESSCOOKIE]: null, [Http.Cookies.JSESSIONID]: null, lastTouched: Date.now() });
     }
     const session = this.sessions.get(origin);
     if (!session) {
@@ -146,7 +139,11 @@ export const SESSION_MANAGER = new class extends ContextNode {
     }
 
     try {
-      //TODO figure out why we it will sometimes error out with this if-check
+      //TODO somewhere we aren't managing the CSRF token properly
+      // this is likely because we aren't updating it on every request
+      // but rather only on certain ones. We may need to update it more often
+      // or have a better way of determining when it needs to be updated.
+      // For now, we'll just always fetch a new token every time.
       //if (!session.lastCsrfToken || session.lastTouched < (Date.now() - this.MAX_CSRF_TOKEN_AGE)) {
       const tokenValue = await this.fetch(`${origin}${ApiEndpoints.CSRF_TOKEN}`).then(r => r.text());
       session.lastCsrfToken = tokenValue;
@@ -157,15 +154,15 @@ export const SESSION_MANAGER = new class extends ContextNode {
       options = options || {};
       options.headers = options.headers || {};
 
-      (options.headers as Record<string, string>)[this.B6P_CSRF_TOKEN] =
+      (options.headers as Record<string, string>)[Http.Headers.B6P_CSRF_TOKEN] =
         session.lastCsrfToken
         || (() => { throw new Err.CsrfTokenNotFoundError(); })();
       let response = await this.fetch(url, options);
       // TODO: figure out why the get here is always returning empty
       // and why the for loop is needed
-      let newToken = response.headers.get(this.B6P_CSRF_TOKEN);
+      let newToken = response.headers.get(Http.Headers.B6P_CSRF_TOKEN);
       for (const [key, value] of Object.entries(response.headers)) {
-        if (key === this.B6P_CSRF_TOKEN) {
+        if (key === Http.Headers.B6P_CSRF_TOKEN) {
           newToken = value;
         }
       }
@@ -216,19 +213,19 @@ export const SESSION_MANAGER = new class extends ContextNode {
     if (response.status === ResponseCodes.FORBIDDEN) {
       throw new Err.UnauthorizedError(`HTTP Error: ${response.status} ${response.statusText}`);
     }
-    const cookies = response.headers.get(HttpHeaders.SET_COOKIE);
+    const cookies = response.headers.get(Http.Headers.SET_COOKIE);
     const responderUrl = new URL(response.url);
     if (cookies) {
       const cookieMap = this.parseCookies(response.headers);
       const sessionData: SessionData = {
         lastTouched: Date.now(),
-        [CookieNames.JSESSIONID]: cookieMap.get(CookieNames.JSESSIONID)
+        [Http.Cookies.JSESSIONID]: cookieMap.get(Http.Cookies.JSESSIONID)
           || this.sessions.get(responderUrl.origin)?.JSESSIONID
           || (() => { throw new Err.SessionIdMissingError(); })(),
-        [CookieNames.INGRESSCOOKIE]: cookieMap.get(CookieNames.INGRESSCOOKIE)
+        [Http.Cookies.INGRESSCOOKIE]: cookieMap.get(Http.Cookies.INGRESSCOOKIE)
           || this.sessions.get(responderUrl.origin)?.INGRESSCOOKIE
           || null,
-        lastCsrfToken: response.headers.get(this.B6P_CSRF_TOKEN)
+        lastCsrfToken: response.headers.get(Http.Headers.B6P_CSRF_TOKEN)
           || this.sessions.get(responderUrl.origin)?.lastCsrfToken
           || null
       };
@@ -239,7 +236,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         throw new Err.SessionDataMissingError();
       }
       existing.lastTouched = Date.now();
-      existing.lastCsrfToken = response.headers.get(this.B6P_CSRF_TOKEN) || existing.lastCsrfToken;
+      existing.lastCsrfToken = response.headers.get(Http.Headers.B6P_CSRF_TOKEN) || existing.lastCsrfToken;
       await this.sessions.set(responderUrl.origin, existing);
     }
 
@@ -264,7 +261,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         ...options,
         headers: {
           ...options?.headers,
-          [HttpHeaders.COOKIE]: `${CookieNames.JSESSIONID}=${sessionData.JSESSIONID}; ${CookieNames.INGRESSCOOKIE}=${sessionData.INGRESSCOOKIE}`,
+          [Http.Headers.COOKIE]: `${Http.Cookies.JSESSIONID}=${sessionData.JSESSIONID}; ${Http.Cookies.INGRESSCOOKIE}=${sessionData.INGRESSCOOKIE}`,
         }
       };
       const response = await HttpClient.getInstance().fetch(url, options);
@@ -275,9 +272,9 @@ export const SESSION_MANAGER = new class extends ContextNode {
       this.parent.isDebugMode() && this.parent.logger.info("login body:" + authLoginBodyValue);
       //TODO have this moved use the proper login servlet instead of this dummy endpoint
       const response = await HttpClient.getInstance().fetch(url.origin + ApiEndpoints.LOOKUP_TEST, {
-        method: HttpMethods.POST,
+        method: Http.Methods.POST,
         headers: {
-          [HttpHeaders.AUTHORIZATION]: `${await this.authManager.authHeaderValue()}`,
+          [Http.Headers.AUTHORIZATION]: `${await this.authManager.authHeaderValue()}`,
         }
       });
       this.parent.logger.info("login status:" + response.status);

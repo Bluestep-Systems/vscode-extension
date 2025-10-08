@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { SESSION_MANAGER as SM } from "../b6p_session/SessionManager";
-import { ApiEndpoints, HttpHeaders, HttpMethods, MimeTypes } from "../../resources/constants";
+import { ApiEndpoints, Http, MimeTypes } from "../../resources/constants";
 import { Alert } from "../util/ui/Alert";
 import { ProgressHelper } from "../util/ui/ProgressHelper";
 import type { ScriptGQLBadResp, ScriptGQLGoodResp, ScriptGqlResp } from "../../../../types";
@@ -74,10 +74,10 @@ async function getScriptWebdavId(origin: string, topId: string): Promise<string 
 
   try {
     const GQL_RESP = await SM.csrfFetch(originUrl.origin + ApiEndpoints.GQL, {
-      method: HttpMethods.POST,
+      method: Http.Methods.POST,
       headers: {
-        [HttpHeaders.ACCEPT]: HttpHeaders.ACCEPT_ALL,
-        [HttpHeaders.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON
+        [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
+        [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON
       },
       body: gqlBody(topId)
     }).then((res: Response) => res.json()).catch(e => {

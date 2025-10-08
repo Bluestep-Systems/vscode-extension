@@ -1,6 +1,6 @@
 import { BlueHqAnyUrlResp, OrgCacheElement } from "../../../../types";
 import { BlueHQ } from "../../resources/constants";
-import { HttpSchemes, Numerical } from "../../resources/constants";
+import { Http, Numerical } from "../../resources/constants";
 import { App } from "../App";
 import type { SESSION_MANAGER } from "../b6p_session/SessionManager";
 import { ContextNode } from "../context/ContextNode";
@@ -89,7 +89,7 @@ export const ORG_CACHE = new class extends ContextNode {
           } else {
             this.map().delete(u);
             let foundU: string | null = null;
-            while (foundU = this.findUCacheOnly(new URL(HttpSchemes.HTTPS + element.host))) {
+            while (foundU = this.findUCacheOnly(new URL(Http.Schemes.HTTPS + element.host))) {
               App.logger.info(`OrgCache contained duplicate host ${element.host}. Cleared U ${foundU}`);
               this.map().delete(foundU);
             }
@@ -153,7 +153,7 @@ export const ORG_CACHE = new class extends ContextNode {
       if (cacheElement && cacheElement.length > 0) {
         //TODO optimize this such that we check session manager for a valid session for one of the hosts
         //TODO update last access time
-        return new URL(HttpSchemes.HTTPS + cacheElement[0].host);
+        return new URL(Http.Schemes.HTTPS + cacheElement[0].host);
       }
     }
 

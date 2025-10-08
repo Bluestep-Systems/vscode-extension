@@ -1,4 +1,4 @@
-import { HttpHeaders, MimeTypes } from "../../../resources/constants";
+import { Http, MimeTypes } from "../../../resources/constants";
 
 /**
  * Interface defining HTTP client operations needed for network requests.
@@ -90,7 +90,7 @@ export class MockHttpClient implements HttpClientProvider {
     const response = new Response(JSON.stringify(data), {
       status,
       headers: {
-        [HttpHeaders.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
+        [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
         ...headers
       }
     });
@@ -118,7 +118,7 @@ export class MockHttpClient implements HttpClientProvider {
     const response = new Response(text, {
       status,
       headers: {
-        [HttpHeaders.CONTENT_TYPE]: MimeTypes.TEXT_PLAIN,
+        [Http.Headers.CONTENT_TYPE]: MimeTypes.TEXT_PLAIN,
         ...headers
       }
     });

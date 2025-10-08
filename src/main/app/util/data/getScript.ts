@@ -2,7 +2,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { PrimitiveNestedObject, XMLResponse } from "../../../../../types";
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
-import { ApiEndpoints, FolderNames, HttpHeaders, HttpMethods, WebDAVElements } from "../../../resources/constants";
+import { ApiEndpoints, FolderNames, Http, WebDAVElements } from "../../../resources/constants";
 import { Alert } from "../ui/Alert";
 import { UpstairsUrlParser } from "./UpstairsUrlParser";
 
@@ -29,13 +29,13 @@ async function getSubScript(url: URL, repository: RawFiles = []): Promise<RawFil
     const response = await SM.fetch(url, {
       //TODO review these
       "headers": {
-        [HttpHeaders.ACCEPT]: HttpHeaders.ACCEPT_ALL,
-        [HttpHeaders.ACCEPT_LANGUAGE]: HttpHeaders.ACCEPT_LANGUAGE_EN_US,
-        [HttpHeaders.CACHE_CONTROL]: HttpHeaders.NO_CACHE,
-        [HttpHeaders.PRAGMA]: HttpHeaders.NO_CACHE,
-        [HttpHeaders.UPGRADE_INSECURE_REQUESTS]: "1",
+        [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
+        [Http.Headers.ACCEPT_LANGUAGE]: Http.Headers.ACCEPT_LANGUAGE_EN_US,
+        [Http.Headers.CACHE_CONTROL]: Http.Headers.NO_CACHE,
+        [Http.Headers.PRAGMA]: Http.Headers.NO_CACHE,
+        [Http.Headers.UPGRADE_INSECURE_REQUESTS]: "1",
       },
-      "method": HttpMethods.PROPFIND
+      "method": Http.Methods.PROPFIND
     });
     if (!response.ok) {
       Alert.error(`Failed to fetch sub-script at ${url.href}: ${response.status} ${response.statusText}`);

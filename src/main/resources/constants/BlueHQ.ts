@@ -1,4 +1,4 @@
-import { HttpSchemes } from "./HttpSchemes";
+import { Http } from "./Http";
 
 /**
  * BlueHQ base URLs and endpoints.
@@ -7,7 +7,7 @@ import { HttpSchemes } from "./HttpSchemes";
  */
 export namespace BlueHQ {
   /**
-   * 
+   *
    */
   export const HOST = "bluehq.bluestep.net";
   /**
@@ -17,7 +17,7 @@ export namespace BlueHQ {
   /**
    * creates a new instance of the BlueHQ helper endpoint URL.
    */
-  export const ENDPOINT = () => new URL(HttpSchemes.HTTPS + HOST + ENDPOINT_PATH);
+  export const ENDPOINT = () => new URL(Http.Schemes.HTTPS + HOST + ENDPOINT_PATH);
 
 
   export const getAnyDomainUrl = () => {

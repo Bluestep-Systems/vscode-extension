@@ -1,5 +1,4 @@
-import { ApiEndpoints } from "../../../resources/constants";
-import { HttpSchemes } from "../../../resources/constants/HttpSchemes";
+import { ApiEndpoints, Http } from "../../../resources/constants";
 import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
 import { Err } from "../Err";
 
@@ -47,7 +46,7 @@ export class OrgWorker {
     if (!VALID_HOST_REGEX.test(host)) {
       throw new Err.BlueHqHelperEndpointError(`Invalid host: ${host}`);
     }
-    const url = new URL(`${HttpSchemes.HTTPS}${host}`);
+    const url = new URL(`${Http.Schemes.HTTPS}${host}`);
     return new OrgWorker(url);
   }
 }

@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { ApiEndpoints, CryptoAlgorithms, FileExtensions, HttpHeaders, HttpMethods, MimeTypes, SpecialFiles } from '../../../resources/constants';
+import { ApiEndpoints, CryptoAlgorithms, FileExtensions, Http, MimeTypes, SpecialFiles } from '../../../resources/constants';
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { UpstairsUrlParser } from "../data/UpstairsUrlParser";
@@ -61,9 +61,9 @@ export class ScriptFile extends ScriptNode {
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
     const response = await SM.fetch(ops?.upstairsOverride || this.upstairsUrl(), {
-      method: HttpMethods.HEAD
+      method: Http.Methods.HEAD
     });
-    const etagHeader = response.headers.get(HttpHeaders.ETAG);
+    const etagHeader = response.headers.get(Http.Headers.ETAG);
 
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
     let etag: string | null = null;
@@ -150,9 +150,9 @@ export class ScriptFile extends ScriptNode {
     const lookupUri = this.upstairsUrl();
     App.logger.info("downloading from:" + lookupUri);
     const response = await SM.fetch(lookupUri, {
-      method: HttpMethods.GET,
+      method: Http.Methods.GET,
       headers: {
-        [HttpHeaders.ACCEPT]: HttpHeaders.ACCEPT_ALL,
+        [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
       }
     });
     if (response.status >= ResponseCodes.BAD_REQUEST) {
@@ -161,7 +161,7 @@ export class ScriptFile extends ScriptNode {
     }
     const buffer = await response.arrayBuffer();
     await this.writeContent(buffer);
-    const etagHeader = response.headers.get(HttpHeaders.ETAG);
+    const etagHeader = response.headers.get(Http.Headers.ETAG);
 
     //TODO merge this with the other etag parsing code elsewhere in this class
     //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
@@ -347,9 +347,9 @@ export class ScriptFile extends ScriptNode {
     //TODO investigate if this can be done via streaming
     const fileContents = await fs().readFile(downstairsUri);
     const resp = await SM.fetch(upstairsOverride, {
-      method: HttpMethods.PUT,
+      method: Http.Methods.PUT,
       headers: {
-        [HttpHeaders.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
+        [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
       },
       body: fileContents
     });

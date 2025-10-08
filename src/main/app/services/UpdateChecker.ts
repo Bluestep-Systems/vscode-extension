@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
 import type { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
-import { AuthTypes, FileExtensions, GitHubUrls, HttpHeaders, HttpMethods, SettingsKeys } from '../../resources/constants';
+import { AuthTypes, FileExtensions, GitHubUrls, Http, SettingsKeys } from '../../resources/constants';
 import { FileSystem } from '../util/fs/FileSystem';
 import { PrivateKeys, TypedPersistable } from '../util/PseudoMaps';
 import { PrivateTypedPersistable } from '../util/PseudoMaps/TypedPrivatePersistable';
@@ -105,15 +105,15 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private async getGitHubHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
-      [HttpHeaders.USER_AGENT]: HttpHeaders.USER_AGENT_B6P,
-      [HttpHeaders.ACCEPT]: HttpHeaders.GITHUB_API_ACCEPT
+      [Http.Headers.USER_AGENT]: Http.Headers.USER_AGENT_B6P,
+      [Http.Headers.ACCEPT]: Http.Headers.GITHUB_API_ACCEPT
     };
 
     const githubToken = await this.getGithubToken();
     if (!githubToken) {
       throw new Err.GitHubTokenNotAvailableError();
     }
-    headers[HttpHeaders.AUTHORIZATION] = `${AuthTypes.BEARER_PREFIX}${githubToken}`;
+    headers[Http.Headers.AUTHORIZATION] = `${AuthTypes.BEARER_PREFIX}${githubToken}`;
 
     return headers;
   }
@@ -202,7 +202,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       const url = `${GitHubUrls.API_BASE}${GitHubUrls.REPOS_PATH}${this.REPO_OWNER}/${this.REPO_NAME}${GitHubUrls.RELEASES_LATEST_PATH}`;
 
       const response = await fetch(url, {
-        method: HttpMethods.GET,
+        method: Http.Methods.GET,
         headers: await this.getGitHubHeaders(),
         signal: AbortSignal.timeout(10_000) // 10 second timeout
       });
@@ -392,9 +392,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   private async downloadVsixFile(downloadUrl: string, version: string): Promise<string> {
     try {
       const response = await fetch(downloadUrl, {
-        method: HttpMethods.GET,
+        method: Http.Methods.GET,
         headers: {
-          [HttpHeaders.USER_AGENT]: HttpHeaders.USER_AGENT_B6P,
+          [Http.Headers.USER_AGENT]: Http.Headers.USER_AGENT_B6P,
         },
         signal: AbortSignal.timeout(30000) // 30 second timeout
       });
@@ -562,7 +562,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   public async getAllReleases(includePrerelease = false): Promise<GithubRelease[]> {
     try {
       const response = await fetch(`${GitHubUrls.API_BASE}${GitHubUrls.REPOS_PATH}${this.REPO_OWNER}/${this.REPO_NAME}${GitHubUrls.RELEASES_PATH}`, {
-        method: HttpMethods.GET,
+        method: Http.Methods.GET,
         headers: await this.getGitHubHeaders(),
       });
 

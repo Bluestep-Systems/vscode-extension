@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ConfigJsonContent, MetaDataDotJsonContent } from '../../../../../types';
-import { FolderNames, HttpHeaders, HttpMethods, SpecialFiles } from '../../../resources/constants';
+import { FolderNames, Http, SpecialFiles } from '../../../resources/constants';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
@@ -75,7 +75,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   public async getUpstairsLastModified(): Promise<Date> {
 
     const response = await SM.fetch(this.upstairsUrl(), {
-      method: HttpMethods.HEAD
+      method: Http.Methods.HEAD
     });
     const lastModifiedHeaderValue = response.headers.get("Last-Modified");
     if (!lastModifiedHeaderValue) {
@@ -92,9 +92,9 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async getUpstairsContent(): Promise<string> {
     const response = await SM.fetch(this.upstairsUrl(), {
-      method: HttpMethods.GET,
+      method: Http.Methods.GET,
       headers: {
-        [HttpHeaders.ACCEPT]: HttpHeaders.ACCEPT_ALL,
+        [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
       }
     });
     if (response.status >= ResponseCodes.BAD_REQUEST) {
