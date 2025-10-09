@@ -2,7 +2,7 @@ import * as path from 'path';
 import { ApiEndpoints, CryptoAlgorithms, FileExtensions, Http, MimeTypes, SpecialFiles } from '../../../resources/constants';
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
-import { UpstairsUrlParser } from "../data/UpstairsUrlParser";
+import { ScriptUrlParser } from "../data/ScriptUrlParser";
 import { Err } from "../Err";
 import { FileSystem } from "../fs/FileSystem";
 import { ResponseCodes } from "../network/StatusCodes";
@@ -91,6 +91,9 @@ export class ScriptFile extends ScriptNode {
   public async getLastVerifiedHash(): Promise<string | null> {
     await this.requireExists();
     const md = await this.getScriptRoot().getMetaData();
+    if (!md) {
+      return null;
+    }
     const record = md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath);
     return record ? record.lastVerifiedHash : null;
   }
@@ -139,14 +142,14 @@ export class ScriptFile extends ScriptNode {
    * @throws an {@link Err.EtagParsingError} When the ETag header cannot be parsed
    * @lastreviewed 2025-10-01
    */
-  public async download(): Promise<Response> {
+  public async download(parser?: ScriptUrlParser): Promise<Response> {
     const ignore = await super.isInGitIgnore();
     if (ignore) {
       App.logger.info(`not downloading \`${this.name()}\` because in .gitignore`);
       await this.deleteFromMetadata();
       return new Response("", { status: ResponseCodes.TEAPOT });
     }
-    const lookupUri = await this.upstairsUrl();
+    const lookupUri = await this.upstairsUrl(parser);
     App.logger.info("downloading from:" + lookupUri);
     const response = await SM.fetch(lookupUri, {
       method: Http.Methods.GET,
@@ -223,9 +226,9 @@ export class ScriptFile extends ScriptNode {
    * Constructs the appropriate WebDAV {@link URL} based on the file type (root, metadata, declarations, or draft).
    * @lastreviewed 2025-10-01
    */
-  public async upstairsUrl(): Promise<URL> {
+  public async upstairsUrl(parser?: ScriptUrlParser): Promise<URL> {
 
-    const upstairsBaseUrl = await this.getScriptRoot().toScriptBaseUpstairsUrl();
+    const upstairsBaseUrl = await this.getScriptRoot(parser).toScriptBaseUpstairsUrl();
     console.log("base upstairs URL:", upstairsBaseUrl.toString());
     const newUrl = new URL(upstairsBaseUrl);
     if (this.parser.type === "root") {
@@ -309,7 +312,7 @@ export class ScriptFile extends ScriptNode {
   async upload(upstairsUrlOverrideString: string | null = null): Promise<Response | void> {
     App.logger.info("Preparing to send file:", this.uri().fsPath);
     App.logger.info("To target formula URI:", upstairsUrlOverrideString);
-    const upstairsUrlParser = new UpstairsUrlParser(upstairsUrlOverrideString || this.upstairsUrl().toString());
+    const upstairsUrlParser = new ScriptUrlParser(upstairsUrlOverrideString || this.upstairsUrl().toString());
     const { webDavId, url: upstairsUrl } = upstairsUrlParser;
     const upstairsOverride = new URL(upstairsUrl);
     const downstairsUri = this.uri();

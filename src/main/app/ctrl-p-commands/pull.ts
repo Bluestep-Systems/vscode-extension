@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
 import { App } from '../App';
 import { flattenDirectory } from '../util/data/flattenDirectory';
-import { getHostFolderUri } from '../util/data/getHostFolderUri';
 import { getScript } from "../util/data/getScript";
-import { UpstairsUrlParser } from "../util/data/UpstairsUrlParser";
+import { ScriptUrlParser } from "../util/data/ScriptUrlParser";
 import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
 import { ScriptRoot } from '../util/script/ScriptRoot';
@@ -16,21 +15,19 @@ import { ProgressHelper } from '../util/ui/ProgressHelper';
  */
 export default async function (overrideFormulaUri?: string): Promise<void> {
   try {
-    const urlObj = await getStartingURL(overrideFormulaUri);
-    if (urlObj === undefined) {
+    const scriptUrlParser = await getStartingParser(overrideFormulaUri);
+    if (scriptUrlParser === null) {
       return;
     }
-    const { url, webDavId } = urlObj;
-    const fetchedScriptObject = await getScript({ url, webDavId });
+    const fetchedScriptObject = await getScript(scriptUrlParser);
     if (fetchedScriptObject === null) {
       return;
     }
-    const rawFilePaths = fetchedScriptObject;
     const ultimateUris: vscode.Uri[] = [];
     // Create tasks for progress helper
-    const pullTasks = rawFilePaths.map(path => ({
+    const pullTasks = fetchedScriptObject.map(path => ({
       execute: async () => {
-        const createdUri = await createOrUpdateIndividualNode(path.downstairsPath, url);
+        const createdUri = await createOrUpdateIndividualNode(path.downstairsPath, scriptUrlParser);
         ultimateUris.push(createdUri);
         return createdUri;
       },
@@ -41,7 +38,15 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       title: "Pulling Script...",
       cleanupMessage: "Cleaning up the downstairs folder..."
     });
-    const directory = ScriptFactory.createFolder(() => vscode.Uri.joinPath(getHostFolderUri(url), webDavId));
+
+    const directory = ScriptFactory.createFolder(
+      vscode.Uri.joinPath(
+        getActiveFolderUri(),
+        await scriptUrlParser.getU(),          //NOTE this will have already been cached
+        await scriptUrlParser.getScriptName(), //NOTE this will have already been cached
+        "/"
+      )
+    );
     const flattenedDirectory = await flattenDirectory(directory);
     await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
@@ -62,7 +67,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
   const toDelete: vscode.Uri[] = [];
   for (const ep of existingPaths) {
     //ignore special files
-    if (await ScriptFactory.createNode(() => ep).isInGitIgnore()) {
+    if (await ScriptFactory.createNode(ep).isInGitIgnore()) {
       continue;
     }
     if ([ScriptRoot.METADATA_FILENAME, ScriptRoot.GITIGNORE_FILENAME].some(special => ep.fsPath.endsWith(special))) {
@@ -72,35 +77,47 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
       toDelete.push(ep);
     }
   }
-  // delete all unused paths
-  for (const del of toDelete) {
-    App.logger.warn("Deleting unused path:" +  del.fsPath);
-    vscode.workspace.fs.delete(del, { recursive: true, useTrash: false });
+  if (toDelete.length !== 0) {
+    const YES_OPTION = "Yes";
+    const NO_OPTION = "No";
+    const prompt = await Alert.prompt(
+      `The pull operation has detected files that are no longer present in the source. Do you want to delete these files from your local workspace?
+      
+      ${toDelete.map(d => `\n- ${d.fsPath}`).join("")}
+      `,
+      [YES_OPTION, NO_OPTION],
+    );
+    if (prompt !== YES_OPTION) {
+      Alert.info("User chose not to delete unused paths");
+      return;
+    }
+    // delete all unused paths
+    for (const del of toDelete) {
+      App.logger.warn("Deleting unused path:" + del.fsPath);
+      vscode.workspace.fs.delete(del, { recursive: true, useTrash: false });
+    }
   }
+
 }
 
 /**
  * gets the URL for the pull operation. if we don't get an override URI we ask the user to provide one.
- * @param overrideFormulaUri 
+ * @param overrideFormulaUrl 
  * @returns 
  */
-async function getStartingURL(overrideFormulaUri?: string) {
-  const formulaURI = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the desired formula URI' });
-  if (formulaURI === undefined) {
-    vscode.window.showErrorMessage('No formula URI provided');
-    return;
+async function getStartingParser(overrideFormulaUrl?: string) {
+  const formulaURL = overrideFormulaUrl || await vscode.window.showInputBox({ prompt: 'Paste in the desired formula URL' });
+  if (formulaURL === undefined) {
+    vscode.window.showErrorMessage('No formula URL provided');
+    return null;
   }
-  return new UpstairsUrlParser(formulaURI);
+  return new ScriptUrlParser(formulaURL);
 }
 
-async function createOrUpdateIndividualNode(downstairsRest: string, sourceUrl: URL): Promise<vscode.Uri> {
-  const activeFolder = vscode.workspace.workspaceFolders?.[0];
-  if (!activeFolder) {
-    vscode.window.showErrorMessage('No active file found');
-    throw new Err.NoActiveFileError();
-  }
-  const curPath = activeFolder.uri;
-  const ultimatePath = vscode.Uri.joinPath(curPath, sourceUrl.host, downstairsRest);
+async function createOrUpdateIndividualNode(downstairsRest: string, parser: ScriptUrlParser): Promise<vscode.Uri> {
+  const activePath = getActiveFolderUri();
+  const U = await parser.getU();
+  const ultimatePath = vscode.Uri.joinPath(activePath, U, downstairsRest);
 
   const isDirectory = ultimatePath.toString().endsWith("/");
 
@@ -124,7 +141,17 @@ async function createOrUpdateIndividualNode(downstairsRest: string, sourceUrl: U
       await sf.touch("lastPulled");
       return sf.uri();
     }
-    await sf.download();
+    await sf.download(parser);
   }
   return ultimatePath;
+}
+
+function getActiveFolderUri() {
+  const activeFolder = vscode.workspace.workspaceFolders?.[0];
+  if (!activeFolder) {
+    vscode.window.showErrorMessage('No active file found');
+    throw new Err.NoActiveFileError();
+  }
+  const curPath = activeFolder.uri;
+  return curPath;
 }

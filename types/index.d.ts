@@ -464,7 +464,7 @@ export type Settings = {
     enabled: boolean;
 
     /**
-     * If in debug mode, the URL to use for anyDomain lookups instead of the actual domain.
+     * If in debug mode, the URLs to use for anyDomain lookups instead of the actual domain.
      */
     anyDomainOverrideUrl: string;
   }

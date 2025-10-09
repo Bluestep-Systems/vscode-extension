@@ -10,6 +10,7 @@ import { UPDATE_MANAGER as UM } from './services/UpdateChecker';
 import { SettingsWrapper } from './util/PseudoMaps';
 import { Err } from './util/Err';
 import { Alert } from './util/ui/Alert';
+import { ORG_CACHE as OC } from './cache/OrgCache';
 
 
 
@@ -48,11 +49,13 @@ export const App = new class extends ContextNode {
       ['bsjs-push-pull.clearSessions', vscode.commands.registerCommand('bsjs-push-pull.clearSessions', async () => {
         Alert.info("Clearing all Sessions");
         SM.clearMap();
+        OC.clearCache();
       })],
       ['bsjs-push-pull.clearAll', vscode.commands.registerCommand('bsjs-push-pull.clearAll', async () => {
         Alert.info("Clearing Sessions, Auth Managers, and Settings");
         App.clearMap(true);
         SM.clearMap();
+        OC.clearCache();
         Auth.clearManagers();
       })],
       ['bsjs-push-pull.toggleDebug', vscode.commands.registerCommand('bsjs-push-pull.toggleDebug', async () => {
@@ -151,7 +154,7 @@ export const App = new class extends ContextNode {
   public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
     !alreadyAlerted && Alert.info("Cleared all Settings");
-    this.settings.set('debugMode', { enabled: false, anyDomainOverrideUrl: "https://templateassisted.myassn.com/" });
+    this.settings.set('debugMode', SettingsWrapper.DEFAULT.debugMode);
     
   }
 

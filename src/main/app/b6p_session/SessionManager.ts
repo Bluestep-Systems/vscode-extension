@@ -93,7 +93,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
   }
 
   /**
-   * The ancestor context node that was used to instantiate this manager
+   * The parent App instance.
    */
   public get parent() {
     if (!this._parent) {

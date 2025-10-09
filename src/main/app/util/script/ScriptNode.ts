@@ -15,6 +15,7 @@ import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
 import { App } from '../../App';
+import { ScriptUrlParser } from '../data/ScriptUrlParser';
 const fs = FileSystem.getInstance;
 
 /**
@@ -155,7 +156,10 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Get the {@link ScriptRoot} object for this file.
    * @lastreviewed 2025-09-29
    */
-  public getScriptRoot() {
+  public getScriptRoot(parser?: ScriptUrlParser): ScriptRoot {
+    if (parser) {
+      this.scriptRoot.withParser(parser);
+    }
     return this.scriptRoot;
   }
 
@@ -166,6 +170,9 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async getLastPulledTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
+    if (!md) {
+      return null;
+    }
     return md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath)?.lastPulled || null;
   }
 
@@ -189,6 +196,9 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async getLastPushedTimeStr(): Promise<string | null> {
     const md = await this.getScriptRoot().getMetaData();
+    if (!md) {
+      return null;
+    }
     return md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath)?.lastPushed || null;
   }
 

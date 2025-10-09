@@ -15,6 +15,7 @@ import type { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
 import { ORG_CACHE as OC } from '../../cache/OrgCache';
+import { ScriptUrlParser } from '../data/ScriptUrlParser';
 const fs = FileSystem.getInstance;
 
 /**
@@ -27,7 +28,10 @@ export class ScriptRoot {
   private static readonly ScriptContentFolders = [FolderNames.INFO, FolderNames.SCRIPTS, FolderNames.OBJECTS] as const;
   public static readonly METADATA_FILENAME = SpecialFiles.B6P_METADATA;
   public static readonly GITIGNORE_FILENAME = SpecialFiles.GITIGNORE;
+  private _orgWorker: OrgWorker | null;
   public readonly rootUri: vscode.Uri;
+  private parser: DownstairsUriParser;
+  private scriptParser: ScriptUrlParser | null;
   /**
    * Creates a script root utilizing any of the children in said script.
    * 
@@ -38,9 +42,22 @@ export class ScriptRoot {
    * @lastreviewed 2025-09-15
    */
   constructor(public readonly uri: vscode.Uri) {
-    const parser = new DownstairsUriParser(uri);
-    const shavedName = parser.getShavedName();
+    this.parser = new DownstairsUriParser(uri);
+    const shavedName = this.parser.getShavedName();
     this.rootUri = vscode.Uri.file(shavedName);
+    this._orgWorker = null;
+    this.scriptParser = null;
+  }
+
+  public orgWorker(): OrgWorker {
+    if (this._orgWorker === null) {
+      if (this.scriptParser !== null) {
+        this._orgWorker = this.scriptParser.orgWorker();
+        return this._orgWorker;
+      }
+      throw new Err.InvalidStateError("OrgWorker not initialized");
+    }
+    return this._orgWorker;
   }
 
   /**
@@ -69,7 +86,7 @@ export class ScriptRoot {
    * 
    * @param callBack Optional callback function to modify the metadata object
    * @returns The current or modified metadata object
-   * @throws {Error} When file system operations fail after retries or for unexpected errors
+   * @throws {Err.FileNotFoundError} When file system operations fail after retries or for unexpected errors
    * @lastreviewed 2025-09-15
    */
   public async modifyMetaData(callBack?: ((meta: ScriptMetaData) => void)): Promise<ScriptMetaData> {
@@ -143,10 +160,17 @@ export class ScriptRoot {
         throw e;
       }
       App.logger.warn("Metadata file does not exist or is invalid; creating a new one.");
-      const metaDataDotJson = await this.getAsFolder().getMetadataDotJson();
+      let scriptName: string;
+      if (this.orgWorker() === null) {
+        const metaDataDotJson = await this.getAsFolder().getMetadataDotJson();
+        scriptName = metaDataDotJson.displayName || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })();
+      } else {
+        scriptName = await this.scriptParser?.getScriptName() || (() => { throw new Err.FileReadError("Missing script name and no parser available"); })();
+      }
+      
       contentObj = {
-        scriptName: metaDataDotJson.displayName || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })(),
-        U: await new OrgWorker(await this.toScriptBaseUpstairsUrl()).getU(),
+        scriptName: scriptName || (() => { throw new Err.ScriptOperationError("Missing script name"); })(),
+        U: await this.orgWorker().getU(),
         webdavId: await this.webDavId(),
         pushPullRecords: []
       };
@@ -163,12 +187,23 @@ export class ScriptRoot {
     return contentObj;
   }
 
+  withParser(parser: ScriptUrlParser) {
+    this.scriptParser = parser;
+  }
+
   /**
    * Gets the metadata for the script root.
    * @lastreviewed 2025-09-15
    */
-  public async getMetaData(): Promise<ScriptMetaData> {
-    return await this.modifyMetaData();
+  public async getMetaData(): Promise<ScriptMetaData | null> {
+    try {
+      return await this.modifyMetaData();
+    } catch (e) {
+      if (e instanceof Err.ConfigFileError) {
+        return null;
+      }
+      throw e;
+    }
   }
 
   /**
@@ -232,29 +267,40 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the {@link vscode.Uri Uri} for the downstairs organization folder.
+   * Gets the {@link vscode.Uri Uri} for the downstairs U folder.
    *
-   * @todo This will be replaced when we update the org file to use a metadata file
-   * @lastreviewed 2025-09-15
+   * @lastreviewed 2025-10-09
    */
   public getOrgUri() {
     return vscode.Uri.joinPath(this.getRootUri(), "..");
   }
 
   /**
-   * The WebDAV ID extracted from the file path.
-   *
-   * Eventually when this structure is refactored to use a metadata file, this will
-   * not be so trivial.
-   * @lastreviewed 2025-09-15
+   * The WebDAV ID extracted from the metadata file.
+   * @throws an {@link Err.FileNotFoundError} if the metadata file is missing or malformed.
+   * @lastreviewed 2025-10-09
    */
   async webDavId() {
+    if (this.scriptParser !== null) {
+      return this.scriptParser.webDavId;
+    }
     const metadata = await this.getMetaData();
+    if (!metadata) {
+      throw new Err.InvalidStateError("Missing metadata");
+    }
     return metadata.webdavId || (() => { throw new Err.InvalidStateError("Missing webdavId in metadata"); })();
   }
 
+  /**
+   * The WebDAV ID extracted from the metadata file.
+   * @throws an {@link Err.FileNotFoundError} if the metadata file is missing or malformed.
+   * @lastreviewed 2025-10-09
+   */
   async getU() {
     const metadata = await this.getMetaData();
+    if (!metadata) {
+      return await this.orgWorker().getU();
+    }
     return metadata.U || (() => { throw new Err.InvalidStateError("Missing origin in metadata"); })();
   }
 
@@ -264,14 +310,11 @@ export class ScriptRoot {
    * @lastreviewed null
    */
   public async anyOrigin() {
-    if (App.isDebugMode()) {
-      return new URL(App.settings.get("debugMode").anyDomainOverrideUrl);
-    }
     return await OC.getAnyBaseUrl(await this.getU());
   }
 
   public getAsFolder(): ScriptFolder {
-    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.getRootUri(),"/"));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.getRootUri(), "/"));
   }
 
   /**

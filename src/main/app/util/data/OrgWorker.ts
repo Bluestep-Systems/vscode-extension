@@ -7,13 +7,23 @@ import { HttpClient } from "../network/HttpClient";
  */
 export class OrgWorker {
 
-  constructor(private readonly rawUrl: URL) {}
+  /**
+   * The U associated with the URL, once fetched. null if not yet fetched.
+   */
+  private _U: string | null;
+
+  constructor(private readonly rawUrl: URL) {
+    this._U = null;
+  }
 
   /**
    * Simply calls the org (sans session management) to get the U associated with the URL; this requires that the org is reachable.
    * @throws an {@link Err.OrgWorkerError} if the fetch fails or the response is not OK.
    */
   async getU(): Promise<string> {
+    if (this._U !== null) {
+      return this._U;
+    }
     const newUrl = new URL(this.rawUrl);
     newUrl.pathname = ApiEndpoints.APPINFO_U;
     try {
@@ -23,7 +33,8 @@ export class OrgWorker {
       if (!response.ok) {
         throw new Err.OrgWorkerError(`Failed to fetch user info from URL: ${newUrl.toString()}. Status: ${response.status}`);
       }
-      return await response.text();
+      this._U = await response.text();
+      return this._U;
     } catch (error) {
       console.error("Error fetching user info:", error);
       throw new Err.OrgWorkerError(`Error fetching user info from URL: ${newUrl.toString()}\n ${error}`);

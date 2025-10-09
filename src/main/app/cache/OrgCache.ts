@@ -37,6 +37,9 @@ export const ORG_CACHE = new class extends ContextNode {
     await this.map().store();
   }
 
+  /**
+   * The parent SESSION_MANAGER instance.
+   */
   public get parent(): typeof SESSION_MANAGER {
     if (!this._parent) {
       throw new Error("OrgCache not initialized; call init() first.");
@@ -151,8 +154,10 @@ export const ORG_CACHE = new class extends ContextNode {
     if (!/^U\d{6}$/.test(u)) {
       throw new Err.OrgCacheError("Invalid U format: " + u);
     }
-    // first we clean duplicates to ensure the cache is in a good state
+    // next we clean duplicates to ensure the cache is in a good state
+    // we may want to later allow for this to throw an error if the cache is invalid
     this.cleanDuplicates();
+    // check cache first
     if (this.map().has(u)) {
       const cacheElement = this.map().get(u);
       if (cacheElement && cacheElement.length > 0) {
@@ -161,7 +166,13 @@ export const ORG_CACHE = new class extends ContextNode {
         return new URL(Http.Schemes.HTTPS + cacheElement[0].host);
       }
     }
-
+    // check for overrides
+    const settings = this.parent.parent.settings;
+    const overrideUrl = settings.getParsedAnyDomainOverrideUrl(u);
+    if (overrideUrl) {
+      return overrideUrl;
+    }
+    // finally we call the BlueHQ helper endpoint to do a hard-lookup
     const resp = await this.parent.fetch(BlueHQ.getAnyDomainUrl(u));
     if (!resp.ok) {
       throw new Err.BlueHqHelperEndpointError("Failed to fetch any domain from BlueHQ: " + resp.status + " " + resp.statusText);

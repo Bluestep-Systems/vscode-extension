@@ -27,31 +27,47 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
-    "configuration": {
-      "title": "B6P - BlueStep JavaScript Push/Pull",
-      "properties": {
-        "bsjs-push-pull.updateCheck.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable automatic update checking"
-        },
-        "bsjs-push-pull.updateCheck.showNotifications": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show update notifications"
-        },
-        "bsjs-push-pull.debugMode.enabled": {
-          "type": "boolean",
-          "description": "Enable debug mode",
-          "default": false
-        },
-        "bsjs-push-pull.debugMode.anyDomainOverrideUrl": {
-          "type": "string",
-          "description": "Override the domain used for 'anyDomain' lookups in debug mode",
-          "default": "https://templateassisted.myassn.com/"
+    "configuration": [
+      {
+        "title": "Update Check",
+        "order": 0,
+        "id": "bsjs-push-pull.updateCheck",
+        "properties": {
+          "bsjs-push-pull.updateCheck.enabled": {
+            "order": 0,
+            "type": "boolean",
+            "default": true,
+            "description": "Enable automatic update checking"
+          },
+          "bsjs-push-pull.updateCheck.showNotifications": {
+            "order": 1,
+            "type": "boolean",
+            "default": true,
+            "description": "Show update notifications"
+          }
+        }
+      },
+      {
+        "title": "Debug Mode",
+        "order": 1,
+        "id": "bsjs-push-pull.debugMode",
+        "properties": {
+          "bsjs-push-pull.debugMode.enabled": {
+            "order": 0,
+            "type": "boolean",
+            "description": "Enable debug mode",
+            "default": false
+          },
+          "bsjs-push-pull.debugMode.anyDomainOverrideUrl": {
+            "order": 1,
+            "type": "string",
+            "editPresentation": "multilineText",
+            "description": "Override the domains used for 'anyDomain' lookups in debug mode",
+            "default": "U131364=https://templateassisted.myassn.com/"
+          }
         }
       }
-    },
+    ],
     "commands": [
       {
         "command": "bsjs-push-pull.pushScript",

@@ -7,7 +7,7 @@ import { Util } from '../util';
 import { DownstairsUriParser } from '../util/data/DownstairsUrIParser';
 import { flattenDirectory } from '../util/data/flattenDirectory';
 import { getScript } from '../util/data/getScript';
-import { UpstairsUrlParser } from '../util/data/UpstairsUrlParser';
+import { ScriptUrlParser } from '../util/data/ScriptUrlParser';
 import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
 import { ScriptRoot } from '../util/script/ScriptRoot';
@@ -104,11 +104,11 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   if (!downstairsRootFolderUri || !upstairsRootUrlString) {
     throw new Err.CleanupParametersError();
   }
-  const upstairsObj = new UpstairsUrlParser(upstairsRootUrlString);
+  const upstairsObj = new ScriptUrlParser(upstairsRootUrlString);
   /**
    * this will give us a list of that are currently present upstairs
    */
-  const getScriptRet = await getScript({ url: upstairsObj.url, webDavId: upstairsObj.webDavId });
+  const getScriptRet = await getScript(upstairsObj);
   if (!getScriptRet) {
     throw new Err.CleanupScriptError();
   }
@@ -120,6 +120,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for
   // any unmatched brothers.
 
+  const pathsToDelete = new Set<string>();
   for (const rawFilePath of rawFilePaths) {
     // note that the only thing with an undefined trailing should be the root itself
     const curPath = vscode.Uri.joinPath(downstairsRootFolderUri, rawFilePath.trailing || path.sep);
@@ -134,10 +135,32 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
       }
       // If there's no matching downstairs path, we need to delete the upstairs path
       App.logger.info(`No matching downstairs path found for upstairs path: ${rawFilePath.upstairsPath}. Deleting upstairs path.`);
-      await SM.fetch(rawFilePath.upstairsPath, {
-        method: "DELETE"
-      });
+      pathsToDelete.add(rawFilePath.upstairsPath);
     }
+  }
+
+  if (pathsToDelete.size === 0) {
+    App.logger.info("No unused upstairs paths to delete.");
+    return;
+  }
+
+  const YES_OPTION = "Yes";
+  const NO_OPTION = "No";
+  const prompt = await Alert.prompt(
+    `The following upstairs paths are unused and will be deleted:\n${Array.from(pathsToDelete).join('\n')}\n\nDo you want to proceed?`, 
+    [YES_OPTION, NO_OPTION]
+  );
+
+  if (prompt !== YES_OPTION) {
+    Alert.info("User chose not to delete unused upstairs paths. Consider cleaning up manually.");
+    return;
+  }
+
+  for (const upstairsPath of pathsToDelete) {
+    App.logger.info("Deleting unused upstairs path:" + upstairsPath);
+    SM.fetch(upstairsPath, {
+      method: "DELETE"
+    });
   }
 }
 

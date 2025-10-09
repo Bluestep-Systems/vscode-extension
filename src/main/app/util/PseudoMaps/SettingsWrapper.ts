@@ -20,7 +20,7 @@ import { Persistable } from "./Persistable";
  */
 export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
   public static readonly DEFAULT: Settings = {
-    debugMode: { enabled: false, anyDomainOverrideUrl: "https://templateassisted.myassn.com/" },
+    debugMode: { enabled: false, anyDomainOverrideUrl: "U131364=https://templateassisted.myassn.com/" },
     updateCheck: { enabled: true, showNotifications: true }
   };
 
@@ -31,7 +31,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
     super(config);
   }
 
-  
+
   get<K extends keyof Settings>(key: K): Settings[K] {
     let ret = super.get(key) || SettingsWrapper.DEFAULT[key];
     if (Object.keys(ret).length !== Object.keys(SettingsWrapper.DEFAULT[key]).length) {
@@ -40,7 +40,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
     return ret;
   }
 
-  
+
   set<K extends keyof Settings>(key: K, value: Settings[K]): this {
     super.set(key, value);
     console.log(`Setting context key: bsjs-push-pull.${key} to ${JSON.stringify(value)}`);
@@ -54,12 +54,12 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
    * because otherwise it would cause an infinite loop when called from sync().
    */
   async store(update: boolean = true) {
-    const flattened: { key: string, value: Serializable }[] = [];
+    const flattened: { key: string, value: Serializable; }[] = [];
     for (const key of this.keys()) {
       Util.rethrow(flattenLayer, { key, obj: this.get(key) });
     }
 
-    function flattenLayer({ key, obj }: { key: string, obj: Serializable }) {
+    function flattenLayer({ key, obj }: { key: string, obj: Serializable; }) {
       if (typeof obj === 'object' && obj !== null) {
         for (const [k, v] of Object.entries(obj)) {
           flattenLayer({ key: `${key}.${k}`, obj: v });
@@ -119,4 +119,30 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
 
     this.store(false);
   }
+
+  getParsedAnyDomainOverrideUrl(u: string): URL | null {
+    const urlString = this.get('debugMode').anyDomainOverrideUrl;
+    if (!urlString) {
+      return null;
+    }
+    if (this.get('debugMode').enabled) {
+      const override = this.get('debugMode').anyDomainOverrideUrl;
+      if (override) {
+        const lines = override.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        for (const line of lines) {
+          const parts = line.split("=");
+          if (parts.length === 2 && parts[0] === u) {
+            try {
+              return new URL(parts[1]);
+            } catch (e) {
+              App.logger.error("Invalid anyDomainOverrideUrl in debugMode settings:", parts[1]);
+              Alert.popup("Invalid anyDomainOverrideUrl in debugMode settings. Please fix it.");
+            }
+          }
+        }
+      }
+    }
+    return null;
+  }
+
 }

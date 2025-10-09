@@ -697,6 +697,16 @@ export namespace Err {
     }
   }
 
+  /**
+   * Error thrown when fetching the metadata.json fails.
+   */
+  export class MetadataDotJsonFetchError extends Error {
+    constructor(webDavId: string) {
+      super(`Error fetching metadata.json for WebDAV ID ${webDavId}`);
+      this.name = "MetadataDotJsonFetchError";
+    }
+  }
+
   // Stack trace utility errors
 
   /**
