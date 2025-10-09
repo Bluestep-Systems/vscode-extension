@@ -12,7 +12,7 @@ import { Err } from '../util/Err';
  * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location.
  * @returns 
  */
-export default async function (): Promise<void> {
+export default async function (isSnapshot: boolean = false): Promise<void> {
 
   try {
 
@@ -20,8 +20,8 @@ export default async function (): Promise<void> {
     if (activeEditorUri === undefined) {
       return;
     }
-    const fileMetaData = ScriptFactory.createFile(activeEditorUri);
-    const dirtyDocs = await getDirtyDocs(fileMetaData.getScriptRoot().getRootUri());
+    const sf = ScriptFactory.createFile(activeEditorUri);
+    const dirtyDocs = await getDirtyDocs(sf.getScriptRoot().getRootUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
       const CANCEL = 'Cancel';
@@ -40,8 +40,8 @@ export default async function (): Promise<void> {
         return;
       }
     }
-
-    await pushScript({ overrideFormulaUri: await fileMetaData.getScriptRoot().toScriptBaseUpstairsString() });
+    const overrideFormulaUrl = await sf.getScriptRoot().toScriptBaseUpstairsString();
+    await pushScript({ overrideFormulaUrl, isSnapshot });
   } catch(e) {
     if (e instanceof Err.AlreadyAlertedError) {
       return; // do nothing, already handled

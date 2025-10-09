@@ -4,8 +4,11 @@ import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { FolderNames, SpecialFiles } from '../../../resources/constants';
 import { App } from '../../App';
+import { ORG_CACHE as OC } from '../../cache/OrgCache';
+import pushCurrent from '../../ctrl-p-commands/pushCurrent';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { OrgWorker } from '../data/OrgWorker';
+import { ScriptUrlParser } from '../data/ScriptUrlParser';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ScriptCompiler } from './ScriptCompiler';
@@ -14,8 +17,6 @@ import { ScriptFile } from './ScriptFile';
 import type { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
-import { ORG_CACHE as OC } from '../../cache/OrgCache';
-import { ScriptUrlParser } from '../data/ScriptUrlParser';
 const fs = FileSystem.getInstance;
 
 /**
@@ -44,7 +45,7 @@ export class ScriptRoot {
   constructor(public readonly uri: vscode.Uri) {
     this.parser = new DownstairsUriParser(uri);
     const shavedName = this.parser.getShavedName();
-    this.rootUri = vscode.Uri.file(shavedName);
+    this.rootUri = vscode.Uri.joinPath(vscode.Uri.file(shavedName), "/");
     this._orgWorker = null;
     this.scriptParser = null;
   }
@@ -161,17 +162,26 @@ export class ScriptRoot {
       }
       App.logger.warn("Metadata file does not exist or is invalid; creating a new one.");
       let scriptName: string;
-      if (this.orgWorker() === null) {
+      let U: string;
+      let webdavId: string;
+      
+      if (this.scriptParser === null) {
+        // the absence of a parser indicates that this is coming from a local file, thus these elements should exist
         const metaDataDotJson = await this.getAsFolder().getMetadataDotJson();
         scriptName = metaDataDotJson.displayName || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })();
+        U = await this.getU() || (() => { throw new Err.FileReadError("Missing U in metadata"); })();
+        webdavId = await this.webDavId() || (() => { throw new Err.FileReadError("Missing webdavId in metadata"); })();
       } else {
-        scriptName = await this.scriptParser?.getScriptName() || (() => { throw new Err.FileReadError("Missing script name and no parser available"); })();
+        //only time this should be happening is on initial download
+        scriptName = await this.scriptParser.getScriptName() || (() => { throw new Err.FileReadError("Missing script name and no parser available"); })();
+        U = await this.scriptParser.getU() || (() => { throw new Err.FileReadError("Missing U and no parser available"); })();
+        webdavId = this.scriptParser.webDavId || (() => { throw new Err.FileReadError("Missing webdavId and no parser available"); })();
       }
       
       contentObj = {
-        scriptName: scriptName || (() => { throw new Err.ScriptOperationError("Missing script name"); })(),
-        U: await this.orgWorker().getU(),
-        webdavId: await this.webDavId(),
+        scriptName,
+        U,
+        webdavId,
         pushPullRecords: []
       };
       modified = true;
@@ -318,7 +328,7 @@ export class ScriptRoot {
   }
 
   /**
-   * Returns a base URL string suitable for pull and push operations.
+   * Returns a base URL string suitable for pull and push operations to the appropriate org.
    * @lastreviewed 2025-09-15
    */
   public async toScriptBaseUpstairsString() {
@@ -454,7 +464,8 @@ export class ScriptRoot {
   public async snapshot() {
     //TODO do a safety check on the hash to prevent deleted files needlessly
     //await this.deleteBuildFolder();
-    await this.compileDraftFolder();
+    pushCurrent(true);
+
   }
 
   /**
@@ -496,7 +507,7 @@ export class ScriptRoot {
     for (const file of allDraftFiles) {
       if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
         await file.isInItsRespectiveBuildFolder() ||
-        await file.isInInfoOrObjects() || // TODO delete this after these folders are obviated
+        await file.isInInfo() || // TODO delete this after this is obviated
         await file.isFolder()) {
         continue;
       }
@@ -608,17 +619,20 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets all draft folder nodes that are eligible for pushing (excludes build folder contents).
+   * Gets all draft folder nodes that are eligible for pushing (excludes build folder contents when not snapshot).
    * 
-   * @returns A {@link Promise} that resolves to an array of {@link ScriptNode} instances that can be pushed
    * @lastreviewed 2025-10-01
    */
-  public async getPushableDraftNodes(): Promise<ScriptNode[]> {
+  public async getPushableDraftNodes(snapshot: boolean = false): Promise<ScriptNode[]> {
     const flattened = await this.getDraftFolder().flatten();
-    const filtered = [];
+    const filtered:ScriptNode[] = [];
     for (const f of flattened) {
-      if (!(await f.isInItsRespectiveBuildFolder())) {
+      const inBuildFolder = !snapshot && await f.isInItsRespectiveBuildFolder();
+      const fileName = f.path();
+      if (!inBuildFolder) {
         filtered.push(f);
+      } else {
+        App.logger.info(`Excluding file in build folder from push: ${fileName}`);
       }
     }
     return filtered;

@@ -38,7 +38,7 @@ export default async function (): Promise<void> {
           if (webDavId !== null) {
             await push(
               {
-                overrideFormulaUri: `${origin}${ApiEndpoints.FILES}${webDavId}/`,
+                overrideFormulaUrl: `${origin}${ApiEndpoints.FILES}${webDavId}/`,
                 sourceOps: { sourceOrigin, topId },
                 skipMessage: true
             });

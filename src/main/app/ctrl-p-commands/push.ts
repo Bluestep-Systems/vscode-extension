@@ -10,7 +10,6 @@ import { getScript } from '../util/data/getScript';
 import { ScriptUrlParser } from '../util/data/ScriptUrlParser';
 import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
-import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
 
@@ -20,7 +19,7 @@ import { ProgressHelper } from '../util/ui/ProgressHelper';
  * @param sourceOps The options for oveerriding the source location
  * @returns A promise that resolves when the push is complete.
  */
-export default async function ({ overrideFormulaUri, sourceOps, skipMessage }: { overrideFormulaUri?: string, sourceOps?: SourceOps, skipMessage?: boolean }): Promise<void> {
+export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot }: { overrideFormulaUrl?: string, sourceOps?: SourceOps, skipMessage?: boolean, isSnapshot?: boolean }): Promise<void> {
   try {
     const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
     if (sourceEditorUri === undefined) {
@@ -28,33 +27,19 @@ export default async function ({ overrideFormulaUri, sourceOps, skipMessage }: {
       return;
     }
     App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
-    const targetFormulaOverride = overrideFormulaUri || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
+    const targetFormulaOverride = overrideFormulaUrl || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
     if (targetFormulaOverride === undefined) {
       Alert.error('No target formula URI provided');
       return;
     }
-    const matcher = sourceEditorUri.toString().match(/(.*\/\d+)\//);
-    const sourceFolder = matcher ? matcher[1] : null;
-    if (sourceFolder === null) {
-      Alert.error('target URI not valid');
-      return;
-    }
-    App.logger.info("sourceFolder", sourceFolder);
-    if (!sourceFolder) {
-      Alert.error('No source folder found');
-      return;
-    }
-    App.logger.info("Source folder URI:", sourceFolder);
-    const downstairsRootFolderUri = vscode.Uri.file(uriStringToFilePath(sourceFolder));
-    App.logger.info("Reading directory:", downstairsRootFolderUri.toString());
-    const sr = ScriptRoot.fromRootUri(downstairsRootFolderUri);
+    const sr = ScriptFactory.createScriptRoot(sourceEditorUri);
     await sr.compileDraftFolder();
     const detectedIssues = await sr.preflightCheck();
     if (detectedIssues) {
       Alert.error(detectedIssues);
       return;
     }
-    const snList = await sr.getPushableDraftNodes();
+    const snList = await sr.getPushableDraftNodes(isSnapshot);
 
     // Create tasks for progress helper
     const pushTasks = snList.map(sn => ({
@@ -67,7 +52,7 @@ export default async function ({ overrideFormulaUri, sourceOps, skipMessage }: {
       cleanupMessage: "Cleaning up the upstairs draft folder..."
     });
 
-    await cleanupUnusedUpstairsPaths(downstairsRootFolderUri, targetFormulaOverride);
+    await cleanupUnusedUpstairsPaths(sr.getRootUri(), targetFormulaOverride, isSnapshot);
 
     if (!skipMessage) {
       Alert.popup('Push complete!');
@@ -81,26 +66,11 @@ export default async function ({ overrideFormulaUri, sourceOps, skipMessage }: {
 }
 
 /**
- * Converts a URI string to a file path.
- * @param uriString The URI string to convert.
- * @returns The corresponding file path.
- */
-function uriStringToFilePath(uriString: string): string {
-  // Remove the file:// protocol prefix if present
-  let path = uriString.replace(/^file:\/\/\/?/, '');
-
-  // URL decode the string to handle encoded characters like %3A
-  path = decodeURIComponent(path);
-
-  return path;
-}
-
-/**
  * the objective of this function is to remove upstairs paths that no longer have a downstairs counterpart
  * @param downstairsRootFolderUri 
  * @param upstairsRootUrlString 
  */
-async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, upstairsRootUrlString?: string) {
+async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, upstairsRootUrlString?: string, isSnapshot: boolean = false): Promise<void> {
   if (!downstairsRootFolderUri || !upstairsRootUrlString) {
     throw new Err.CleanupParametersError();
   }
@@ -133,6 +103,10 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
       }
+      if (!isSnapshot && await sf.isInItsRespectiveBuildFolder()) {
+        App.logger.info(`File is in build folder; skipping deletion: ${rawFilePath.upstairsPath}`);
+        continue;
+      }
       // If there's no matching downstairs path, we need to delete the upstairs path
       App.logger.info(`No matching downstairs path found for upstairs path: ${rawFilePath.upstairsPath}. Deleting upstairs path.`);
       pathsToDelete.add(rawFilePath.upstairsPath);
@@ -147,7 +121,11 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   const YES_OPTION = "Yes";
   const NO_OPTION = "No";
   const prompt = await Alert.prompt(
-    `The following upstairs paths are unused and will be deleted:\n${Array.from(pathsToDelete).join('\n')}\n\nDo you want to proceed?`, 
+    `The following upstairs paths are unused and will be deleted:
+    
+    ${Array.from(pathsToDelete).join('\n')}
+    
+    Do you want to proceed?`, 
     [YES_OPTION, NO_OPTION]
   );
 

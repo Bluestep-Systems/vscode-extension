@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { ApiEndpoints, CryptoAlgorithms, FileExtensions, Http, MimeTypes, SpecialFiles } from '../../../resources/constants';
+import { CryptoAlgorithms, FileExtensions, Http, MimeTypes, SpecialFiles } from '../../../resources/constants';
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { ScriptUrlParser } from "../data/ScriptUrlParser";
@@ -312,17 +312,9 @@ export class ScriptFile extends ScriptNode {
   async upload(upstairsUrlOverrideString: string | null = null): Promise<Response | void> {
     App.logger.info("Preparing to send file:", this.uri().fsPath);
     App.logger.info("To target formula URI:", upstairsUrlOverrideString);
-    const upstairsUrlParser = new ScriptUrlParser(upstairsUrlOverrideString || this.upstairsUrl().toString());
-    const { webDavId, url: upstairsUrl } = upstairsUrlParser;
-    const upstairsOverride = new URL(upstairsUrl);
-    const downstairsUri = this.uri();
-
-    const desto = downstairsUri.fsPath
-      .split(upstairsUrl.host + "/" + webDavId)[1];
-    if (typeof desto === 'undefined') {
-      throw new Err.DestinationPathError(downstairsUri.fsPath);
-    }
-    upstairsOverride.pathname = `${ApiEndpoints.FILES}${webDavId}${desto}`;
+    const upstairsOverride = new URL(upstairsUrlOverrideString || this.upstairsUrl().toString());
+    const thisUpstairs = await this.upstairsUrl();
+    upstairsOverride.pathname = thisUpstairs.pathname;
     if (!(await this.oldIntegrityMatches())) {
       const OVERWRITE = 'Overwrite';
       const CANCEL = 'Cancel';
@@ -341,14 +333,13 @@ export class ScriptFile extends ScriptNode {
     const reason = await this.getReasonToNotPush({ upstairsOverride });
 
     if (reason) {
-      App.logger.info(`${reason}; not pushing file:`, downstairsUri.fsPath);
+      App.logger.info(`${reason}; not pushing file:`, this.uri().fsPath);
       return;
     }
-    App.logger.info("Destination:", upstairsUrl.toString());
-
+    App.logger.info("Destination:", upstairsOverride.toString());
 
     //TODO investigate if this can be done via streaming
-    const fileContents = await fs().readFile(downstairsUri);
+    const fileContents = await fs().readFile(this.uri());
     const resp = await SM.fetch(upstairsOverride, {
       method: Http.Methods.PUT,
       headers: {
@@ -361,7 +352,7 @@ export class ScriptFile extends ScriptNode {
       throw new Err.FileSendError(details);
     }
     await this.touch("lastPushed");
-    App.logger.info("File sent successfully:", downstairsUri.fsPath);
+    App.logger.info("File sent successfully:", this.uri().fsPath);
     return resp;
     async function getDetails(resp: Response) {
       return `
