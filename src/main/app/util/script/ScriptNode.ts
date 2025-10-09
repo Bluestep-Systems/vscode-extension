@@ -42,9 +42,9 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @param param0.downstairsUri The local file system URI for this script file
    * @lastreviewed 2025-09-15
    */
-  constructor(public readonly downstairsUri: vscode.Uri) {
+  constructor(public readonly downstairsUri: vscode.Uri, scriptRoot?: ScriptRoot) {
     this.parser = new DownstairsUriParser(downstairsUri);
-    this.scriptRoot = new ScriptRoot(downstairsUri);
+    this.scriptRoot = scriptRoot || new ScriptRoot(downstairsUri);
   }
 
   /**
