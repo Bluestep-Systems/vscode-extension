@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { App } from '../app/App';
+//@ts-ignore
 import { runConverts } from '../conversions';
 
 /**
@@ -9,7 +10,7 @@ import { runConverts } from '../conversions';
 export default function (context: vscode.ExtensionContext) {
   try {
     App.init(context);
-    runConverts();
+    //runConverts();
     App.isDebugMode() && console.log("B6P: App initialized in debug mode");
     App.logger.info("B6P: App initialized");
   } catch (error) {
