@@ -33,7 +33,6 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
       return;
     }
     const sr = ScriptFactory.createScriptRoot(sourceEditorUri);
-    await sr.compileDraftFolder();
     const detectedIssues = await sr.preflightCheck();
     if (detectedIssues) {
       Alert.error(detectedIssues);
@@ -105,6 +104,9 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
       }
       if (!isSnapshot && await sf.isInItsRespectiveBuildFolder()) {
         App.logger.info(`File is in build folder; skipping deletion: ${rawFilePath.upstairsPath}`);
+        continue;
+      } else if (isSnapshot && await sf.isInInfoOrObjects()) {
+        App.logger.info(`File is in Info or Objects folder; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
       }
       // If there's no matching downstairs path, we need to delete the upstairs path

@@ -462,10 +462,8 @@ export class ScriptRoot {
    * // TODO this is not complete
    */
   public async snapshot() {
-    //TODO do a safety check on the hash to prevent deleted files needlessly
-    //await this.deleteBuildFolder();
-    pushCurrent(true);
-
+    await this.compileDraftFolder();
+    await pushCurrent(true);
   }
 
   /**
@@ -507,7 +505,7 @@ export class ScriptRoot {
     for (const file of allDraftFiles) {
       if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
         await file.isInItsRespectiveBuildFolder() ||
-        await file.isInInfo() || // TODO delete this after this is obviated
+        await file.isInInfoOrObjects() || // TODO delete this after this is obviated
         await file.isFolder()) {
         continue;
       }
