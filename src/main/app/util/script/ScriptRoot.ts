@@ -371,7 +371,7 @@ export class ScriptRoot {
   /**
    * Gets the info {@link ScriptFolder} in the draft directory.
    */
-  public async getInfoFolder() {
+  public async getDraftInfoFolder() {
     return this.getDraftFolder().getChildFolder("info");
   }
 
@@ -379,7 +379,7 @@ export class ScriptRoot {
    * Gets the contents of the info  in the draft directory.
    * @lastreviewed 2025-09-15
    */
-  public async getInfoFolderContents() {
+  public async getDraftInfoFolderContents() {
     return this.getDraftFolderContents("info");
   }
 
@@ -387,7 +387,7 @@ export class ScriptRoot {
    * Gets the scripts {@link ScriptFolder} in the draft directory.
    * @lastreviewed 2025-10-01
    */
-  public async getScriptsFolder() {
+  public async getDraftScriptsFolder() {
     return this.getDraftFolder().getChildFolder("scripts");
   }
 
@@ -408,7 +408,7 @@ export class ScriptRoot {
    * Gets the {@link vscode.Uri}s of the objects folder.
    * @lastreviewed 2025-10-01
    */
-  public async getObjectsFolderContents() {
+  public async getDraftObjectsFolderContents() {
     return this.getDraftFolderContents("objects");
   }
 
@@ -419,8 +419,8 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-01
    */
   public async isCopacetic(): Promise<boolean> {
-    const infoContent = await this.getInfoFolderContents();
-    const objectsContent = await this.getObjectsFolderContents();
+    const infoContent = await this.getDraftInfoFolderContents();
+    const objectsContent = await this.getDraftObjectsFolderContents();
     const reasonsWhyBad: string[] = [];
     if (infoContent.length !== 3) {
       reasonsWhyBad.push("`info` folder must have 3 elements");
@@ -473,7 +473,7 @@ export class ScriptRoot {
       }
       file.copyToSnapshot();
     }
-    
+
     await pushCurrent({ isSnapshot: true, sr: this });
   }
 
@@ -516,7 +516,7 @@ export class ScriptRoot {
     for (const file of allDraftFiles) {
       if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
         await file.isInItsRespectiveBuildFolder() ||
-        await file.isInInfoOrObjects() || // TODO delete this after this is obviated
+        await file.isInDraftInfo() || // TODO delete this after this is obviated
         await file.isFolder()) {
         continue;
       }
@@ -632,19 +632,26 @@ export class ScriptRoot {
    * 
    * @lastreviewed 2025-10-01
    */
-  public async getPushableDraftNodes(snapshot: boolean = false): Promise<ScriptNode[]> {
-    const flattened = await this.getDraftFolder().flatten();
-    const filtered: ScriptNode[] = [];
-    for (const f of flattened) {
+  public async getPushableNodes(snapshot: boolean = false): Promise<ScriptNode[]> {
+    const flattenedDraft = await this.getDraftFolder().flatten();
+    const pushableNodes: ScriptNode[] = [];
+    for (const f of flattenedDraft) {
       const inBuildFolder = !snapshot && await f.isInItsRespectiveBuildFolder();
       const fileName = f.path();
       if (!inBuildFolder) {
-        filtered.push(f);
+        pushableNodes.push(f);
       } else {
         App.logger.info(`Excluding file in build folder from push: ${fileName}`);
       }
     }
-    return filtered;
+
+    if (snapshot) {
+      const flattenedSnapshot = await this.getSnapshotFolder().flatten();
+      for (const f of flattenedSnapshot) {
+        pushableNodes.push(f);
+      }
+    }
+    return pushableNodes;
   }
 
   /**

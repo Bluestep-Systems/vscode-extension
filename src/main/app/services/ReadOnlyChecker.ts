@@ -45,7 +45,7 @@ async function determine(sf: ScriptFile) {
   if (sf.isInDeclarations()) {
     return true;
   }
-  if (await sf.isInInfoOrObjects()) {
+  if (await sf.isInDraftInfoOrObjects()) {
     return true;
   }
   if (await sf.isExternalModel()) {

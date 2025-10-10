@@ -8,6 +8,7 @@ import { ScriptFactory } from './ScriptFactory';
 import type { ScriptFile } from './ScriptFile';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
+import { App } from '../../App';
 /**
  * Represents a folder in the script project structure.
  */
@@ -29,6 +30,7 @@ export class ScriptFolder extends ScriptNode {
    * @param _upstairsUrlOverrideString NOT USED
    */
   public async upload(_upstairsUrlOverrideString: string | null): Promise<Response | void> {
+    App.logger.info(`ScriptFolder.upload() called on ${this.path()}; no action taken.`);
     return;
   }
 

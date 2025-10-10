@@ -236,7 +236,7 @@ suite('ScriptNode Tests', () => {
 
       const scriptFile = ScriptFactory.createFile(infoUri);
 
-      const isInInfo = await scriptFile.isInInfo();
+      const isInInfo = await scriptFile.isInDraftInfo();
       const isInInfoFolder = await scriptFile.isInInfoFolder();
 
       assert.strictEqual(isInInfo, true);
@@ -253,7 +253,7 @@ suite('ScriptNode Tests', () => {
 
       const scriptFile = ScriptFactory.createFile(objectsUri);
 
-      const isInObjects = await scriptFile.isInObjects();
+      const isInObjects = await scriptFile.isInDraftObjects();
 
       assert.strictEqual(isInObjects, true);
     });
@@ -268,7 +268,7 @@ suite('ScriptNode Tests', () => {
 
       const scriptFile = ScriptFactory.createFile(infoUri);
 
-      const isInInfoOrObjects = await scriptFile.isInInfoOrObjects();
+      const isInInfoOrObjects = await scriptFile.isInDraftInfoOrObjects();
 
       assert.strictEqual(isInInfoOrObjects, true);
     });
@@ -284,9 +284,9 @@ suite('ScriptNode Tests', () => {
       mockFileSystemProvider.setMockDirectory(infoFolderUri);
       mockFileSystemProvider.setMockDirectory(objectsFolderUri);
 
-      const isInInfo = await scriptFile.isInInfo();
-      const isInObjects = await scriptFile.isInObjects();
-      const isInInfoOrObjects = await scriptFile.isInInfoOrObjects();
+      const isInInfo = await scriptFile.isInDraftInfo();
+      const isInObjects = await scriptFile.isInDraftObjects();
+      const isInInfoOrObjects = await scriptFile.isInDraftInfoOrObjects();
 
       assert.strictEqual(isInInfo, false);
       assert.strictEqual(isInObjects, false);

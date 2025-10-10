@@ -43,7 +43,7 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
       Alert.error(detectedIssues);
       return;
     }
-    const snList = await sr.getPushableDraftNodes(isSnapshot);
+    const snList = await sr.getPushableNodes(isSnapshot);
 
     // Create tasks for progress helper
     const pushTasks = snList.map(sn => ({
@@ -106,12 +106,15 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
-      } else if (await sf.isInInfoOrObjects()) {
+      } else if (await sf.isInDraftInfoOrObjects()) {
         App.logger.info(`File is in Info or Objects folder; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
-      } else if (!isSnapshot && await sf.isInItsRespectiveBuildFolder()) {
-        App.logger.info(`File is in build folder; skipping deletion: ${rawFilePath.upstairsPath}`);
-        continue;
+      } else if (!isSnapshot) {
+        const inBuildFolder = await sf.isInItsRespectiveBuildFolder();
+        if (inBuildFolder) {
+          App.logger.info(`File is in build folder; skipping deletion: ${rawFilePath.upstairsPath}`);
+          continue;
+        }
       }
       // If there's no matching downstairs path, we need to delete the upstairs path
       App.logger.info(`No matching downstairs path found for upstairs path: ${rawFilePath.upstairsPath}. Deleting upstairs path.`);

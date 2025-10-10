@@ -281,7 +281,7 @@ export class ScriptFile extends ScriptNode {
     if (await this.isInGitIgnore()) {
       return "Node is ignored by .gitignore";
     }
-    if (await this.isInInfoOrObjects()) {
+    if (await this.isInDraftInfoOrObjects()) {
       return "Node is in info or objects";
     }
     if (await this.isFolder()) {

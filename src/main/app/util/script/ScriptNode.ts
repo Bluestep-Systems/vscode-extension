@@ -309,8 +309,8 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Checks if the script node is in the info folder.
    * @lastreviewed 2025-09-15
    */
-  public async isInInfo(): Promise<boolean> {
-    const infoFolder = await this.getScriptRoot().getInfoFolderContents();
+  public async isInDraftInfo(): Promise<boolean> {
+    const infoFolder = await this.getScriptRoot().getDraftInfoFolderContents();
     return infoFolder.some(file => file.fsPath === this.uri().fsPath);
   }
 
@@ -318,8 +318,8 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Checks if the script node is in the objects folder.
    * @lastreviewed 2025-09-15
    */
-  public async isInObjects(): Promise<boolean> {
-    const objectsFolder = await this.getScriptRoot().getObjectsFolderContents();
+  public async isInDraftObjects(): Promise<boolean> {
+    const objectsFolder = await this.getScriptRoot().getDraftObjectsFolderContents();
     return objectsFolder.some(file => file.fsPath === this.uri().fsPath);
   }
 
@@ -327,8 +327,8 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Checks if the script node is in the info or objects folder.
    * @lastreviewed 2025-09-15
    */
-  public async isInInfoOrObjects(): Promise<boolean> {
-    return await this.isInInfo() || await this.isInObjects();
+  public async isInDraftInfoOrObjects(): Promise<boolean> {
+    return await this.isInDraftInfo() || await this.isInDraftObjects();
   }
 
   /**
@@ -344,7 +344,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @lastreviewed 2025-09-15
    */
   public async isInInfoFolder(): Promise<boolean> {
-    const infoFolder = await this.getScriptRoot().getInfoFolderContents();
+    const infoFolder = await this.getScriptRoot().getDraftInfoFolderContents();
     return infoFolder.some(file => file.fsPath === this.uri().fsPath);
   }
 
