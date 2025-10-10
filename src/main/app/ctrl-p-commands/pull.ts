@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { App } from '../App';
 import { Util } from '../util/';
 import { ScriptUrlParser } from "../util/data/ScriptUrlParser";
-import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
@@ -40,7 +39,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
 
     const directory = ScriptFactory.createFolder(
       vscode.Uri.joinPath(
-        getActiveFolderUri(),
+        Util.getActiveWorkspaceFolderUri(),
         await scriptUrlParser.getU(),          //NOTE this will have already been cached
         await scriptUrlParser.getScriptName(), //NOTE this will have already been cached
         "/"
@@ -114,7 +113,7 @@ async function getStartingParser(overrideFormulaUrl?: string) {
 }
 
 async function createOrUpdateIndividualNode(downstairsRest: string, parser: ScriptUrlParser): Promise<vscode.Uri> {
-  const activePath = getActiveFolderUri();
+  const activePath = Util.getActiveWorkspaceFolderUri();
   const U = await parser.getU();
   const ultimatePath = vscode.Uri.joinPath(activePath, U, downstairsRest);
 
@@ -145,12 +144,3 @@ async function createOrUpdateIndividualNode(downstairsRest: string, parser: Scri
   return ultimatePath;
 }
 
-function getActiveFolderUri() {
-  const activeFolder = vscode.workspace.workspaceFolders?.[0];
-  if (!activeFolder) {
-    vscode.window.showErrorMessage('No active file found');
-    throw new Err.NoActiveFileError();
-  }
-  const curPath = activeFolder.uri;
-  return curPath;
-}

@@ -273,6 +273,15 @@ export namespace Util {
     }
     return result;
   }
+  export function getActiveWorkspaceFolderUri() {
+    const activeFolder = vscode.workspace.workspaceFolders?.[0];
+    if (!activeFolder) {
+      vscode.window.showErrorMessage('No active file found');
+      throw new Err.NoActiveFileError();
+    }
+    const curPath = activeFolder.uri;
+    return curPath;
+  }
 
 }
 
