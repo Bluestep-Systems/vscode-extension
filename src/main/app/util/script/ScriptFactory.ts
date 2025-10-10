@@ -5,7 +5,6 @@ import type { ScriptNode } from "./ScriptNode";
 import * as vscode from "vscode";
 import { ScriptRoot } from "./ScriptRoot";
 import { TsConfig } from "./TsConfig";
-console.log("ScriptFactory loaded");
 
 /**
  * Factory namespace for creating ScriptNode instances (files and folders).

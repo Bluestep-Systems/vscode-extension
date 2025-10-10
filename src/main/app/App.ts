@@ -136,7 +136,7 @@ export const App = new class extends ContextNode {
     // Register the settings change listener
     vscode.workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration(App.appKey)) {
-        console.log("Configuration changed, updating settings map");
+        this.isDebugMode() && console.log("Configuration changed, updating settings map");
         this.settings.sync();
       }
       

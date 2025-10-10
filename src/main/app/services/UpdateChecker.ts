@@ -39,7 +39,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     this._state = new PrivateTypedPersistable<ClientInfo>({ key: PrivateKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null } });
     setTimeout(async () => {
       try {
-        console.log("B6P: Starting automatic update check...");
+        this.parent.logger.info("B6P: Starting automatic update check...");
         await this.checkForUpdatesIfNeeded();
       } catch (error) {
         this.parent.logger.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));

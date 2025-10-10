@@ -53,9 +53,7 @@ export enum ResponseCodes {
    * 
    * Evolved into a semantically useful status code for "you're barking up the wrong tree" scenarios:
    * - Request is fundamentally misguided or meaningless in the current context
-   * - Client is making assumptions about server capabilities that are incorrect
    * - Request type/method is conceptually inappropriate for the resource
-   * - Server wants to indicate "this request doesn't make sense here" beyond standard 4xx codes
    * 
    * As of 2024, used by some systems to indicate that a request was rejected for being 
    * a nonstandard method, or for other reasons that don't fit into the usual 4xx categories.
