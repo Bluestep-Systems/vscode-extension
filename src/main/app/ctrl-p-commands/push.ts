@@ -5,8 +5,6 @@ import { App } from '../App';
 import { SESSION_MANAGER as SM } from '../b6p_session/SessionManager';
 import { Util } from '../util';
 import { DownstairsUriParser } from '../util/data/DownstairsUrIParser';
-import { flattenDirectory } from '../util/data/flattenDirectory';
-import { getScript } from '../util/data/getScript';
 import { ScriptUrlParser } from '../util/data/ScriptUrlParser';
 import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
@@ -84,13 +82,13 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
   /**
    * this will give us a list of that are currently present upstairs
    */
-  const getScriptRet = await getScript(upstairsObj);
+  const getScriptRet = await upstairsObj.getScript();
   if (!getScriptRet) {
     throw new Err.CleanupScriptError();
   }
   const rawFilePaths = getScriptRet;
   const directory = ScriptFactory.createFolder(downstairsRootFolderUri);
-  const flattenedDownstairs = await flattenDirectory(directory);
+  const flattenedDownstairs = await Util.flattenDirectory(directory);
   // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
   // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
   // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for

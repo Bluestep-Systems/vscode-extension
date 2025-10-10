@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { App } from '../App';
-import { flattenDirectory } from '../util/data/flattenDirectory';
-import { getScript } from "../util/data/getScript";
+import { Util } from '../util/';
 import { ScriptUrlParser } from "../util/data/ScriptUrlParser";
 import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
@@ -19,7 +18,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     if (scriptUrlParser === null) {
       return;
     }
-    const fetchedScriptObject = await getScript(scriptUrlParser);
+    const fetchedScriptObject = await scriptUrlParser.getScript();
     if (fetchedScriptObject === null) {
       return;
     }
@@ -47,7 +46,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
         "/"
       )
     );
-    const flattenedDirectory = await flattenDirectory(directory);
+    const flattenedDirectory = await Util.flattenDirectory(directory);
     await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
     Alert.popup('Pull complete!');

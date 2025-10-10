@@ -1,6 +1,6 @@
 import path from 'path';
 import * as vscode from 'vscode';
-import { flattenDirectory } from '../data/flattenDirectory';
+import { Util } from '../';
 import { Err } from '../Err';
 import { ResponseCodes } from '../network/StatusCodes';
 import { ScriptPathElement } from './PathElement';
@@ -120,7 +120,7 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed 2025-09-29
    */
   public async flattenRaw(): Promise<vscode.Uri[]> {
-    return flattenDirectory(this);
+    return Util.flattenDirectory(this);
   }
 
   /**
