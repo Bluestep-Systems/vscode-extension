@@ -1,9 +1,6 @@
-import { Util } from '../util';
-import { ScriptFactory } from '../util/script/ScriptFactory';
-
+import * as vscode from 'vscode';
+import { App } from '../App';
 export default async function () {
-  const activeUri = await Util.getDownstairsFileUri();
-  const root = ScriptFactory.createScriptRoot(() => activeUri);
-
-  await root.compileDraftFolder();
+  
+  vscode.commands.executeCommand('workbench.action.openSettings', App.appKey);
 }

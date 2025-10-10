@@ -163,14 +163,6 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Run Script](command:bsjs-push-pull.runTask)"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Quick Deploy](command:bsjs-push-pull.quickDeploy)"
-      },
-      {
-        "view": "b6pMenuView",
         "contents": "--- Primary Tasks ---"
       },
       {
@@ -191,7 +183,19 @@
       },
       {
         "view": "b6pMenuView",
+        "contents": "[Change Settings](command:bsjs-push-pull.openSettings)"
+      },
+      {
+        "view": "b6pMenuView",
         "contents": "---- Advanced ----"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Quick Deploy](command:bsjs-push-pull.quickDeploy)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Run Custom Script](command:bsjs-push-pull.runTask)"
       },
       {
         "view": "b6pMenuView",
@@ -219,11 +223,6 @@
       {
         "view": "b6pMenuView",
         "contents": "[Trigger BlueSync Task](command:bsjs-push-pull.notify)",
-        "when": "bsjs-push-pull.debugMode.enabled"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Extension Preferences](command:bsjs-push-pull.notify)",
         "when": "bsjs-push-pull.debugMode.enabled"
       }
     ]

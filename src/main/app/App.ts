@@ -60,9 +60,12 @@ export const App = new class extends ContextNode {
       })],
       ['bsjs-push-pull.toggleDebug', vscode.commands.registerCommand('bsjs-push-pull.toggleDebug', async () => {
         App.toggleDebugMode();
+      })],
+      ['bsjs-push-pull.openSettings', vscode.commands.registerCommand('bsjs-push-pull.openSettings', async () => {
+        vscode.commands.executeCommand('workbench.action.openSettings', App.appKey);
       })]
     ]);
-    constructor() { }
+    constructor() {}
     forEach(callback: (disposable: vscode.Disposable, key: string, map: this) => void) {
       this.#map.forEach((disposable, key) => callback(disposable, key, this));
     }
@@ -139,7 +142,7 @@ export const App = new class extends ContextNode {
         this.isDebugMode() && console.log("Configuration changed, updating settings map");
         this.settings.sync();
       }
-      
+
     });
     this.settings.sync();
     readOnlyCheck(); // run it once on startup
@@ -155,7 +158,7 @@ export const App = new class extends ContextNode {
     this.settings.clear();
     !alreadyAlerted && Alert.info("Cleared all Settings");
     this.settings.set('debugMode', SettingsWrapper.DEFAULT.debugMode);
-    
+
   }
 
   public isDebugMode() {
