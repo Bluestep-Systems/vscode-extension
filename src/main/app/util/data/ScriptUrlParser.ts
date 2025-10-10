@@ -1,6 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
 import { MetaDataDotJsonContent, XMLResponse } from "../../../../../types";
-import { ApiEndpoints, FolderNames, Http, SpecialFiles, WebDAVElements } from "../../../resources/constants";
+import { ApiEndpoints, Http, SpecialFiles, WebDAVElements } from "../../../resources/constants";
 import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
 import { Err } from "../Err";
 import { Alert } from "../ui/Alert";
@@ -177,13 +177,9 @@ async getSubScript(url: URL, scriptName: string, repository: RawFiles = []): Pro
     const firstLayer: RawFiles = await Promise.all(dResponses
       .map(terminal => new ScriptUrlParser(terminal[WebDAVElements.HREF]))
       .filter(parser => {
-        let { trailing, trailingFolder } = parser;
+        let { trailing } = parser;
         // this is the folder itself, not a file or subfolder so it is meaningless to us
         if (trailing === undefined) {
-          return false;
-        }
-        // don't pull snapshot elements
-        if (trailingFolder === FolderNames.SNAPSHOT) {
           return false;
         }
         return true;

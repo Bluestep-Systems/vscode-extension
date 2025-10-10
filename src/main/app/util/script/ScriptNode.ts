@@ -516,7 +516,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async copyDraftFileToBuild() {
     if (await this.isInItsRespectiveBuildFolder()) {
-      throw new Err.BuildFolderOperationError("copy");
+      throw new Err.BuildFolderOperationError("copy", this.path());
     }
     if (!(await this.isCopacetic())) {
       throw new Err.ScriptNotCopaceticError();
@@ -559,7 +559,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async copyTo(uri: vscode.Uri): Promise<void> {
     if (await this.isInItsRespectiveBuildFolder()) {
-      throw new Err.BuildFolderOperationError("copy");
+      throw new Err.BuildFolderOperationError("copy", this.path());
     }
     if (!(await this.isCopacetic())) {
       throw new Err.ScriptNotCopaceticError();
@@ -574,7 +574,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async delete(): Promise<void> {
     if (await this.isCopacetic()) {
-      await fs().delete(this, { useTrash: true, recursive: true });
+      await fs().delete(this, { recursive: true });
     } else {
       throw new Err.ScriptNotCopaceticError();
     }

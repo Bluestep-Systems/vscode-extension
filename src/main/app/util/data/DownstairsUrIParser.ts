@@ -95,7 +95,11 @@ export class DownstairsUriParser {
    * @returns `true` if the parser is for a declarations or draft file, `false` otherwise.
    */
   public isDeclarationsOrDraft(): boolean {
-    return this.type === "declarations" || this.type === "draft";
+    return ["draft", "declarations"].includes(this.type);
+  }
+
+  public isInDefinedFolders(): boolean {
+    return ["draft", "declarations", "snapshot"].includes(this.type);
   }
 
   /**

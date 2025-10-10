@@ -451,8 +451,8 @@ export namespace Err {
    * Error thrown when trying to operate on build folder files.
    */
   export class BuildFolderOperationError extends ScriptOperationError {
-    constructor(operation: string) {
-      super(`Cannot ${operation} a file that is already in a build folder`);
+    constructor(operation: string, filename: string) {
+      super(`Cannot ${operation} a file (${filename}) that is already in a build folder`);
       this.name = "BuildFolderOperationError";
     }
   }

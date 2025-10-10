@@ -64,8 +64,8 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
   // find all existing paths that are not in the valid paths list
   const toDelete: vscode.Uri[] = [];
   for (const ep of existingPaths) {
-    //ignore special files
-    if (await ScriptFactory.createNode(ep).isInGitIgnore()) {
+    const node = ScriptFactory.createNode(ep);
+    if (await node.isInGitIgnore()) {
       continue;
     }
     if ([ScriptRoot.METADATA_FILENAME, ScriptRoot.GITIGNORE_FILENAME].some(special => ep.fsPath.endsWith(special))) {

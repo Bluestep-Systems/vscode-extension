@@ -247,7 +247,7 @@ export class ScriptFile extends ScriptNode {
         throw new Err.MetadataFileOperationError("convert to upstairs URL");
       }
       newUrl.pathname = upstairsBaseUrl.pathname + fileName;
-    } else if (this.parser.isDeclarationsOrDraft()) {
+    } else if (this.parser.isInDefinedFolders()) {
       newUrl.pathname = upstairsBaseUrl.pathname + this.parser.type + "/" + this.parser.rest;
     } else {
       throw new Err.InvalidFileTypeForUrlError(this.parser.type);

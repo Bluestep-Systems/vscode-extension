@@ -18,7 +18,7 @@ import { ScriptRoot } from '../util/script/ScriptRoot';
  * @param sourceOps The options for oveerriding the source location
  * @returns A promise that resolves when the push is complete.
  */
-export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot, scriptRoot }: { overrideFormulaUrl?: string, sourceOps?: SourceOps, skipMessage?: boolean, isSnapshot?: boolean, scriptRoot?: ScriptRoot }): Promise<void> {
+export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot, scriptRoot }: { overrideFormulaUrl?: string, sourceOps?: SourceOps, skipMessage?: boolean, isSnapshot?: boolean, scriptRoot?: ScriptRoot; }): Promise<void> {
   try {
     let sr: ScriptRoot;
     const targetFormulaOverride = overrideFormulaUrl || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
@@ -106,12 +106,11 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
-      }
-      if (!isSnapshot && await sf.isInItsRespectiveBuildFolder()) {
-        App.logger.info(`File is in build folder; skipping deletion: ${rawFilePath.upstairsPath}`);
-        continue;
-      } else if (isSnapshot && await sf.isInInfoOrObjects()) {
+      } else if (await sf.isInInfoOrObjects()) {
         App.logger.info(`File is in Info or Objects folder; skipping deletion: ${rawFilePath.upstairsPath}`);
+        continue;
+      } else if (!isSnapshot && await sf.isInItsRespectiveBuildFolder()) {
+        App.logger.info(`File is in build folder; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
       }
       // If there's no matching downstairs path, we need to delete the upstairs path
@@ -132,7 +131,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     
     ${Array.from(pathsToDelete).join('\n')}
     
-    Do you want to proceed?`, 
+    Do you want to proceed?`,
     [YES_OPTION, NO_OPTION]
   );
 

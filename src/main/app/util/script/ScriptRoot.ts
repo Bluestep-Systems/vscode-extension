@@ -467,9 +467,13 @@ export class ScriptRoot {
     const draftFiles = await draftFolder.flatten();
     const snapshotFolder = this.getSnapshotFolder();
     snapshotFolder.delete();
-    draftFiles.forEach((file) => {
+    for (const file of draftFiles) {
+      if (await file.isInItsRespectiveBuildFolder()) {
+        continue;
+      }
       file.copyToSnapshot();
-    });
+    }
+    
     await pushCurrent({ isSnapshot: true, sr: this });
   }
 

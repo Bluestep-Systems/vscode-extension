@@ -269,7 +269,11 @@ export class VSCodeFileSystem implements FileSystemProvider {
     return vscode.workspace.fs.rename(source, target, { overwrite: options?.overwrite ?? false });
   }
   async copy(source: vscode.Uri, target: vscode.Uri, options?: { overwrite?: boolean }): Promise<void> {
-    return vscode.workspace.fs.copy(source, target, { overwrite: options?.overwrite ?? false });
+    try {
+      return vscode.workspace.fs.copy(source, target, { overwrite: options?.overwrite ?? false });
+    } catch (e) {
+      throw new Err.FileSystemError(e instanceof Error ? e.message : String(e));  
+    }
   }
   isWritableFileSystem(scheme: string): boolean | undefined {
     return vscode.workspace.fs.isWritableFileSystem(scheme);
