@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Alert } from '../ui/Alert';
 import { MetaDataDotJsonContent } from '../../../../../types';
-import { readFileText } from './readFile';
+import { Util } from '../';
 import { Err } from '../Err';
 
 /**
@@ -55,7 +55,7 @@ export class IdUtility {
    * @returns
    */
   private async isContainedInThisMetadataJsonFile(uri: vscode.Uri): Promise<boolean> {
-    const textContent = await readFileText(uri);
+    const textContent = await Util.readFileText(uri);
     const metadata = JSON.parse(textContent) as MetaDataDotJsonContent;
     if (!metadata.altIds) {
       throw new Err.MetadataFormatError("altIds");

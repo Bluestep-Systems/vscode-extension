@@ -8,7 +8,7 @@ export default async function (): Promise<void> {
     if (workspaceUri === undefined) {
       vscode.window.showErrorMessage('No source path provided');
       return;
-    }
+    } 
     const fileMetaData = ScriptFactory.createFile(activeEditorUri);
     await pullScript(await fileMetaData.getScriptRoot().toScriptBaseUpstairsString());
   } catch (e) {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { App } from "../App";
-import { getActiveEditorUri } from "../util/data/getActiveEditorUri";
+import { Util } from "../util";
 import { ScriptFile } from '../util/script/ScriptFile';
 import { ScriptRoot } from "../util/script/ScriptRoot";
 import { ScriptFactory } from '../util/script/ScriptFactory';
@@ -10,7 +10,7 @@ export default async function () {
     if (App.isDebugMode()) {
      return; // in debug mode, don't enforce read-only
     }
-    const activeEditorUri = getActiveEditorUri({ quiet: true });
+    const activeEditorUri = Util.getActiveEditorUri({ quiet: true });
     if (!activeEditorUri) {
       return; // if there's no active editor, just return. not our problem
     }

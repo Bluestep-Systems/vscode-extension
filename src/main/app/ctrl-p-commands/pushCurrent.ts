@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { App } from '../App';
-import { getActiveEditorUri } from '../util/data/getActiveEditorUri';
-import { getDirtyDocs } from '../util/data/getDirtyDocs';
+import { Util } from '../util';
 import { ScriptFactory } from '../util/script/ScriptFactory';
 import { Alert } from '../util/ui/Alert';
 import pushScript from './push';
@@ -20,13 +19,13 @@ export default async function (args? : {isSnapshot: boolean, sr: ScriptRoot}): P
     if (args?.sr) {
       actual_sr = args.sr;
     } else {
-      const activeEditorUri = getActiveEditorUri();
+      const activeEditorUri = Util.getActiveEditorUri();
       if (activeEditorUri === undefined) {
         return;
       }
       actual_sr = ScriptFactory.createScriptRoot(activeEditorUri);
     }
-    const dirtyDocs = await getDirtyDocs(actual_sr.getRootUri());
+    const dirtyDocs = await Util.getDirtyDocs(actual_sr.getRootUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
       const CANCEL = 'Cancel';

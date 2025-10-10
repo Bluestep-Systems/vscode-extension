@@ -465,6 +465,8 @@ export class ScriptRoot {
     await this.compileDraftFolder();
     const draftFolder = this.getDraftFolder();
     const draftFiles = await draftFolder.flatten();
+    const snapshotFolder = this.getSnapshotFolder();
+    snapshotFolder.delete();
     draftFiles.forEach((file) => {
       file.copyToSnapshot();
     });
@@ -615,7 +617,7 @@ export class ScriptRoot {
     const badFiles: string[] = [];
     for (const tsConfig of await tsConfigFiles) {
       if (!(await tsConfig.isCopacetic())) {
-        badFiles.push(`${tsConfig.path()}`);
+        badFiles.push(tsConfig.path());
       }
     }
     return badFiles;

@@ -5,7 +5,7 @@ import { FolderNames, Http, SpecialFiles } from '../../../resources/constants';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
-import { readFileText } from '../data/readFile';
+import { Util } from '../';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
@@ -272,7 +272,7 @@ export abstract class ScriptNode implements ScriptPathElement {
       throw new Err.ConfigFileError(fileName, files ? files.length : 0);
     }
     const configFileUri = files[0];
-    const configFileContent = await readFileText(configFileUri);
+    const configFileContent = await Util.readFileText(configFileUri);
     const config = JSON.parse(configFileContent) as T;
     return config;
   }

@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import * as path from 'path';
-import { readFileText } from "../data/readFile";
+import { Util } from "../";
 import { Err } from "../Err";
 import { FileSystem } from "../fs/FileSystem";
 import { ScriptPathElement } from "./PathElement";
@@ -107,7 +107,7 @@ export class TsConfig implements ScriptPathElement {
    * @lastreviewed 2025-10-01
    */
   public async getBuildFolder() {
-    const fileContents = await readFileText(this.uri());
+    const fileContents = await Util.readFileText(this.uri());
     const config = JSON.parse(fileContents);
     const outDir = config.compilerOptions?.outDir || (() => { throw new Err.MissingConfigurationError("outDir"); })();
     return ScriptFactory.createFolder(vscode.Uri.joinPath(this.folder().uri(), outDir), this.sf.getScriptRoot());

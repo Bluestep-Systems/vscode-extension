@@ -11,7 +11,7 @@ const fs = FileSystem.getInstance;
  * Utility functions and types.
  */
 export namespace Util {
-  export function printLine(ops?: { ret?: boolean }) {
+  export function printLine(ops?: { ret?: boolean; }) {
     const stack = new Error().stack || (() => { throw new Err.NoStackTraceError(); })();
     let FULL_LINE = stack.split('\n')[2]!.trim(); // 0:Error, 1:this function, 2:
 
@@ -77,7 +77,7 @@ export namespace Util {
     return false;
   };
 
-  export function isNonPrimitiveSavable(object: Serializable): object is { [key: string]: Serializable } {
+  export function isNonPrimitiveSavable(object: Serializable): object is { [key: string]: Serializable; } {
     // lack of strict equality check is intentional
     /* eslint-disable eqeqeq */
     return object != null && typeof object === "object" && !Array.isArray(object);
@@ -119,7 +119,7 @@ export namespace Util {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  export function rethrow<U,V>(fn: (arg: U) => V, arg: U): V {
+  export function rethrow<U, V>(fn: (arg: U) => V, arg: U): V {
     try {
       return fn(arg);
     } catch (e) {
@@ -141,7 +141,7 @@ export namespace Util {
     let found = false;
     const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
     const wsDir = await fs().readDirectory(ScriptFactory.createFolder(curWorkspaceFolder.uri));
-  
+
     const folderUri = wsDir.reduce(
       (curValue, [subFolderName, _fileType]) => {
         const subFolderPath = path.join(curWorkspaceFolder.uri.fsPath, subFolderName);
@@ -160,12 +160,103 @@ export namespace Util {
       throw new Err.NoFolderFoundError("source origin");
     }
     const id = new IdUtility(topId);
-  
+
     const ret = await id.findFileContaining(folderUri);
     if (!ret) {
       throw new Err.NoMatchingFileFoundError();
     }
     return ret;
   }
+
+  /**
+ * Gets the URI of the active editor; performing basic checks to ensure it is valid.
+ * @returns The URI of the active editor, or undefined if not available. NOTE: it
+ * will also inform the user via vscode notifications if there is an issue.
+ */
+  export function getActiveEditorUri({ quiet = false }: { quiet?: boolean; } = {}): vscode.Uri | undefined {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      if (!quiet) {
+        vscode.window.showErrorMessage('No workspace folder is open.');
+      }
+      return void 0;
+    }
+    const activeEditor = getActiveEditor();
+    if (!activeEditor) {
+      if (!quiet) {
+        vscode.window.showErrorMessage('No active text editor found.');
+      }
+      return void 0;
+    }
+    const workspaceUri = workspaceFolders[0].uri;
+    const activeEditorUri = activeEditor.document.uri;
+    if (!activeEditorUri.path.startsWith(workspaceUri.path)) {
+      if (!quiet) {
+        vscode.window.showWarningMessage('Active file is not in the current workspace');
+      }
+      return void 0;
+    }
+    return activeEditorUri;
+  }
+
+  /**
+   * Gets the active text editor, throwing an error if none is found.
+   * @returns The active text editor.
+   * @throws an {@link Err.NoActiveEditorError} if there is no active text editor.
+   */
+  export function getActiveEditor(): vscode.TextEditor {
+    const activeEditor = vscode.window.activeTextEditor;
+    if (!activeEditor) {
+      throw new Err.NoActiveEditorError();
+    }
+    return activeEditor;
+  }
+
+  /**
+ * Reads the text content of a file.
+ * @param uri The URI of the file to read.
+ * @returns The text content of the file.
+ */
+  export async function readFileText(uri: vscode.Uri) {
+    const fileData = await readFileRaw(uri);
+    const textContent = Buffer.from(fileData).toString('utf8');
+    return textContent;
+  }
+
+  /**
+   * Reads the raw binary content of a file.
+   * @param uri The URI of the file to read.
+   * @returns The raw binary content of the file.
+   */
+  export async function readFileRaw(uri: vscode.Uri) {
+    const fileData = await fs().readFile(uri);
+    return fileData;
+  }
+
+  /**
+ * Recursively retrieves all dirty documents within a given directory.
+ * @param directoryUri The URI of the directory to search.
+ * @returns An array of dirty text documents within the directory.
+ */
+  export async function getDirtyDocs(directoryUri: vscode.Uri): Promise<vscode.TextDocument[]> {
+    const activeEditorDocuments = vscode.window.visibleTextEditors.map(editor => editor.document);
+    const dirtyDocs: vscode.TextDocument[] = [];
+    const directory = await vscode.workspace.fs.readDirectory(directoryUri);
+    for (const [name, type] of directory) {
+      if (type === vscode.FileType.Directory) {
+        const subDir = vscode.Uri.joinPath(directoryUri, name);
+        dirtyDocs.push(...await getDirtyDocs(subDir));
+      } else if (type === vscode.FileType.File) {
+        const fileUri = vscode.Uri.joinPath(directoryUri, name);
+        const dirtyDoc = activeEditorDocuments.find(doc => doc.uri.toString() === fileUri.toString() && doc.isDirty);
+        if (dirtyDoc) {
+          dirtyDocs.push(dirtyDoc);
+        }
+      }
+    }
+    return dirtyDocs;
+  }
+
+
 }
 
