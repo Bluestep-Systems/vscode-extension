@@ -303,13 +303,6 @@ export class ScriptFile extends ScriptNode {
     return path.extname(this.name()).toLowerCase() !== FileExtensions.TYPESCRIPT;
   }
 
-  /**
-   * Copies the file to the snapshot location.
-   * @lastreviewed 2025-10-10
-   */
-  public copyToSnapshot() {
-    console.log("copying file over", this.uri().fsPath);
-  }
   public get extension() {
     return path.extname(this.name()).toLowerCase();
   }

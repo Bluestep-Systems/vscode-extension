@@ -521,6 +521,18 @@ export abstract class ScriptNode implements ScriptPathElement {
     await this.copyTo(buildUri);
   }
 
+  public async copyToSnapshot() {
+    if (this.isInSnapshot()) {
+      throw new Err.SnapshotOperationError("copy to snapshot");
+    }
+    const snapshotUri = vscode.Uri.joinPath(
+      this.getScriptRoot().getRootUri(),
+      FolderNames.SNAPSHOT,
+      this.pathWithRespectToDraftRoot()
+    );
+    await this.copyTo(snapshotUri);
+  }
+
   /**
    * Gets the contents of the current node as a byte array.
    */

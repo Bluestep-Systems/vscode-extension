@@ -458,6 +458,16 @@ export namespace Err {
   }
 
   /**
+ * Error thrown when trying to operate on snapshot files.
+ */
+  export class SnapshotOperationError extends ScriptOperationError {
+    constructor(operation: string) {
+      super(`Cannot ${operation} a file that is already in a build folder`);
+      this.name = "SnapshotOperationError";
+    }
+  }
+
+  /**
    * Error thrown when provided URI doesn't point to expected resource type.
    */
   export class InvalidResourceTypeError extends ScriptOperationError {
