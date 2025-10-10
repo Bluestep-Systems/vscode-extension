@@ -489,16 +489,6 @@ export abstract class ScriptNode implements ScriptPathElement {
     return !(await this.isFolder());
   }
 
-  /**
-   * Converts the current node to a Folder instance if can be represented by one
-   */
-  public async toFolder(): Promise<ScriptFolder> {
-    if (await this.isFolder()) {
-      return ScriptFactory.createFolder(() => this.uri());
-    } else {
-      throw new Err.InvalidResourceTypeError("folder");
-    }
-  }
 
   /**
    * Copies the current draft file to its respective build folder.

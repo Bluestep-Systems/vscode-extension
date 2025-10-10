@@ -1313,36 +1313,6 @@ suite('ScriptNode Tests', () => {
       assert.strictEqual(isFile, false, 'Should not detect as file');
     });
 
-    test('should convert node to folder successfully', async () => {
-      const folderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/scripts');
-
-      // Set up directory with proper error for readFile
-      mockFileSystemProvider.setMockDirectory(folderUri);
-      const dirError = new vscode.FileSystemError('File is a directory');
-      (dirError as any).code = 'FileIsADirectory';
-      mockFileSystemProvider.setMockError(folderUri, dirError);
-
-      const scriptNode = ScriptFactory.createNode(folderUri);
-      const scriptFolder = await scriptNode.toFolder();
-
-      assert.ok(scriptFolder instanceof ScriptFactory.createFolder(folderUri).constructor, 'Should return ScriptFolder instance');
-      assert.strictEqual(scriptFolder.path(), folderUri.fsPath, 'Paths should match');
-    });
-
-    test('should throw error when converting file to folder', async () => {
-      const fileUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft/test.js');
-      const fileContent = Buffer.from('test content');
-
-      mockFileSystemProvider.setMockFile(fileUri, fileContent);
-
-      const scriptNode = ScriptFactory.createNode(fileUri);
-
-      await assert.rejects(
-        async () => await scriptNode.toFolder(),
-        /InvalidResourceTypeError/,
-        'Should throw InvalidResourceTypeError'
-      );
-    });
   });
 
   suite('ScriptNode Stat and Read Operations', () => {
