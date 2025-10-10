@@ -1,10 +1,10 @@
-# BlueStep VS Code Extension Setup
+# BlueStep VS Code/Cursor Extension Setup
 
 Thank you for installing the BlueStep JavaScript Push/Pull extension!
 
-## Important: Configure File Watcher Exclusions
+## Configure File Watcher Exclusions
 
-To prevent VS Code from watching directories and hidden files created/managed by this extension, please add the following patterns to your workspace settings:
+To prevent VS Code/Cursor from watching directories and hidden files created/managed by this extension, please apply the following to your file settings. This is not strictly required, but it is highly recommended in order to avoid confusion and lessen performance issues.
 
 ### Recommended Settings
 

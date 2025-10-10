@@ -38,18 +38,19 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     const version = parent.getVersion();
     this._state = new PrivateTypedPersistable<ClientInfo>({ key: PrivateKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null, setupShown: false } });
 
-    // Check for version change and show setup guide if needed
-    this.showSetupGuide();
-    this.getVersionNotes(version);
+
 
     setTimeout(async () => {
       try {
         this.parent.logger.info("B6P: Starting automatic update check...");
+        // Check for version change and show setup guide if needed
+        this.showSetupGuide();
+        this.getVersionNotes(version);
         await this.checkForUpdatesIfNeeded();
       } catch (error) {
         this.parent.logger.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));
       }
-    }, 5_000);
+    }, 5_000); // Delay 5 seconds to allow other startup tasks to complete
     return this;
   }
 
@@ -115,7 +116,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     return this._parent;
   }
 
-  
+
   public get context(): vscode.ExtensionContext {
     if (!this._parent) {
       throw new Err.ManagerNotInitializedError("UpdateChecker");
@@ -346,11 +347,11 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     return `${GitHubUrls.BASE}/${this.REPO_OWNER}/${this.REPO_NAME}/releases/tag/${release.tag_name}`;
   }
 
-    /**
-   * Show update notification to user
-   * @param updateInfo Information about the available update
-   * @lastreviewed null
-   */
+  /**
+ * Show update notification to user
+ * @param updateInfo Information about the available update
+ * @lastreviewed null
+ */
   private async notifyUser(updateInfo: UpdateInfo): Promise<void> {
     const config = vscode.workspace.getConfiguration(this.parent.appKey);
     const showNotifications = config.get<boolean>('updateCheck.showNotifications', true);
