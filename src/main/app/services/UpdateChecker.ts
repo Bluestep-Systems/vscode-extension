@@ -36,7 +36,12 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   init(parent: typeof App): this {
     this._parent = parent;
     const version = parent.getVersion();
-    this._state = new PrivateTypedPersistable<ClientInfo>({ key: PrivateKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null } });
+    this._state = new PrivateTypedPersistable<ClientInfo>({ key: PrivateKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null, setupShown: false } });
+
+    // Check for version change and show setup guide if needed
+    this.showSetupGuide();
+    this.getVersionNotes(version);
+
     setTimeout(async () => {
       try {
         this.parent.logger.info("B6P: Starting automatic update check...");
@@ -48,7 +53,61 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     return this;
   }
 
-  
+  /**
+   * Checks if the extension version has changed (install or update) and shows setup guide
+   * @param currentVersion The current version of the extension
+   * @lastreviewed null
+   */
+  private getVersionNotes(currentVersion: string): void {
+    const storedVersion = this.state.get('version');
+
+    // Check if this is a fresh install or an update
+    if (storedVersion !== currentVersion) {
+      const isNewInstall = storedVersion === currentVersion; // Default value matches current means first run
+      const message = isNewInstall
+        ? 'Welcome to BlueStep JavaScript Push/Pull!'
+        : `BlueStep extension updated to v${currentVersion}`;
+
+      this.parent.logger.info(`B6P: Version change detected (${storedVersion} -> ${currentVersion})`);
+      //TODO implement release notes display
+      this.parent.logger.info(message);
+    }
+  }
+
+  /**
+   * Opens the SETUP.md file in the editor
+   * @param message Optional message to show in a notification
+   * @lastreviewed null
+   */
+  private async showSetupGuide(message?: string): Promise<void> {
+    try {
+      if (this.state.get('setupShown')) {
+        return; // Already shown
+      }
+      // Get the extension's installation path
+      const extensionPath = this.context.extensionUri;
+      const setupFilePath = vscode.Uri.joinPath(extensionPath, 'SETUP.md');
+
+      // Open the setup guide
+      const document = await vscode.workspace.openTextDocument(setupFilePath);
+      await vscode.window.showTextDocument(document, {
+        preview: false,
+        viewColumn: vscode.ViewColumn.One
+      });
+
+      // Show optional notification
+      if (message) {
+        vscode.window.showInformationMessage(message);
+      }
+      this.state.set('setupShown', true);
+      await this.state.store();
+    } catch (error) {
+      this.parent.logger.error(`B6P: Failed to open setup guide: ${error instanceof Error ? error.message : error}`);
+      // Don't throw - this is a nice-to-have feature
+    }
+  }
+
+
   public get parent(): typeof App {
     if (!this._parent) {
       throw new Err.ManagerNotInitializedError("UpdateChecker");

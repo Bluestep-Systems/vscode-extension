@@ -372,6 +372,7 @@ export type ClientInfo = {
   version: string;
   lastChecked: number;
   githubToken: string | null;
+  setupShown: boolean;
 }
 export type GithubRelease = {
   url: string;
