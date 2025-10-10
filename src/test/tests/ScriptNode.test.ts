@@ -1247,7 +1247,7 @@ suite('ScriptNode Tests', () => {
       const folderUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/draft');
       const folder = ScriptFactory.createFolder(folderUri);
 
-      const response = await folder.upload(null);
+      const response = await folder.upload();
 
       assert.strictEqual(response, undefined, 'Folder upload should return void/undefined');
     });

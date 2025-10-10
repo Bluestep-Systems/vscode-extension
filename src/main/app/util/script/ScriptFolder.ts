@@ -1,6 +1,7 @@
 import path from 'path';
 import * as vscode from 'vscode';
 import { Util } from '../';
+import { App } from '../../App';
 import { Err } from '../Err';
 import { ResponseCodes } from '../network/StatusCodes';
 import { ScriptPathElement } from './PathElement';
@@ -8,7 +9,6 @@ import { ScriptFactory } from './ScriptFactory';
 import type { ScriptFile } from './ScriptFile';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
-import { App } from '../../App';
 /**
  * Represents a folder in the script project structure.
  */
@@ -29,9 +29,13 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed 2025-10-01
    * @param _upstairsUrlOverrideString NOT USED
    */
-  public async upload(_upstairsUrlOverrideString: string | null): Promise<Response | void> {
+  public async upload(_arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean; }): Promise<Response | void> {
     App.logger.info(`ScriptFolder.upload() called on ${this.path()}; no action taken.`);
     return;
+  }
+
+  async getReasonToNotPush(_arg?: { upstairsOverride?: URL, isSnapshot?: boolean; }): Promise<string | null> {
+    return `Node (${this.path()}) is a folder`;
   }
 
   /**

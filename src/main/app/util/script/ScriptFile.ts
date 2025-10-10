@@ -264,7 +264,7 @@ export class ScriptFile extends ScriptNode {
    * @returns Empty string if the file can be pushed, otherwise a descriptive reason why not
    * @lastreviewed 2025-09-15
    */
-  public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string | null> {
+  public async getReasonToNotPush(ops?: { upstairsOverride?: URL, isSnapshot?: boolean }): Promise<string | null> {
 
     if (this.parser.type === "root") {
       return "Node is the root folder";
@@ -281,7 +281,7 @@ export class ScriptFile extends ScriptNode {
     if (await this.isInGitIgnore()) {
       return "Node is ignored by .gitignore";
     }
-    if (await this.isInDraftInfoOrObjects()) {
+    if (ops?.isSnapshot ? false : await this.isInDraftInfoOrObjects()) {
       return "Node is in info or objects";
     }
     if (await this.isFolder()) {
@@ -314,17 +314,19 @@ export class ScriptFile extends ScriptNode {
   public get extension() {
     return path.extname(this.name()).toLowerCase();
   }
-  async upload(upstairsUrlOverrideString: string | null = null): Promise<Response | void> {
+  async upload(arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean }): Promise<Response | void> {
     App.logger.info("Preparing to send file:", this.uri().fsPath);
-    App.logger.info("To target formula URI:", upstairsUrlOverrideString);
-    const upstairsOverride = new URL(upstairsUrlOverrideString || this.upstairsUrl().toString());
+    App.logger.info("To target formula URI:", arg?.upstairsUrlOverrideString);
+    const upstairsOverride = new URL(arg?.upstairsUrlOverrideString || this.upstairsUrl().toString());
     const thisUpstairs = await this.upstairsUrl();
     upstairsOverride.pathname = thisUpstairs.pathname;
-    if (!(await this.oldIntegrityMatches())) {
+    // we skip snapshots because when they go to be uploaded
+    // they will always have been freshly created.
+    if (!this.isInSnapshot() && !(await this.oldIntegrityMatches())) {
       const OVERWRITE = 'Overwrite';
       const CANCEL = 'Cancel';
       const overwrite = await Alert.prompt(
-        `The upstairs file (${this.name()}) has changed since the last time you pushed or pulled. Do you want to overwrite it?`,
+        `The upstairs file (${upstairsOverride}) has changed since the last time you pushed or pulled. Do you wish to overwrite it?`,
         [
           OVERWRITE,
           CANCEL
@@ -335,7 +337,7 @@ export class ScriptFile extends ScriptNode {
         throw new Err.UserCancelledError(`User ${overwrite ? overwrite + "ed" : "cancelled"} push due to upstairs file change`);
       }
     }
-    const reason = await this.getReasonToNotPush({ upstairsOverride });
+    const reason = await this.getReasonToNotPush({ upstairsOverride, isSnapshot: arg?.isSnapshot });
 
     if (reason) {
       App.logger.info(`${reason}; not pushing file:`, this.uri().fsPath);

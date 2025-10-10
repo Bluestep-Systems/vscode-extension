@@ -637,6 +637,11 @@ export class ScriptRoot {
     const pushableNodes: ScriptNode[] = [];
     for (const f of flattenedDraft) {
       const inBuildFolder = !snapshot && await f.isInItsRespectiveBuildFolder();
+      const reason = await f.getReasonToNotPush({ isSnapshot: snapshot });
+      if (reason) {
+        App.logger.info(`Excluding draft file from push: ${f.path()} (${reason})`);
+        continue;
+      }
       const fileName = f.path();
       if (!inBuildFolder) {
         pushableNodes.push(f);
@@ -648,6 +653,11 @@ export class ScriptRoot {
     if (snapshot) {
       const flattenedSnapshot = await this.getSnapshotFolder().flatten();
       for (const f of flattenedSnapshot) {
+        const reason = await f.getReasonToNotPush({ isSnapshot: snapshot });
+        if (reason) {
+          App.logger.info(`Excluding snapshot file from push: ${f.path()} (${reason})`);
+          continue;
+        }
         pushableNodes.push(f);
       }
     }

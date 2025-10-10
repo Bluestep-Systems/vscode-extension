@@ -476,7 +476,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @throws an {@link Err.UserCancelledError} When the user cancels the upload due to some issue that required user intervention
    * @lastreviewed 2025-10-01
    */
-  abstract upload(upstairsUrlOverrideString: string | null): Promise<Response | void>;
+  abstract upload(arg?: {upstairsUrlOverrideString?: string, isSnapshot?: boolean}): Promise<Response | void>;
 
   /**
    * Downloads the upstairs node and writes it to the local file system.
@@ -507,6 +507,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     return !(await this.isFolder());
   }
 
+  abstract getReasonToNotPush(arg?: { upstairsOverride?: URL, isSnapshot?: boolean }): Promise<string | null>;
 
   /**
    * Copies the current draft file to its respective build folder.

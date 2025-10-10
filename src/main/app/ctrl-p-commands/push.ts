@@ -47,7 +47,7 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
 
     // Create tasks for progress helper
     const pushTasks = snList.map(sn => ({
-      execute: () => sn.upload(targetFormulaOverride),
+      execute: () => sn.upload({ upstairsUrlOverrideString: targetFormulaOverride, isSnapshot }),
       description: `scripts`
     }));
 
@@ -59,7 +59,7 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
     await cleanupUnusedUpstairsPaths(sr.getRootUri(), targetFormulaOverride, isSnapshot);
 
     if (!skipMessage) {
-      Alert.popup('Push complete!');
+      Alert.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
     }
   } catch (e) {
     if (!(e instanceof Err.AlreadyAlertedError)) {
