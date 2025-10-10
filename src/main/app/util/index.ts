@@ -10,6 +10,8 @@ import type { ScriptFolder } from './script/ScriptFolder';
 const fs = FileSystem.getInstance;
 /**
  * Utility functions and types.
+ * 
+ * //TODO some of these may be redundant and can be consolidated
  */
 export namespace Util {
   export function printLine(ops?: { ret?: boolean; }) {
