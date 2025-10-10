@@ -6,22 +6,27 @@ import { ScriptFactory } from '../util/script/ScriptFactory';
 import { Alert } from '../util/ui/Alert';
 import pushScript from './push';
 import { Err } from '../util/Err';
+import type { ScriptRoot } from '../util/script/ScriptRoot';
 
 
 /**
  * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location.
  * @returns 
  */
-export default async function (isSnapshot: boolean = false): Promise<void> {
+export default async function (args? : {isSnapshot: boolean, sr: ScriptRoot}): Promise<void> {
 
   try {
-
-    const activeEditorUri = getActiveEditorUri();
-    if (activeEditorUri === undefined) {
-      return;
+    let actual_sr: ScriptRoot;
+    if (args?.sr) {
+      actual_sr = args.sr;
+    } else {
+      const activeEditorUri = getActiveEditorUri();
+      if (activeEditorUri === undefined) {
+        return;
+      }
+      actual_sr = ScriptFactory.createScriptRoot(activeEditorUri);
     }
-    const sf = ScriptFactory.createFile(activeEditorUri);
-    const dirtyDocs = await getDirtyDocs(sf.getScriptRoot().getRootUri());
+    const dirtyDocs = await getDirtyDocs(actual_sr.getRootUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
       const CANCEL = 'Cancel';
@@ -40,8 +45,8 @@ export default async function (isSnapshot: boolean = false): Promise<void> {
         return;
       }
     }
-    const overrideFormulaUrl = await sf.getScriptRoot().toScriptBaseUpstairsString();
-    await pushScript({ overrideFormulaUrl, isSnapshot });
+    const overrideFormulaUrl = await actual_sr.toScriptBaseUpstairsString();
+    await pushScript({ overrideFormulaUrl, isSnapshot: args?.isSnapshot });
   } catch(e) {
     if (e instanceof Err.AlreadyAlertedError) {
       return; // do nothing, already handled

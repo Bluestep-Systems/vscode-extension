@@ -164,7 +164,7 @@ export class ScriptRoot {
       let scriptName: string;
       let U: string;
       let webdavId: string;
-      
+
       if (this.scriptParser === null) {
         // the absence of a parser indicates that this is coming from a local file, thus these elements should exist
         const metaDataDotJson = await this.getAsFolder().getMetadataDotJson();
@@ -177,7 +177,7 @@ export class ScriptRoot {
         U = await this.scriptParser.getU() || (() => { throw new Err.FileReadError("Missing U and no parser available"); })();
         webdavId = this.scriptParser.webDavId || (() => { throw new Err.FileReadError("Missing webdavId and no parser available"); })();
       }
-      
+
       contentObj = {
         scriptName,
         U,
@@ -463,7 +463,12 @@ export class ScriptRoot {
    */
   public async snapshot() {
     await this.compileDraftFolder();
-    await pushCurrent(true);
+    const draftFolder = this.getDraftFolder();
+    const draftFiles = await draftFolder.flatten();
+    draftFiles.forEach((file) => {
+      file.copyToSnapshot();
+    });
+    await pushCurrent({ isSnapshot: true, sr: this });
   }
 
   /**
@@ -623,7 +628,7 @@ export class ScriptRoot {
    */
   public async getPushableDraftNodes(snapshot: boolean = false): Promise<ScriptNode[]> {
     const flattened = await this.getDraftFolder().flatten();
-    const filtered:ScriptNode[] = [];
+    const filtered: ScriptNode[] = [];
     for (const f of flattened) {
       const inBuildFolder = !snapshot && await f.isInItsRespectiveBuildFolder();
       const fileName = f.path();

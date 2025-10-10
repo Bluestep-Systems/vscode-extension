@@ -35,12 +35,12 @@ export namespace ScriptFactory {
    * ```
    * @lastreviewed 2025-10-01
    */
-  export function createNode(uriSupplier: (() => vscode.Uri) | vscode.Uri): ScriptNode {
+  export function createNode(uriSupplier: (() => vscode.Uri) | vscode.Uri, scriptRoot?: ScriptRoot): ScriptNode {
     const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
     if (uri.fsPath.endsWith('/')) {
-      return new ScriptFolder(uri);
+      return new ScriptFolder(uri, scriptRoot);
     } else {
-      return new ScriptFile(uri);
+      return new ScriptFile(uri, scriptRoot);
     }
   }
 
@@ -57,9 +57,9 @@ export namespace ScriptFactory {
    * ```
    * @lastreviewed 2025-10-01
    */
-  export function createFolder(uriSupplier: (() => vscode.Uri) | vscode.Uri): ScriptFolder {
+  export function createFolder(uriSupplier: (() => vscode.Uri) | vscode.Uri, scriptRoot?: ScriptRoot): ScriptFolder {
     const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
-    return new ScriptFolder(uri);
+    return new ScriptFolder(uri, scriptRoot);
   }
 
   /**
@@ -76,9 +76,9 @@ export namespace ScriptFactory {
    * ```
    * @lastreviewed 2025-10-01
    */
-  export function createFile(uriSupplier: (() => vscode.Uri) | vscode.Uri): ScriptFile {
+  export function createFile(uriSupplier: (() => vscode.Uri) | vscode.Uri, scriptRoot?: ScriptRoot): ScriptFile {
     const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
-    return new ScriptFile(uri);
+    return new ScriptFile(uri, scriptRoot);
   }
 
   /**

@@ -54,6 +54,11 @@ export abstract class ScriptNode implements ScriptPathElement {
   abstract upstairsUrl(): Promise<URL>;
 
   /**
+   * Creates a familial node with the given downstairs {@link vscode.Uri} after verifying that it indeed has a familial relation.
+   */
+  abstract createFamilial(downstairsUri: vscode.Uri): ScriptNode;
+
+  /**
    * Gets the downstairs (local) {@link vscode.Uri} for this file
    * @lastreviewed 2025-09-29
    */
@@ -301,7 +306,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Checks if the script file is in the info folder.
+   * Checks if the script node is in the info folder.
    * @lastreviewed 2025-09-15
    */
   public async isInInfo(): Promise<boolean> {
@@ -310,7 +315,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Checks if the script file is in the objects folder.
+   * Checks if the script node is in the objects folder.
    * @lastreviewed 2025-09-15
    */
   public async isInObjects(): Promise<boolean> {
@@ -319,7 +324,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Checks if the script file is in the info or objects folder.
+   * Checks if the script node is in the info or objects folder.
    * @lastreviewed 2025-09-15
    */
   public async isInInfoOrObjects(): Promise<boolean> {
@@ -327,7 +332,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Checks if the script file is in the draft folder.
+   * Checks if the script node is in the draft folder.
    * @lastreviewed 2025-09-15
    */
   public isInDraft(): boolean {
@@ -335,7 +340,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Determines if the script file is in the info folder.
+   * Determines if the script node is in the info folder.
    * @lastreviewed 2025-09-15
    */
   public async isInInfoFolder(): Promise<boolean> {
@@ -344,7 +349,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Checks if the script file is in a valid state.
+   * Checks if the script node is in a valid state.
    * Currently only checks if the node exists.
    * @lastreviewed 2025-09-15
    */
@@ -353,7 +358,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Determines if the file is listed in the .gitignore file.
+   * Determines if the node is listed in the .gitignore file.
    * @lastreviewed 2025-09-15
    */
   public async isInGitIgnore(): Promise<boolean> {
@@ -405,7 +410,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     if (!tsConfigUri) {
       throw new Err.ConfigFileError(TsConfig.NAME, 0);
     }
-    return ScriptFactory.createTsConfig(() => tsConfigUri);
+    return ScriptFactory.createTsConfig(tsConfigUri);
   }
 
   /**
@@ -445,6 +450,19 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public pathWithRespectToDraftRoot() {
     return path.relative(vscode.Uri.joinPath(this.getScriptRoot().getRootUri(), FolderNames.DRAFT).fsPath, this.uri().fsPath);
+  }
+
+  /**
+   * Gets the path of the current node relative to the closest tsconfig.json file
+   * @throws an {@link Err.ConfigFileError} When no tsconfig.json file is found
+   * @lastreviewed 2025-10-10
+   */
+  public async pathWithRespectToTsConfig() {
+    const closestTsConfigUri = await this.getClosestTsConfigUri();
+    if (!closestTsConfigUri) {
+      throw new Err.ConfigFileError(TsConfig.NAME, 0);
+    }
+    return path.relative(closestTsConfigUri.fsPath, this.uri().fsPath);
   }
 
   /**
@@ -503,14 +521,20 @@ export abstract class ScriptNode implements ScriptPathElement {
     if (!(await this.isCopacetic())) {
       throw new Err.ScriptNotCopaceticError();
     }
+    const tsConfig = await this.getClosestTsConfigFile();
     const buildUri = vscode.Uri.joinPath(
-      (await this.getClosestTsConfigFile()).folder().uri(),
-      (await this.getBuildFolder()).name(),
-      this.pathWithRespectToDraftRoot()
+      tsConfig.folder().uri(),
+      await tsConfig.relativePathToBuildFolder(),
+      await this.pathWithRespectToTsConfig()
     );
     await this.copyTo(buildUri);
   }
 
+  /**
+   * Copies the current draft file to the snapshot folder.
+   * @throws an {@link Err.SnapshotOperationError} When the current node is already in the snapshot folder
+   * @lastreviewed 2025-10-10
+   */
   public async copyToSnapshot() {
     if (this.isInSnapshot()) {
       throw new Err.SnapshotOperationError("copy to snapshot");

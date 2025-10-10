@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as path from 'path';
 import { readFileText } from "../data/readFile";
 import { Err } from "../Err";
 import { FileSystem } from "../fs/FileSystem";
@@ -45,7 +46,7 @@ export class TsConfig implements ScriptPathElement {
     if (!(other instanceof TsConfig)) {
       return false;
     }
-    return this.equals(other);
+    return this.sf.equals(other.sf);
   }
 
   /**
@@ -108,6 +109,12 @@ export class TsConfig implements ScriptPathElement {
     const fileContents = await readFileText(this.uri());
     const config = JSON.parse(fileContents);
     const outDir = config.compilerOptions?.outDir || (() => { throw new Err.MissingConfigurationError("outDir"); })();
-    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.folder().uri(), outDir));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.folder().uri(), outDir));
+  }
+
+  public async relativePathToBuildFolder(): Promise<string> {
+    const buildFolder = await this.getBuildFolder();
+    const relativePath = path.relative(this.uri().fsPath, buildFolder.uri().fsPath);
+    return relativePath;
   }
 }

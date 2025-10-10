@@ -12,6 +12,7 @@ import { Err } from '../util/Err';
 import { ScriptFactory } from '../util/script/ScriptFactory';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
+import { ScriptRoot } from '../util/script/ScriptRoot';
 
 /**
  * Pushes a script to a WebDAV location.
@@ -19,20 +20,26 @@ import { ProgressHelper } from '../util/ui/ProgressHelper';
  * @param sourceOps The options for oveerriding the source location
  * @returns A promise that resolves when the push is complete.
  */
-export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot }: { overrideFormulaUrl?: string, sourceOps?: SourceOps, skipMessage?: boolean, isSnapshot?: boolean }): Promise<void> {
+export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot, scriptRoot }: { overrideFormulaUrl?: string, sourceOps?: SourceOps, skipMessage?: boolean, isSnapshot?: boolean, scriptRoot?: ScriptRoot }): Promise<void> {
   try {
-    const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
-    if (sourceEditorUri === undefined) {
-      Alert.error('No source path provided');
-      return;
-    }
-    App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
+    let sr: ScriptRoot;
     const targetFormulaOverride = overrideFormulaUrl || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
     if (targetFormulaOverride === undefined) {
       Alert.error('No target formula URI provided');
       return;
     }
-    const sr = ScriptFactory.createScriptRoot(sourceEditorUri);
+    if (scriptRoot) {
+      sr = scriptRoot;
+    } else {
+      const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
+      if (sourceEditorUri === undefined) {
+        Alert.error('No source path provided');
+        return;
+      }
+      App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
+      sr = ScriptFactory.createScriptRoot(sourceEditorUri);
+    }
+
     const detectedIssues = await sr.preflightCheck();
     if (detectedIssues) {
       Alert.error(detectedIssues);

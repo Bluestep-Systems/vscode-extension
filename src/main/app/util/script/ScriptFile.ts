@@ -9,6 +9,7 @@ import { ResponseCodes } from "../network/StatusCodes";
 import { Alert } from '../ui/Alert';
 import { ScriptNode } from "./ScriptNode";
 import { TsConfig } from './TsConfig';
+import { Uri } from 'vscode';
 const fs = FileSystem.getInstance;
 
 /**
@@ -31,6 +32,13 @@ export class ScriptFile extends ScriptNode {
    * Regex for "weak" etags (SHA-512 hashes).
    */
   private static WeakEtagPattern = /^W\/"[a-f0-9]{128}"$/;
+
+  public createFamilial(downstairsUri: Uri): ScriptFile {
+    if (!this.scriptRoot.getAsFolder().contains(downstairsUri)) {
+      throw new Err.ScriptOperationError("The provided URI is not a proper sibling within the same script root.");
+    }
+    return new ScriptFile(downstairsUri, this.scriptRoot);
+  }
 
   /**
    * Gets the lowercased SHA-512 hash of the local file.

@@ -8,11 +8,18 @@ import { ScriptFactory } from './ScriptFactory';
 import type { ScriptFile } from './ScriptFile';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
+import { ScriptRoot } from './ScriptRoot';
 /**
  * Represents a folder in the script project structure.
  */
 export class ScriptFolder extends ScriptNode {
 
+  public createFamilial(downstairsUri: vscode.Uri): ScriptFolder {
+    if (!this.scriptRoot.getAsFolder().contains(downstairsUri)) {
+      throw new Err.ScriptOperationError("The provided URI is not a sibling within the same script root.");
+    }
+    return new ScriptFolder(downstairsUri, this.scriptRoot);
+  }
 
   /**
    * The upload method is not implemented for {@link ScriptFolder} since individual files
@@ -91,10 +98,12 @@ export class ScriptFolder extends ScriptNode {
   /**
    * Checks if this folder contains another PathElement by comparing their paths.
    * @param other The {@link ScriptPathElement} to check if it's contained within this folder
-   * @returns True if the other element's path is within this folder's path, false otherwise
    * @lastreviewed 2025-09-29
    */
-  public contains(other: ScriptPathElement): boolean {
+  public contains(other: ScriptPathElement | vscode.Uri): boolean {
+    if (other instanceof vscode.Uri) {
+      return other.fsPath.includes(this.path());
+    }
     return other.path().includes(this.path());
   }
 
@@ -103,7 +112,14 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed 2025-09-29
    */
   public async flatten(): Promise<ScriptNode[]> {
-    return (await this.flattenRaw()).map(ScriptFactory.createNode);
+    let sharedRoot: ScriptRoot | null = null;
+    const rawUris = await this.flattenRaw();
+    if (rawUris.length > 0) {
+      sharedRoot = ScriptFactory.createScriptRoot(rawUris[0]);
+    } else {
+      return [];
+    }
+    return rawUris.map(uri => ScriptFactory.createNode(uri, sharedRoot));
   }
 
   /**
