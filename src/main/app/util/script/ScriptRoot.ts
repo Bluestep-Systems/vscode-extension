@@ -324,7 +324,7 @@ export class ScriptRoot {
   }
 
   public getAsFolder(): ScriptFolder {
-    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.getRootUri(), "/"));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.getRootUri(), "/"), this);
   }
 
   /**
@@ -522,8 +522,8 @@ export class ScriptRoot {
         await file.copyDraftFileToBuild();
       }
     }
-    const emittedEntries = await compiler.compile();
-    const emittedScriptNodes = emittedEntries.map(e => ScriptFactory.createNode(() => vscode.Uri.file(e)));
+    const emittedEntries = await compiler.compile(this);
+    const emittedScriptNodes = emittedEntries.map(e => ScriptFactory.createNode(vscode.Uri.file(e), this));
 
     // now we need to delete any files in the build folder(s) that were not emitted by the compiler
     // or copied (like JSON files, js files, etc).
@@ -565,7 +565,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-01
    */
   public getDraftFolder() {
-    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "draft"));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, "draft"), this);
   }
 
   /**
@@ -581,7 +581,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-01
    */
   public getSnapshotFolder() {
-    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "snapshot"));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, "snapshot"), this);
   }
 
   /**
@@ -589,7 +589,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-01
    */
   public getDeclarationsFolder() {
-    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rootUri, "declarations"));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, "declarations"), this);
   }
 
   /**
@@ -600,7 +600,7 @@ export class ScriptRoot {
    */
   public async findTsConfigFiles(): Promise<TsConfig[]> {
     const tsConfigFiles = await vscode.workspace.findFiles(new vscode.RelativePattern(this.getDraftFolder().uri(), '**/' + TsConfig.NAME));
-    return tsConfigFiles.map(f => ScriptFactory.createTsConfig(() => f));
+    return tsConfigFiles.map(f => ScriptFactory.createTsConfig(f, this));
   }
 
   /**

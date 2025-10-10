@@ -384,7 +384,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public folder(): ScriptFolder {
     const fileUri = this.uri();
-    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(fileUri, '..'));
+    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(fileUri, '..'), this.scriptRoot);
   }
 
   /**

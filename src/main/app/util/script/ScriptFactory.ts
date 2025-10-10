@@ -124,8 +124,8 @@ export namespace ScriptFactory {
    * ```
    * @lastreviewed 2025-10-01
    */
-  export function createTsConfig(uriSupplier: (() => vscode.Uri) | vscode.Uri): TsConfig {
+  export function createTsConfig(uriSupplier: (() => vscode.Uri) | vscode.Uri, scriptRoot?: ScriptRoot): TsConfig {
     const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
-    return new TsConfig(uri);
+    return new TsConfig(uri, scriptRoot);
   }
 }

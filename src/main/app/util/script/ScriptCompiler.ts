@@ -5,6 +5,7 @@ import { Err } from "../Err";
 import { FileSystem } from "../fs/FileSystem";
 import { ScriptFactory } from "./ScriptFactory";
 import type { ScriptNode } from "./ScriptNode";
+import type { ScriptRoot } from "./ScriptRoot";
 const fs = FileSystem.getInstance;
 
 /**
@@ -121,15 +122,21 @@ export class ScriptCompiler {
   /**
    * Compiles all added TypeScript files grouped by their tsconfig.json configurations.
    * Shows compilation results and diagnostics to the user.
+   * 
+   * @param sharedRoot An optional shared ScriptRoot for all files being compiled;
+   * if provided, this root will be used for all created ScriptFile instances;
+   *  Otherwise each file will generate its own ScriptRoot.
+   * @returns A Promise that resolves to an array of emitted file paths.
    * @lastreviewed 2025-10-01
    */
-  public async compile(): Promise<string[]> {
+  public async compile(sharedRoot?: ScriptRoot): Promise<string[]> {
     const emittedFiles: string[] = [];
     for (const [tsConfigPath, sfList] of this.projects.entries()) {
       if (sfList.length === 0) {
         throw new Err.NoFilesToCompileError(tsConfigPath);
       }
-      const compilerOptions = await this.getCompilerOptions(ScriptFactory.createFile(vscode.Uri.file(tsConfigPath)));
+      const sf = ScriptFactory.createFile(vscode.Uri.file(tsConfigPath), sharedRoot);
+      const compilerOptions = await this.getCompilerOptions(sf);
       const sfUris = sfList.map(sf => sf.uri());
       const program = ts.createProgram(sfUris.map(uri => uri.fsPath), compilerOptions);
       const emitResult = program.emit();

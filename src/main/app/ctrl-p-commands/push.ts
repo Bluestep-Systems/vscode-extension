@@ -104,7 +104,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     if (!downstairsPath) {
       // we don't want to delete stuff that is in gitignore
       const parser = new DownstairsUriParser(downstairsRootFolderUri);
-      const sf = ScriptFactory.createFile(vscode.Uri.joinPath(parser.prependingPathUri(), rawFilePath.downstairsPath));
+      const sf = ScriptFactory.createFile(vscode.Uri.joinPath(parser.prependingPathUri(), rawFilePath.downstairsPath), directory.getScriptRoot());
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;

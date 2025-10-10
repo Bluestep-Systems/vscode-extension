@@ -5,8 +5,9 @@ import { Err } from "../Err";
 import { FileSystem } from "../fs/FileSystem";
 import { ScriptPathElement } from "./PathElement";
 import { ScriptFactory } from "./ScriptFactory";
-import { ScriptFile } from "./ScriptFile";
+import type { ScriptFile } from "./ScriptFile";
 import type { ScriptFolder } from "./ScriptFolder";
+import type { ScriptRoot } from "./ScriptRoot";
 const fs = FileSystem.getInstance;
 
 /**
@@ -30,11 +31,11 @@ export class TsConfig implements ScriptPathElement {
    * @throws an {@link Error} When the ScriptFile does not point to a tsconfig.json file
    * @lastreviewed 2025-10-01
    */
-  constructor(protected readonly rawUri: vscode.Uri) {
-    this.sf = ScriptFactory.createFile(rawUri);
+  constructor(protected readonly rawUri: vscode.Uri, scriptRoot?: ScriptRoot) {
     if (!this.path().endsWith(TsConfig.NAME)) {
       throw new Err.InvalidResourceTypeError("tsconfig.json file");
     }
+    this.sf = ScriptFactory.createFile(rawUri, scriptRoot);
   }
 
   /**
@@ -71,7 +72,7 @@ export class TsConfig implements ScriptPathElement {
    * @lastreviewed 2025-10-01
    */
   public folder() {
-    return ScriptFactory.createFolder(() => vscode.Uri.joinPath(this.rawUri, ".."));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rawUri, ".."), this.sf.getScriptRoot());
   }
 
   /**
@@ -109,7 +110,7 @@ export class TsConfig implements ScriptPathElement {
     const fileContents = await readFileText(this.uri());
     const config = JSON.parse(fileContents);
     const outDir = config.compilerOptions?.outDir || (() => { throw new Err.MissingConfigurationError("outDir"); })();
-    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.folder().uri(), outDir));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.folder().uri(), outDir), this.sf.getScriptRoot());
   }
 
   public async relativePathToBuildFolder(): Promise<string> {

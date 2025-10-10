@@ -8,7 +8,6 @@ import { ScriptFactory } from './ScriptFactory';
 import type { ScriptFile } from './ScriptFile';
 import { ScriptNode } from './ScriptNode';
 import { TsConfig } from './TsConfig';
-import { ScriptRoot } from './ScriptRoot';
 /**
  * Represents a folder in the script project structure.
  */
@@ -51,7 +50,7 @@ export class ScriptFolder extends ScriptNode {
    */
   public async findAllTsConfigFiles(): Promise<TsConfig[]> {
     const uris = await vscode.workspace.findFiles(new vscode.RelativePattern(this.uri(), '**/tsconfig.json'));
-    return uris.map(ScriptFactory.createTsConfig);
+    return uris.map(uri => ScriptFactory.createTsConfig(uri, this.scriptRoot));
   }
 
   /**
@@ -92,7 +91,7 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed 2025-09-29
    */
   public getChildFolder(folderName: string): ScriptFolder {
-    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.uri(), folderName));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.uri(), folderName), this.scriptRoot);
   }
 
   /**
@@ -108,18 +107,12 @@ export class ScriptFolder extends ScriptNode {
   }
 
   /**
-   * Recursively flattens all files in this folder and returns them as ScriptFile instances.
+   * Recursively flattens all files in this folder and returns them as ScriptFile instances with a shared root.
    * @lastreviewed 2025-09-29
    */
   public async flatten(): Promise<ScriptNode[]> {
-    let sharedRoot: ScriptRoot | null = null;
     const rawUris = await this.flattenRaw();
-    if (rawUris.length > 0) {
-      sharedRoot = ScriptFactory.createScriptRoot(rawUris[0]);
-    } else {
-      return [];
-    }
-    return rawUris.map(uri => ScriptFactory.createNode(uri, sharedRoot));
+    return rawUris.map(uri => ScriptFactory.createNode(uri, this.scriptRoot));
   }
 
   /**
@@ -159,21 +152,21 @@ export class ScriptFolder extends ScriptNode {
    * Gets an immediate child node (file or folder) by name.
    */
   getImmediateChildNode(name: string): ScriptNode {
-    return ScriptFactory.createNode(vscode.Uri.joinPath(this.uri(), name));
+    return ScriptFactory.createNode(vscode.Uri.joinPath(this.uri(), name), this.scriptRoot);
   }
 
   /**
    * Gets an immediate child file by name.
    */
   getImmediateChildFile(name: string): ScriptFile {
-    return ScriptFactory.createFile(vscode.Uri.joinPath(this.uri(), name));
+    return ScriptFactory.createFile(vscode.Uri.joinPath(this.uri(), name), this.scriptRoot);
   }
 
   /**
    * Gets an immediate child folder by name.
    */
   getImmediateChildFolder(name: string): ScriptFolder {
-    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.uri(), name));
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.uri(), name), this.scriptRoot);
   }
 
 }
