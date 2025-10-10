@@ -36,6 +36,11 @@ export abstract class ScriptNode implements ScriptPathElement {
   protected scriptRoot: ScriptRoot;
 
   /**
+   * Caches the existence check result to avoid redundant filesystem calls.
+   */
+  private _exists: boolean | undefined;
+
+  /**
    * Creates a {@link ScriptNode} instance in addition to its associated {@link ScriptRoot} object.
    * 
    * @param param0 Object containing the downstairs URI (local file system path)
@@ -124,10 +129,15 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @lastreviewed 2025-09-29
    */
   public async exists(): Promise<boolean> {
+    if (this._exists) {
+      return this._exists;
+    }
     try {
       await fs().stat(this.uri());
+      this._exists = true;
       return true;
     } catch (e) {
+      this._exists = false;
       return false;
     }
   }
@@ -373,7 +383,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @lastreviewed 2025-09-15
    */
   public async getRest(): Promise<string> {
-    return (await this.upstairsUrl() ).pathname;
+    return (await this.upstairsUrl()).pathname;
   }
 
 
@@ -476,7 +486,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @throws an {@link Err.UserCancelledError} When the user cancels the upload due to some issue that required user intervention
    * @lastreviewed 2025-10-01
    */
-  abstract upload(arg?: {upstairsUrlOverrideString?: string, isSnapshot?: boolean}): Promise<Response | void>;
+  abstract upload(arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean; }): Promise<Response | void>;
 
   /**
    * Downloads the upstairs node and writes it to the local file system.
@@ -507,7 +517,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     return !(await this.isFolder());
   }
 
-  abstract getReasonToNotPush(arg?: { upstairsOverride?: URL, isSnapshot?: boolean }): Promise<string | null>;
+  abstract getReasonToNotPush(arg?: { upstairsOverride?: URL, isSnapshot?: boolean; }): Promise<string | null>;
 
   /**
    * Copies the current draft file to its respective build folder.

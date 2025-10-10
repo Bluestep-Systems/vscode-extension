@@ -507,7 +507,7 @@ suite('ScriptNode Tests', () => {
     });
 
     test('should return reason for declarations files', async () => {
-      const declarationsUri = vscode.Uri.parse('file:///test/workspace/configbeh.bluestep.net/1466960/declarations/test.js');
+      const declarationsUri = vscode.Uri.parse('file:///test/workspace/U123456/1466960/declarations/test.js');
       const declarationsFile = ScriptFactory.createFile(declarationsUri);
 
       const reason = await declarationsFile.getReasonToNotPush();

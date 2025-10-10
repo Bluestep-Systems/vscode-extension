@@ -41,6 +41,16 @@ export class ScriptFile extends ScriptNode {
   }
 
   /**
+   * Indicates whether this script file is an external model; this is cached after the first check.
+   */
+  private _isExternalModel: boolean | undefined;
+
+  /**
+   * Caches the reason to not push this file, if determined.
+   */
+  private _reasonToNotPush: string | undefined | null;
+
+  /**
    * Gets the lowercased SHA-512 hash of the local file.
    * @lastreviewed 2025-09-15
    */
@@ -65,7 +75,7 @@ export class ScriptFile extends ScriptNode {
    * @returns The SHA-512 hash string in lowercase, or `null` if file doesn't exist or has complex ETag
    * @lastreviewed 2025-09-15
    */
-  public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL }): Promise<string | null> {
+  public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL; }): Promise<string | null> {
     const response = await SM.fetch(ops?.upstairsOverride || await this.upstairsUrl(), {
       method: Http.Methods.HEAD
     });
@@ -114,7 +124,7 @@ export class ScriptFile extends ScriptNode {
    * @param ops.upstairsOverride Optional override {@link URL} to check against instead of the default upstairs {@link URL}
    * @lastreviewed 2025-09-15
    */
-  public async currentIntegrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
+  public async currentIntegrityMatches(ops?: { upstairsOverride?: URL; }): Promise<boolean> {
     const localHash = await this.getHash();
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = localHash === upstairsHash;
@@ -128,7 +138,7 @@ export class ScriptFile extends ScriptNode {
    * @param ops Optional override {@link URL} to check against instead of the default upstairs {@link URL}
    * @returns Whether the old integrity matches
    */
-  public async oldIntegrityMatches(ops?: { upstairsOverride?: URL }): Promise<boolean> {
+  public async oldIntegrityMatches(ops?: { upstairsOverride?: URL; }): Promise<boolean> {
     const lastHash = await this.getLastVerifiedHash();
     if (!lastHash) {
       return false;
@@ -264,33 +274,34 @@ export class ScriptFile extends ScriptNode {
    * @returns Empty string if the file can be pushed, otherwise a descriptive reason why not
    * @lastreviewed 2025-09-15
    */
-  public async getReasonToNotPush(ops?: { upstairsOverride?: URL, isSnapshot?: boolean }): Promise<string | null> {
+  public async getReasonToNotPush(ops?: { upstairsOverride?: URL, isSnapshot?: boolean; }): Promise<string | null> {
+    if (this._reasonToNotPush !== undefined) {
+      return this._reasonToNotPush;
+    }
+    return await this.setReasonToNotPush(ops);
+  }
 
+  private async setReasonToNotPush(ops?: { upstairsOverride?: URL, isSnapshot?: boolean; }): Promise<string | null> {
     if (this.parser.type === "root") {
-      return "Node is the root folder";
+      this._reasonToNotPush = "Node is the root folder";
+    } else if (this.name() === SpecialFiles.B6P_METADATA) {
+      this._reasonToNotPush = "Node is a metadata file";
+    } else if (this.isInDeclarations()) {
+      this._reasonToNotPush = "Node is in declarations";
+    } else if (await this.isExternalModel()) {
+      this._reasonToNotPush = "Node is an external model";
+    } else if (await this.isInGitIgnore()) {
+      this._reasonToNotPush = "Node is ignored by .gitignore";
+    } else if (ops?.isSnapshot ? false : await this.isInDraftInfoOrObjects()) {
+      this._reasonToNotPush = "Node is in info or objects";
+    } else if (await this.isFolder()) {
+      this._reasonToNotPush = "Node is a folder";
+    } else if ((await this.isFile()) && await this.currentIntegrityMatches(ops)) {
+      this._reasonToNotPush = "File integrity matches";
+    } else if (!this._reasonToNotPush) {
+      this._reasonToNotPush = null;
     }
-    if (this.name() === SpecialFiles.B6P_METADATA) {
-      return "Node is a metadata file";
-    }
-    if (this.isInDeclarations()) {
-      return "Node is in declarations";
-    }
-    if (await this.isExternalModel()) {
-      return "Node is an external model";
-    }
-    if (await this.isInGitIgnore()) {
-      return "Node is ignored by .gitignore";
-    }
-    if (ops?.isSnapshot ? false : await this.isInDraftInfoOrObjects()) {
-      return "Node is in info or objects";
-    }
-    if (await this.isFolder()) {
-      return "Node is a folder";
-    }
-    if ((await this.isFile()) && await this.currentIntegrityMatches(ops)) {
-      return "File integrity matches";
-    }
-    return null;
+    return this._reasonToNotPush;
   }
 
   /**
@@ -301,7 +312,11 @@ export class ScriptFile extends ScriptNode {
    */
   public async isExternalModel(): Promise<boolean> {
     const config = await this.getConfigDotJson();
+    if (this._isExternalModel) {
+      return true;
+    }
     if (config.models?.map(m => m.name).includes(this.name())) {
+      this._isExternalModel = true;
       return true;
     }
     return false;
@@ -314,7 +329,7 @@ export class ScriptFile extends ScriptNode {
   public get extension() {
     return path.extname(this.name()).toLowerCase();
   }
-  async upload(arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean }): Promise<Response | void> {
+  async upload(arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean; }): Promise<Response | void> {
     App.logger.info("Preparing to send file:", this.uri().fsPath);
     App.logger.info("To target formula URI:", arg?.upstairsUrlOverrideString);
     const upstairsOverride = new URL(arg?.upstairsUrlOverrideString || this.upstairsUrl().toString());

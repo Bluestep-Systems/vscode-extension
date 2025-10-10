@@ -48,8 +48,8 @@ export class DownstairsUriParser {
       throw new Err.InvalidUriStructureError(downstairsUri.toString(), DownstairsUriParser.URI_DISAMBIGUATION_REGEX.toString());
     }
 
-    this.prependingPath = match[1]; // Extract the path before the WebDAV ID
-    this.scriptName = match[2]; // Extract the WebDAV ID
+    this.prependingPath = match[1]; // Extract the path before the script name
+    this.scriptName = match[2]; // Extract the scriptName
     
     const typeStr = match[3] as "draft" | "declarations" | ".b6p_metadata.json" | ".gitignore" | "snapshot" || undefined; // Extract the type string
     this.rest = match[4] || ""; // Extract the relative path after the type
