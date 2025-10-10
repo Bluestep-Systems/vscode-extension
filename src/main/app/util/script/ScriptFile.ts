@@ -320,9 +320,9 @@ export class ScriptFile extends ScriptNode {
     const upstairsOverride = new URL(arg?.upstairsUrlOverrideString || this.upstairsUrl().toString());
     const thisUpstairs = await this.upstairsUrl();
     upstairsOverride.pathname = thisUpstairs.pathname;
-    // we skip snapshots because when they go to be uploaded
+    // we skip snapshots/builds because when they go to be uploaded
     // they will always have been freshly created.
-    if (!this.isInSnapshot() && !(await this.oldIntegrityMatches())) {
+    if (!this.isInSnapshot() && !(await this.isInItsRespectiveBuildFolder()) && !(await this.oldIntegrityMatches())) {
       const OVERWRITE = 'Overwrite';
       const CANCEL = 'Cancel';
       const overwrite = await Alert.prompt(
@@ -333,7 +333,7 @@ export class ScriptFile extends ScriptNode {
         ]
       );
       if (overwrite !== OVERWRITE) {
-        Alert.popup("Push cancelled");
+        await Alert.popup((arg?.isSnapshot ? "Snapshot" : "Push") + " cancelled by user.");
         throw new Err.UserCancelledError(`User ${overwrite ? overwrite + "ed" : "cancelled"} push due to upstairs file change`);
       }
     }
