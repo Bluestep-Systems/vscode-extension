@@ -22,8 +22,8 @@ export type Primitive = string | number | boolean | null;
  * const example3: PrimitiveNestedObject = { k1: null, k2: { k3: false } };
  */
 export type PrimitiveNestedObject = {
-  [key: string]: Primitive | PrimitiveNestedObject
-}
+  [key: string]: Primitive | PrimitiveNestedObject;
+};
 
 /**
  * A savable object can be a primitive, an array of primitives.
@@ -42,9 +42,9 @@ export type PrimitiveNestedObject = {
  * const example6: Serializable = { k1: "v1", k2: 2, k3: [true, 5], k4: { nestedKey: "something" } };
  */
 export type Serializable =
-   Primitive
+  Primitive
   | Serializable[]
-  | { [key: string]: Serializable };
+  | { [key: string]: Serializable; };
 
 /**
  * The structure of a WebDAV XML response.
@@ -82,7 +82,7 @@ export type XMLResponse = {
       };
     }[];
   };
-}
+};
 
 /**
  * data requisite to manage an individual login session
@@ -108,7 +108,7 @@ export type SessionData = {
    * the last CSRF token received from the server
    */
   lastCsrfToken: string | null;
-}
+};
 
 /**
  * Basic auth information.
@@ -135,13 +135,13 @@ type ScriptGQLGoodResp = {
         "children": {
           "items": [
             {
-              "id": string
+              "id": string;
             }
-          ]
-        }
+          ];
+        };
       }
-    ]
-  }
+    ];
+  };
 };
 
 /**
@@ -150,15 +150,15 @@ type ScriptGQLGoodResp = {
 type ScriptGQLBadResp = {
   "errors": [
     {
-      "message": string
+      "message": string;
     }
-  ]
-}
+  ];
+};
 
 /**
  * Options needed to to override the source in a script operation.
  */
-type SourceOps = { sourceOrigin: string, topId: string };
+type SourceOps = { sourceOrigin: string, topId: string; };
 
 /**
  * The metadata for the Script objects used locally.
@@ -206,7 +206,7 @@ type ScriptMetaData = {
     lastVerifiedHash: string | null;
   }[];
 
-}
+};
 /**
  * This is the content of a metadata.json found in every script folder.
  *
@@ -277,7 +277,7 @@ export type MetaDataDotJsonContent = {
    * //TODO
    */
   allowedMethods?: string[];
-}
+};
 
 /**
  * propagation behavior options for scripts
@@ -345,7 +345,7 @@ type ConfigJsonContent = {
    */
   models?: {
     name: string,
-    url: string
+    url: string;
   }[],
 
   /**
@@ -356,24 +356,24 @@ type ConfigJsonContent = {
   /**
    * //TODO
    */
-  scriptlibrary: "private"
+  scriptlibrary: "private";
 };
 
 /**
  * Information about a release of the B6P platform.
  */
-export type UpdateInfo ={
+export type UpdateInfo = {
   version: string;
   downloadUrl: string;
   releaseNotes: string;
   publishedAt: string;
-}
+};
 export type ClientInfo = {
   version: string;
   lastChecked: number;
   githubToken: string | null;
   setupShown: boolean;
-}
+};
 export type GithubRelease = {
   url: string;
   html_url: string;
@@ -446,10 +446,10 @@ export type GithubRelease = {
         received_events_url: string;
         type: "User";
         site_admin: false;
-      }
+      };
     }
-  ]
-}
+  ];
+};
 
 /**
  * The settings used by the extension.
@@ -468,7 +468,7 @@ export type Settings = {
      * If in debug mode, the URLs to use for anyDomain lookups instead of the actual domain.
      */
     anyDomainOverrideUrl: string;
-  }
+  };
   /**
    * Settings related to update checks.
    */
@@ -481,8 +481,8 @@ export type Settings = {
      * Whether to show notifications about updates.
      */
     showNotifications: boolean;
-  }
-}
+  };
+};
 
 /**
  * TypeScript configuration options (tsconfig.json structure).
@@ -572,7 +572,7 @@ export type TsConfig = {
     /** Path mapping entries for module resolution */
     paths?: Record<string, string[]>;
     /** List of TypeScript language service plugins to load */
-    plugins?: Array<{ name: string; [key: string]: any }>;
+    plugins?: Array<{ name: string;[key: string]: any; }>;
 
     // Interop Constraints
     /** Ensure that casing is correct in imports */
@@ -635,22 +635,22 @@ export type TsConfig = {
 
   /** Files or patterns to include in compilation */
   include?: string[];
-  
+
   /** Files or patterns to exclude from compilation */
   exclude?: string[];
-  
+
   /** Specific files to include (overrides include/exclude) */
   files?: string[];
-  
+
   /** Project references for multi-project builds */
-  references?: Array<{ path: string; prepend?: boolean }>;
-  
+  references?: Array<{ path: string; prepend?: boolean; }>;
+
   /** Extends another configuration file */
   extends?: string | string[];
-  
+
   /** Options to pass to the TypeScript compiler API */
   compileOnSave?: boolean;
-  
+
   /** Type acquisition options for JavaScript projects */
   typeAcquisition?: {
     enable?: boolean;
@@ -658,7 +658,7 @@ export type TsConfig = {
     exclude?: string[];
     disableFilenameBasedTypeAcquisition?: boolean;
   };
-  
+
   /** Watch options for file watching in --watch mode */
   watchOptions?: {
     watchFile?: "fixedPollingInterval" | "priorityPollingInterval" | "dynamicPriorityPolling" | "useFsEvents" | "useFsEventsOnParentDirectory";
@@ -683,11 +683,23 @@ type OrgCacheElement = {
    * the last time this entry was accessed
    */
   lastAccess: number;
-}
+};
 
 /**
  * The response from the BlueHQ endpoint when calling for any domain.
  */
 export type BlueHqAnyUrlResp = {
   orgUrl: string;
-}
+};
+
+/**
+ * The response from the GQL parents query.
+ */
+export type GqlParentNameResp = {
+  data: {
+    parents: {
+      id: string;
+      displayName: string;
+    }[];
+  };
+};
