@@ -415,6 +415,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       );
 
       if (selection === reloadAction) {
+        await this.state.set('version', updateInfo.version);
         await vscode.commands.executeCommand('workbench.action.reloadWindow');
       }
 

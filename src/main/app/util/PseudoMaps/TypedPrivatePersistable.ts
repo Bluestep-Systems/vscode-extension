@@ -58,11 +58,10 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * @returns This instance for chaining
    * @lastreviewed 2025-10-01
    */
-  set<K extends keyof T & string>(key: K, value: T[K]): this {
+  async set<K extends keyof T & string>(key: K, value: T[K]) {
     this.checkIsInitialized();
-    super.set(key, value);
-    this.store();
-    return this;
+    await super.set(key, value);
+    await this.store();
   }
 
   /**

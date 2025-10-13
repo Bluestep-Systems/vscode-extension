@@ -29,11 +29,10 @@ export class TypedPersistable<T extends Record<string, Serializable>> extends Ty
    * @returns This instance for chaining
    * @lastreviewed 2025-10-01
    */
-  set<K extends keyof T & string>(key: K, value: T[K]): this
-  set<K extends keyof T & string>(key: K, value: T[K], update: boolean = true): this {
+  async set<K extends keyof T & string>(key: K, value: T[K]): Promise<void>;
+  async set<K extends keyof T & string>(key: K, value: T[K], update: boolean = true): Promise<void> {
     super.set(key, value);
     update && this.store();
-    return this;
   }
 
   
