@@ -181,6 +181,11 @@ type ScriptMetaData = {
   U: string;
 
   /**
+   * the script's unique key (seqnum and classid pair)
+   */
+  scriptKey: { seqnum: string; classid: string; };
+
+  /**
    * push/pull records for the script.
    */
   pushPullRecords: {

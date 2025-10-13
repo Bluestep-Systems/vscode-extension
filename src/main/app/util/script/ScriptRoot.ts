@@ -164,25 +164,29 @@ export class ScriptRoot {
       let scriptName: string;
       let U: string;
       let webdavId: string;
+      let scriptKey: { seqnum: string; classid: string; };
 
       if (this.scriptParser === null) {
         // the absence of a parser indicates that this is coming from a local file, thus these elements should exist
         const metaDataDotJson = await this.getAsFolder().getMetadataDotJson();
         scriptName = metaDataDotJson.displayName || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })();
         U = await this.getU() || (() => { throw new Err.FileReadError("Missing U in metadata"); })();
-        webdavId = await this.webDavId() || (() => { throw new Err.FileReadError("Missing webdavId in metadata"); })();
+        webdavId = await this.getWebdavId() || (() => { throw new Err.FileReadError("Missing webdavId in metadata"); })();
+        scriptKey = await this.getScriptKey() || (() => { throw new Err.FileReadError("Missing scriptKey in metadata"); })();
       } else {
         //only time this should be happening is on initial download
         scriptName = await this.scriptParser.getScriptName() || (() => { throw new Err.FileReadError("Missing script name and no parser available"); })();
         U = await this.scriptParser.getU() || (() => { throw new Err.FileReadError("Missing U and no parser available"); })();
         webdavId = this.scriptParser.webDavId || (() => { throw new Err.FileReadError("Missing webdavId and no parser available"); })();
+        scriptKey = await this.scriptParser.getScriptKey() || (() => { throw new Err.FileReadError("Missing scriptKey and no parser available"); })();
       }
 
       contentObj = {
         scriptName,
         U,
         webdavId,
-        pushPullRecords: []
+        pushPullRecords: [],
+        scriptKey,
       };
       modified = true;
     }
@@ -290,7 +294,7 @@ export class ScriptRoot {
    * @throws an {@link Err.FileNotFoundError} if the metadata file is missing or malformed.
    * @lastreviewed 2025-10-09
    */
-  async webDavId() {
+  async getWebdavId() {
     if (this.scriptParser !== null) {
       return this.scriptParser.webDavId;
     }
@@ -299,6 +303,37 @@ export class ScriptRoot {
       throw new Err.InvalidStateError("Missing metadata");
     }
     return metadata.webdavId || (() => { throw new Err.InvalidStateError("Missing webdavId in metadata"); })();
+  }
+
+  /**
+   * Gets the script key from 
+   * - the script parser (if available)
+   * - the metadata file (if available)
+   * - by instantiating a script parser from the upstairs URL (if a webdavId is available)
+   */
+  async getScriptKey() {
+    if (this.scriptParser !== null) {
+      return this.scriptParser.getScriptKey();
+    }
+    const metadata = await this.getMetaData();
+    if (!metadata) {
+      throw new Err.InvalidStateError("Missing metadata");
+    }
+    const potentialKey = metadata.scriptKey;
+    if (potentialKey) {
+      return potentialKey;
+    }
+    try {
+      // this will fail if there is no webdavId.
+      this.scriptParser = new ScriptUrlParser((await this.toScriptBaseUpstairsUrl()).toString());
+      const key = await this.scriptParser.getScriptKey();
+      await this.modifyMetaData(meta => {
+        meta.scriptKey = key;
+      });
+      return key;
+    } catch (e) {
+      throw new Err.FileReadError("Can't obtain scriptKey in metadata, even after trying to instantiate a scriptParser.");
+    }
   }
 
   /**
@@ -333,7 +368,7 @@ export class ScriptRoot {
    */
   public async toScriptBaseUpstairsString() {
     const origin = await this.anyOrigin();
-    const webdavId = await this.webDavId();
+    const webdavId = await this.getWebdavId();
     return `${origin.toString()}files/${webdavId}/`;
   }
 
