@@ -22,8 +22,11 @@ export namespace ScriptFactory {
    * Creates a ScriptNode instance (either ScriptFile or ScriptFolder) based on the URI path.
    * Automatically determines the appropriate type by checking if the path ends with '/'.
    * 
-   * @param uriSupplier A function that returns the VS Code {@link vscode.Uri uri}  for the script node, or a raw URI.
-   * @returns A {@link ScriptFile} if the path doesn't end with '/', otherwise a ScriptFolder
+   * @param uriSupplier A function that returns the {@link vscode.Uri} for the script node, or a raw {@link vscode.Uri} itself.
+   * @param scriptRoot Optional {@link ScriptRoot} associated with this script node.
+   * 
+   * @returns A {@link ScriptNode} which is either a {@link ScriptFile} or {@link ScriptFolder} instance.
+   * The type is determined by whether the URI path ends with a '/' character.
    * 
    * @example
    * ```typescript
@@ -45,10 +48,11 @@ export namespace ScriptFactory {
   }
 
   /**
-   * Creates a {@link ScriptFolder} instance for the specified {@link vscode.Uri uri}.
+   * Creates a {@link ScriptFolder} instance for the specified {@link vscode.Uri}.
    * This method explicitly creates a folder instance regardless of the URI path format, and performs no other validation.
    * 
-   * @param uriSupplier A function that returns the VS Code {@link vscode.Uri uri} for the folder, or a raw {@link vscode.Uri uri}.
+   * @param uriSupplier A function that returns the {@link vscode.Uri} for the folder, or a raw {@link vscode.Uri} itself.
+   * @param scriptRoot Optional {@link ScriptRoot} associated with this script folder.
    * @example
    * ```typescript
    * const folder = ScriptFactory.createFolder(() => 
@@ -66,7 +70,8 @@ export namespace ScriptFactory {
    * Creates a {@link ScriptFile} instance for the specified {@link vscode.Uri uri}.
    * This method explicitly creates a file instance regardless of the URI path format, and performs no other validation.
    * 
-   * @param uriSupplier A function that returns the VS Code {@link vscode.Uri uri} for the file, or a raw {@link vscode.Uri uri}.
+   * @param uriSupplier A function that returns the {@link vscode.Uri} for the file, or a raw {@link vscode.Uri} itself
+   * @param scriptRoot Optional {@link ScriptRoot} associated with this script file.
    * 
    * @example
    * ```typescript
@@ -84,7 +89,8 @@ export namespace ScriptFactory {
   /**
    * Creates a {@link ScriptRoot} instance for the specified {@link vscode.Uri uri}.
    * and performs no form of validation.
-   * @param uriSupplier A function that returns the VS Code {@link vscode.Uri uri} for the script root, or a direct {@link vscode.Uri uri}
+   * @param uriSupplier A function that returns the {@link vscode.Uri} for the script root, or a direct {@link vscode.Uri}
+   * @param scriptRoot Optional {@link ScriptRoot} associated with this script root.
    * 
    * @example
    * ```typescript
@@ -106,9 +112,10 @@ export namespace ScriptFactory {
   }
 
   /**
-   * Creates a {@link TsConfig} instance for the specified tsconfig.json file {@link vscode.Uri uri}.
+   * Creates a {@link TsConfig} instance for the specified tsconfig.json file {@link vscode.Uri}.
    * 
-   * @param uriSupplier A function that returns the VS Code {@link vscode.Uri uri} for the tsconfig.json file, or a direct {@link vscode.Uri uri}
+   * @param uriSupplier A function that returns the {@link vscode.Uri} for the tsconfig.json file, or a direct {@link vscode.Uri}.
+   * @param scriptRoot Optional {@link ScriptRoot} associated with this tsconfig file.
    * 
    * @example
    * ```typescript

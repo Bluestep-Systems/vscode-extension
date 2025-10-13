@@ -18,7 +18,7 @@ export interface ScriptPathElement {
   path(): string;
   
   /**
-   * Gets the URI of this element.
+   * Gets the {@link vscode.Uri} of this element.
    * @returns The VS Code URI
    * @lastreviewed 2025-10-01
    */
