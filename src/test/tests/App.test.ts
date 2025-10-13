@@ -9,7 +9,7 @@ import { Auth } from '../../main/app/authentication';
 //@ts-ignore
 import { SESSION_MANAGER } from '../../main/app/b6p_session/SessionManager';
 //@ts-ignore
-import { UPDATE_MANAGER } from '../../main/app/services/UpdateChecker';
+import { UPDATE_MANAGER } from '../../main/app/services/UpdateManager';
 //@ts-ignore
 import { Err } from '../../main/app/util/Err';
 //@ts-ignore

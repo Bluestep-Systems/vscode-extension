@@ -473,7 +473,13 @@ export type Settings = {
      * If in debug mode, the URLs to use for anyDomain lookups instead of the actual domain.
      */
     anyDomainOverrideUrl: string;
+
+    /**
+     * If set, this version string will override the actual extension version for update checks.
+     */
+    versionOverride: string;
   };
+  
   /**
    * Settings related to update checks.
    */

@@ -6,7 +6,7 @@ import { OutputChannels, SettingsKeys } from '../resources/constants';
 import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
-import { UPDATE_MANAGER as UM } from './services/UpdateChecker';
+import { UPDATE_MANAGER as UM } from './services/UpdateManager';
 import { SettingsWrapper } from './util/PseudoMaps';
 import { Err } from './util/Err';
 import { Alert } from './util/ui/Alert';
@@ -170,7 +170,11 @@ export const App = new class extends ContextNode {
 
   public toggleDebugMode() {
     console.log("Toggling debug mode");
-    this.settings.set('debugMode', { enabled: !this.settings.get('debugMode').enabled, anyDomainOverrideUrl: this.settings.get('debugMode').anyDomainOverrideUrl });
+    this.settings.set('debugMode', { 
+      enabled: !this.settings.get('debugMode').enabled, 
+      anyDomainOverrideUrl: this.settings.get('debugMode').anyDomainOverrideUrl,
+      versionOverride: this.settings.get('debugMode').versionOverride 
+    });
     Alert.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`);
   }
 

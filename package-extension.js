@@ -93,10 +93,6 @@ function createVsix() {
     // Add dist directory (excluding .map files for production)
     if (fs.existsSync('dist')) {
       archive.directory('dist/', 'extension/dist/', (entry) => {
-        // Exclude .map files from the package
-        if (entry.name.endsWith('.map')) {
-          return false;
-        }
         return entry;
       });
     } else {

@@ -7,7 +7,7 @@ import { App } from '../../main/app/App';
 //@ts-ignore
 import { SESSION_MANAGER } from '../../main/app/b6p_session/SessionManager';
 //@ts-ignore
-import { UPDATE_MANAGER } from '../../main/app/services/UpdateChecker';
+import { UPDATE_MANAGER } from '../../main/app/services/UpdateManager';
 //@ts-ignore
 import { FileSystem } from '../../main/app/util/fs/FileSystem';
 //@ts-ignore

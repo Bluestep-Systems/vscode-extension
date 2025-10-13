@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
 import type { App } from '../App';
 import { ContextNode } from '../context/ContextNode';
-import { AuthTypes, FileExtensions, GitHubUrls, Http, SettingsKeys } from '../../resources/constants';
+import { FileExtensions, GitHubUrls, Http, SettingsKeys } from '../../resources/constants';
 import { FileSystem } from '../util/fs/FileSystem';
 import { PrivateKeys, TypedPersistable } from '../util/PseudoMaps';
 import { PrivateTypedPersistable } from '../util/PseudoMaps/TypedPrivatePersistable';
@@ -36,7 +36,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   init(parent: typeof App): this {
     this._parent = parent;
     const version = parent.getVersion();
-    this._state = new PrivateTypedPersistable<ClientInfo>({ key: PrivateKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null, setupShown: false } });
+    // we're going to leave this as a private persistable in case we 
+    // end up needing the githubtoken again later.
+    this._state = new PrivateTypedPersistable<ClientInfo>({
+      key: PrivateKeys.GITHUB_STATE,
+      context: this.context,
+      defaultValue: { version, lastChecked: 0, githubToken: null, setupShown: false }
+    });
 
     setTimeout(async () => {
       try {
@@ -48,7 +54,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       } catch (error) {
         this.parent.logger.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));
       }
-    }, 5_000); // Delay 5 seconds to allow other startup tasks to complete
+    }, 10_000); // Delay 10 seconds to allow other startup tasks to complete. 
+    //TODO make this delay configurable? And convert the inits to promises so it can simply be awaited
+    // rather than hoping it resolves on time.
     return this;
   }
 
@@ -61,7 +69,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   private getVersionNotes(currentVersion: string): void {
     const storedVersion = this.state.get('version');
     this.parent.logger.info(`B6P: Stored version: ${storedVersion}, Current version is ${currentVersion}`);
-
+    //TODO implement release notes display
 
     // // Check if this is a fresh install or an update
     // if (storedVersion !== currentVersion) {
@@ -71,7 +79,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     //     : `BlueStep extension updated to v${currentVersion}`;
 
     //   this.parent.logger.info(`B6P: Version change detected (${storedVersion} -> ${currentVersion})`);
-    //   //TODO implement release notes display
+    //   
     //   this.parent.logger.info(message);
     // }
   }
@@ -142,23 +150,6 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     return this._state;
   }
 
-  private async getGithubToken() {
-    const token = this.state.get('githubToken');
-    if (!token) {
-      return vscode.window.showInputBox({
-        prompt: 'A GitHub token is required: please enter it',
-        placeHolder: 'ghp_XXXXXXXXXXXXXXXXXXXXXX'
-      }).then(input => {
-        if (input) {
-          this.state.set('githubToken', input);
-          return input;
-        }
-        throw new Err.GitHubTokenNotAvailableError();
-      });
-    }
-    return token;
-  }
-
   /**
    * Get GitHub authentication headers if token is available
    * @returns Headers object with authentication if configured
@@ -169,12 +160,6 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       [Http.Headers.USER_AGENT]: Http.Headers.USER_AGENT_B6P,
       [Http.Headers.ACCEPT]: Http.Headers.GITHUB_API_ACCEPT
     };
-
-    const githubToken = await this.getGithubToken();
-    if (!githubToken) {
-      throw new Err.GitHubTokenNotAvailableError();
-    }
-    headers[Http.Headers.AUTHORIZATION] = `${AuthTypes.BEARER_PREFIX}${githubToken}`;
 
     return headers;
   }
@@ -190,15 +175,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
       if (!updateCheckEnabled) {
         return;
-      } else if (this.state.get('githubToken') === null) {
-        vscode.window.showWarningMessage('B6P -- GitHub token not set. Update checking is disabled');
-        return;
       }
 
       const lastCheck = this.state.get(this.LAST_CHECKED_KEY) || 0;
       const now = Date.now();
 
       if (now - lastCheck < this.UPDATE_INTERVAL) {
+        this.parent.logger.info("B6P: Skipping update check - not enough time has passed since last check.");
         return; // Not enough time has passed
       }
 
@@ -233,7 +216,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
           publishedAt: latestRelease.published_at
         };
 
-        await this.notifyUser(updateInfo);
+        await this.notifyUserAndInstallUpdate(updateInfo);
         return updateInfo;
       }
 
@@ -250,6 +233,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @lastreviewed null
    */
   private getCurrentVersion(): string {
+    if (this.parent.isDebugMode()) {
+      const versionOverride = this.parent.settings.get('debugMode').versionOverride;
+      if (versionOverride) {
+        this.parent.logger.info(`B6P: Using debug mode version override: ${versionOverride}`);
+        return versionOverride;
+      }
+    }
     return this.parent.getVersion();
   }
 
@@ -349,13 +339,13 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   }
 
   /**
- * Show update notification to user
- * @param updateInfo Information about the available update
- * @lastreviewed null
- */
-  private async notifyUser(updateInfo: UpdateInfo): Promise<void> {
-    const config = vscode.workspace.getConfiguration(this.parent.appKey);
-    const showNotifications = config.get<boolean>('updateCheck.showNotifications', true);
+   * Show update notification to user
+   * @param updateInfo Information about the available update
+   * @lastreviewed null
+   */
+  private async notifyUserAndInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
+    const config = this.parent.settings;
+    const showNotifications = config.get('updateCheck').showNotifications;
 
     if (!showNotifications) {
       return;
@@ -363,22 +353,17 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
     const message = `B6P Extension v${updateInfo.version} is available. You have v${this.getCurrentVersion()}.`;
     const Actions = {
-      AUTO_INSTALL: "Auto Install",
-      DOWNLOAD: "Download",
+      INSTALL: "Install",
       VIEW_NOTES: "View Release Notes",
-      REMIND_LATER: "Remind Later",
-      DISABLE: "Disable Updates"
+      DISABLE: "Disable Auto-Check"
     };
     const actions = Object.values(Actions);
 
     const selection = await vscode.window.showInformationMessage(message, ...actions);
 
     switch (selection) {
-      case Actions.AUTO_INSTALL:
+      case Actions.INSTALL:
         await this.autoInstallUpdate(updateInfo);
-        break;
-      case Actions.DOWNLOAD:
-        await this.openDownloadUrl(updateInfo.downloadUrl);
         break;
       case Actions.VIEW_NOTES:
         await this.showReleaseNotes(updateInfo);

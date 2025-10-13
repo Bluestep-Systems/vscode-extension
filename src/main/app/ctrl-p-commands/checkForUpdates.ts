@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Alert } from '../util/ui/Alert';
-import { UPDATE_MANAGER } from '../services/UpdateChecker';
+import { UPDATE_MANAGER } from '../services/UpdateManager';
 
 export default async function checkForUpdates(): Promise<void> {
   try {
@@ -21,7 +21,6 @@ export default async function checkForUpdates(): Promise<void> {
       if (!updateInfo) {
         Alert.popup('You are running the latest version of B6P Extension!');
       }
-      // If updateInfo exists, the user will already be notified via UPDATE_CHECKER.notifyUser()
     });
 
   } catch (error) {

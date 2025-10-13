@@ -48,8 +48,27 @@
         }
       },
       {
-        "title": "Debug Mode",
+        "title": "Squelch Popups",
         "order": 1,
+        "id": "bsjs-push-pull.squelch",
+        "properties": {
+          "bsjs-push-pull.squelch.pushComplete": {
+            "order": 0,
+            "type": "boolean",
+            "description": "Squelch push-complete popup",
+            "default": false
+          },
+          "bsjs-push-pull.squelch.pullComplete": {
+            "order": 1,
+            "type": "boolean",
+            "description": "Squelch pull-complete popup",
+            "default": false
+          }
+        }
+      },
+      {
+        "title": "Debug Mode",
+        "order": 2,
         "id": "bsjs-push-pull.debugMode",
         "properties": {
           "bsjs-push-pull.debugMode.enabled": {
@@ -64,25 +83,13 @@
             "editPresentation": "multilineText",
             "description": "Override the domains used for 'anyDomain' lookups in debug mode",
             "default": "U131364=https://templateassisted.myassn.com/"
-          }
-        }
-      },
-      {
-        "title": "Squelch Popups",
-        "order": 2,
-        "id": "bsjs-push-pull.squelch",
-        "properties": {
-          "bsjs-push-pull.squelch.pushComplete": {
-            "order": 0,
-            "type": "boolean",
-            "description": "Squelch push-complete popup",
-            "default": false
           },
-          "bsjs-push-pull.squelch.pullComplete": {
-            "order": 1,
-            "type": "boolean",
-            "description": "Squelch pull-complete popup",
-            "default": false
+          "bsjs-push-pull.debugMode.versionOverride": {
+            "order": 2,
+            "type": "string",
+            "editPresentation": "multilineText",
+            "description": "Override the version used for update checks in debug mode",
+            "default": "1.1.0"
           }
         }
       }
