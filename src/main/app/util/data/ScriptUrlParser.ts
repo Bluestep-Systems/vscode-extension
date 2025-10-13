@@ -121,10 +121,16 @@ export class ScriptUrlParser {
     }
   }
 
+  /**
+   * Returns a copy of the URL object to prevent external modifications.
+   */
   public urlCopy(): URL {
     return new URL(this.url);
   }
 
+  /**
+   * Returns an OrgWorker instance for organization-specific operations.
+   */
   public orgWorker(): OrgWorker {
     if (this._orgWorker === null) {
       this._orgWorker = new OrgWorker(this.url);
