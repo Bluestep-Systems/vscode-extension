@@ -115,7 +115,10 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
           App.logger.info(`File is in build folder; skipping deletion: ${rawFilePath.upstairsPath}`);
           continue;
         }
+      } else if (isSnapshot) {
+        //TODO check for snapshot versions to cleanup
       }
+      
       // If there's no matching downstairs path, we need to delete the upstairs path
       App.logger.info(`No matching downstairs path found for upstairs path: ${rawFilePath.upstairsPath}. Deleting upstairs path.`);
       pathsToDelete.add(rawFilePath.upstairsPath);
@@ -134,7 +137,7 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
     
     ${Array.from(pathsToDelete).join('\n')}
     
-    Do you want to proceed?`,
+    Do you wish to proceed?`,
     [YES_OPTION, NO_OPTION]
   );
 

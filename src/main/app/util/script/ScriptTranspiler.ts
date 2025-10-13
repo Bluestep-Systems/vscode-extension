@@ -6,6 +6,7 @@ import { FileSystem } from "../fs/FileSystem";
 import { ScriptFactory } from "./ScriptFactory";
 import type { ScriptNode } from "./ScriptNode";
 import type { ScriptRoot } from "./ScriptRoot";
+import { FolderNames } from "../../../resources/constants";
 const fs = FileSystem.getInstance;
 
 /**
@@ -13,12 +14,12 @@ const fs = FileSystem.getInstance;
  * Manages compilation of multiple TypeScript files organized by their tsconfig.json files.
  * @lastreviewed 2025-10-01
  */
-export class ScriptCompiler {
+export class ScriptTranspiler {
   private projects: Map<string, ScriptNode[]> = new Map();
   private static DEFAULT_TS_CONFIG: ts.CompilerOptions = {
     module: ts.ModuleKind.ESNext,
     target: ts.ScriptTarget.ES2022,
-    outDir: ".build",
+    outDir: FolderNames.DOT_BUILD,
     strict: true,
     esModuleInterop: true,
     skipLibCheck: true,
@@ -37,7 +38,7 @@ export class ScriptCompiler {
    * Creates a new ScriptCompiler instance.
    * @lastreviewed 2025-10-01
    */
-  constructor() { }
+  constructor() {}
 
   /**
    * Gets default TypeScript compiler options for a file.
@@ -48,7 +49,7 @@ export class ScriptCompiler {
    */
   private getDefaultOptions(sf: ScriptNode): ts.CompilerOptions {
     throw new Err.InvalidStateError("did not find a tsconfig for " + sf.path() + ".");
-    const LOCAL_CONFIG = ScriptCompiler.DEFAULT_TS_CONFIG;
+    const LOCAL_CONFIG = ScriptTranspiler.DEFAULT_TS_CONFIG;
     LOCAL_CONFIG.rootDir = sf.getScriptRoot().getDraftFolder().path();
     return LOCAL_CONFIG;
   }

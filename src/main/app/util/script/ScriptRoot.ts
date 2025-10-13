@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
-import { FolderNames, SpecialFiles } from '../../../resources/constants';
+import { FileExtensions, FolderNames, SpecialFiles } from '../../../resources/constants';
 import { App } from '../../App';
 import { ORG_CACHE as OC } from '../../cache/OrgCache';
 import pushCurrent from '../../ctrl-p-commands/pushCurrent';
@@ -11,7 +11,7 @@ import { OrgWorker } from '../data/OrgWorker';
 import { ScriptUrlParser } from '../data/ScriptUrlParser';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
-import { ScriptCompiler } from './ScriptCompiler';
+import { ScriptTranspiler } from './ScriptTranspiler';
 import { ScriptFactory } from './ScriptFactory';
 import { ScriptFile } from './ScriptFile';
 import type { ScriptFolder } from './ScriptFolder';
@@ -459,21 +459,13 @@ export class ScriptRoot {
   }
 
   /**
-   * // TODO this is not complete
+   * Performs the "snapshot" operation by compiling the draft folder and pushing
+   * its contents to the server.
+   * 
+   * @lastreviewed 2025-10-13
    */
   public async snapshot() {
     await this.compileDraftFolder();
-    const draftFolder = this.getDraftFolder();
-    const draftFiles = await draftFolder.flatten();
-    const snapshotFolder = this.getSnapshotFolder();
-    snapshotFolder.delete();
-    for (const file of draftFiles) {
-      if (await file.isInItsRespectiveBuildFolder()) {
-        continue;
-      }
-      file.copyToSnapshot();
-    }
-
     await pushCurrent({ isSnapshot: true, sr: this });
   }
 
@@ -485,7 +477,7 @@ export class ScriptRoot {
    */
   public async deleteBuildFolder() {
     try {
-      return await fs().delete(this.getDraftBuildFolder(), { recursive: true });
+      return await fs().delete(await this.getDraftBuildFolder(), { recursive: true });
     } catch (error) {
       // Ignore FileNotFound errors - the folder doesn't exist, which is fine
       if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') {
@@ -501,7 +493,7 @@ export class ScriptRoot {
    * Compiles all TypeScript files in the draft folder and copies non-TypeScript files to its 
    * respective build folder.
    * 
-   * Deletes the existing build folder first, then compiles TypeScript files using {@link ScriptCompiler},
+   * Deletes the existing build folder first, then compiles TypeScript files using {@link ScriptTranspiler},
    * copies other relevant files, and cleans up any orphaned files in the build directory.
    * 
    * @lastreviewed 2025-09-15
@@ -511,7 +503,7 @@ export class ScriptRoot {
     await this.deleteBuildFolder();
     const draftFolder = this.getDraftFolder();
     const allDraftFiles = await draftFolder.flatten();
-    const compiler = new ScriptCompiler();
+    const compiler = new ScriptTranspiler();
     const copiedFiles: string[] = [];
     for (const file of allDraftFiles) {
       if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
@@ -521,7 +513,7 @@ export class ScriptRoot {
         continue;
       }
 
-      if (file.path().endsWith(".ts") || file.path().endsWith(".tsx")) {
+      if ([FileExtensions.TYPESCRIPT, FileExtensions.TYPESCRIPT_JSX].some(ext => file.path().endsWith(ext))) {
         await compiler.addFile(file);
       } else if (!(file as ScriptFile).isTsConfig()) {
         copiedFiles.push(file.path());
@@ -571,23 +563,22 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-01
    */
   public getDraftFolder() {
-    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, "draft"), this);
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, FolderNames.DRAFT), this);
   }
 
   /**
    * Gets the build {@link ScriptFolder} within the draft folder.
    * @lastreviewed 2025-10-01
    */
-  public getDraftBuildFolder() {
-    return this.getDraftFolder().getChildFolder(".build");
+  public async getDraftBuildFolder() {
+    const tsConfig = await this.getDraftTsConfig();
+    
+    return tsConfig.getBuildFolder();
   }
 
-  /**
-   * Gets the snapshot {@link ScriptFolder} within the script root.
-   * @lastreviewed 2025-10-01
-   */
-  public getSnapshotFolder() {
-    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, "snapshot"), this);
+  public async getDraftBuildObjectsFolder() {
+    const buildFolder = await this.getDraftBuildFolder();
+    return buildFolder.getChildFolder(FolderNames.OBJECTS);
   }
 
   /**
@@ -595,7 +586,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-01
    */
   public getDeclarationsFolder() {
-    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, "declarations"), this);
+    return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, FolderNames.DECLARATIONS), this);
   }
 
   /**
@@ -636,31 +627,24 @@ export class ScriptRoot {
     const flattenedDraft = await this.getDraftFolder().flatten();
     const pushableNodes: ScriptNode[] = [];
     for (const f of flattenedDraft) {
-      const inBuildFolder = !snapshot && await f.isInItsRespectiveBuildFolder();
-      const reason = await f.getReasonToNotPush({ isSnapshot: snapshot });
+      const reason = await f.getReasonToNotPush();
       if (reason) {
         App.logger.info(`Excluding draft file from push: ${f.path()} (${reason})`);
         continue;
       }
+      // reasoning: if it's a snapshot, we push every "standard" file.
+      // if it's not a snapshot push, we exclude anything in a build folder
+      // and we exclude anything that has a reason to not push (like being the root folder, etc).
+      const isSnapshotOrNotInBuild = snapshot || !(await f.isInItsRespectiveBuildFolder());
+
       const fileName = f.path();
-      if (!inBuildFolder) {
+      if (isSnapshotOrNotInBuild) {
         pushableNodes.push(f);
       } else {
         App.logger.info(`Excluding file in build folder from push: ${fileName}`);
       }
     }
 
-    if (snapshot) {
-      const flattenedSnapshot = await this.getSnapshotFolder().flatten();
-      for (const f of flattenedSnapshot) {
-        const reason = await f.getReasonToNotPush({ isSnapshot: snapshot });
-        if (reason) {
-          App.logger.info(`Excluding snapshot file from push: ${f.path()} (${reason})`);
-          continue;
-        }
-        pushableNodes.push(f);
-      }
-    }
     return pushableNodes;
   }
 
@@ -683,5 +667,22 @@ export class ScriptRoot {
       red squigglies, but it renders the JSON invalid and the webapp cannot parse it properly.`;
     }
     return "";
+  }
+
+  /**
+   * Gets the root-level tsconfig.json file if it exists and is valid.
+   * 
+   * @returns A Promise that resolves to the root TsConfig instance
+   * @throws an {@link Err.ScriptOperationError} When the root tsconfig.json file is missing or invalid
+   * @lastreviewed 2025-10-13
+   */
+  public async getDraftTsConfig(): Promise<TsConfig> {
+    const draftFolderUri = this.getDraftFolder().uri();
+    const uri = vscode.Uri.joinPath(draftFolderUri, TsConfig.NAME);
+    const tsConfig = ScriptFactory.createTsConfig(uri);
+    if (!(await tsConfig.isCopacetic())) {
+      throw new Err.ScriptOperationError(`No ${TsConfig.NAME} file found in script root.`);
+    }
+    return tsConfig;
   }
 }

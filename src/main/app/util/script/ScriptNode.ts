@@ -517,7 +517,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     return !(await this.isFolder());
   }
 
-  abstract getReasonToNotPush(arg?: { upstairsOverride?: URL, isSnapshot?: boolean; }): Promise<string | null>;
+  abstract getReasonToNotPush(arg?: { upstairsOverride?: URL  }): Promise<string | null>;
 
   /**
    * Copies the current draft file to its respective build folder.
@@ -539,23 +539,6 @@ export abstract class ScriptNode implements ScriptPathElement {
       await this.pathWithRespectToTsConfig()
     );
     await this.copyTo(buildUri);
-  }
-
-  /**
-   * Copies the current draft file to the snapshot folder.
-   * @throws an {@link Err.SnapshotOperationError} When the current node is already in the snapshot folder
-   * @lastreviewed 2025-10-10
-   */
-  public async copyToSnapshot() {
-    if (this.isInSnapshot()) {
-      throw new Err.SnapshotOperationError("copy to snapshot");
-    }
-    const snapshotUri = vscode.Uri.joinPath(
-      this.getScriptRoot().getRootUri(),
-      FolderNames.SNAPSHOT,
-      this.pathWithRespectToDraftRoot()
-    );
-    await this.copyTo(snapshotUri);
   }
 
   /**
@@ -599,7 +582,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   /**
    * Renames the current node to something new; operation is aborted if the new name is the same as the current name.
    */
-  async rename(newName: string): Promise<void> {
+  public async rename(newName: string): Promise<void> {
     await this.isCopacetic();
     if (this.name() === newName) {
       App.logger.info("Ignoring rename operation; new name is the same as the current name.");

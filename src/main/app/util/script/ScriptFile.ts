@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { CryptoAlgorithms, FileExtensions, Http, MimeTypes, SpecialFiles } from '../../../resources/constants';
+import { CryptoAlgorithms, FileExtensions, FolderNames, Http, MimeTypes, SpecialFiles } from '../../../resources/constants';
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { ScriptUrlParser } from "../data/ScriptUrlParser";
@@ -274,14 +274,18 @@ export class ScriptFile extends ScriptNode {
    * @returns Empty string if the file can be pushed, otherwise a descriptive reason why not
    * @lastreviewed 2025-09-15
    */
-  public async getReasonToNotPush(ops?: { upstairsOverride?: URL, isSnapshot?: boolean; }): Promise<string | null> {
+  public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string | null> {
     if (this._reasonToNotPush !== undefined) {
       return this._reasonToNotPush;
     }
     return await this.setReasonToNotPush(ops);
   }
 
-  private async setReasonToNotPush(ops?: { upstairsOverride?: URL, isSnapshot?: boolean; }): Promise<string | null> {
+  /**
+   * Sets the reason to not push this file (so it can be cached)
+   * and returns it.
+   */
+  private async setReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string | null> {
     if (this.parser.type === "root") {
       this._reasonToNotPush = "Node is the root folder";
     } else if (this.name() === SpecialFiles.B6P_METADATA) {
@@ -292,10 +296,8 @@ export class ScriptFile extends ScriptNode {
       this._reasonToNotPush = "Node is an external model";
     } else if (await this.isInGitIgnore()) {
       this._reasonToNotPush = "Node is ignored by .gitignore";
-    } else if (ops?.isSnapshot ? false : await this.isInDraftInfoOrObjects()) {
+    } else if (await this.isInDraftInfoOrObjects()) {
       this._reasonToNotPush = "Node is in info or objects";
-    } else if (await this.isFolder()) {
-      this._reasonToNotPush = "Node is a folder";
     } else if ((await this.isFile()) && await this.currentIntegrityMatches(ops)) {
       this._reasonToNotPush = "File integrity matches";
     } else if (!this._reasonToNotPush) {
@@ -352,7 +354,7 @@ export class ScriptFile extends ScriptNode {
         throw new Err.UserCancelledError(`User ${overwrite ? overwrite + "ed" : "cancelled"} push due to upstairs file change`);
       }
     }
-    const reason = await this.getReasonToNotPush({ upstairsOverride, isSnapshot: arg?.isSnapshot });
+    const reason = await this.getReasonToNotPush({ upstairsOverride });
 
     if (reason) {
       App.logger.info(`${reason}; not pushing file:`, this.uri().fsPath);
@@ -362,16 +364,27 @@ export class ScriptFile extends ScriptNode {
 
     //TODO investigate if this can be done via streaming
     const fileContents = await fs().readFile(this.uri());
-    const resp = await SM.fetch(upstairsOverride, {
+    const requestOptions = {
       method: Http.Methods.PUT,
       headers: {
         [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
       },
       body: fileContents
-    });
+    };
+    let resp = await SM.fetch(upstairsOverride, requestOptions);
     if (!resp.ok) {
       const details = await getDetails(resp);
       throw new Err.FileSendError(details);
+    }
+    // to snapshot we simply need to reupload the exact same file but to the snapshot folder instead
+    if (arg?.isSnapshot) {
+      if (this.parser.type !== FolderNames.DRAFT) {
+        throw new Err.ScriptOperationError("This should never happen, this is here as a safetycheck and should be removed when we're confident.");
+      }
+      const snapshotOverride = new URL(upstairsOverride);
+      snapshotOverride.pathname = snapshotOverride.pathname.replace(new RegExp(FolderNames.DRAFT), FolderNames.SNAPSHOT);
+
+      resp = await SM.fetch(snapshotOverride, requestOptions);
     }
     await this.touch("lastPushed");
     App.logger.info("File sent successfully:", this.uri().fsPath);
@@ -390,10 +403,16 @@ export class ScriptFile extends ScriptNode {
     }
   }
 
+  /**
+   * Determines if the file is a tsconfig.json file.
+   */
   public isTsConfig(): boolean {
     return this.name() === TsConfig.NAME;
   }
 
+  /**
+   * Determines if the file is a markdown file based on its extension.
+   */
   public isMarkdown(): boolean {
     return this.extension === FileExtensions.MARKDOWN;
   }

@@ -38,8 +38,6 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     const version = parent.getVersion();
     this._state = new PrivateTypedPersistable<ClientInfo>({ key: PrivateKeys.GITHUB_STATE, context: this.context, defaultValue: { version, lastChecked: 0, githubToken: null, setupShown: false } });
 
-
-
     setTimeout(async () => {
       try {
         this.parent.logger.info("B6P: Starting automatic update check...");
@@ -55,24 +53,27 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   }
 
   /**
+   * //TODO
    * Checks if the extension version has changed (install or update) and shows setup guide
    * @param currentVersion The current version of the extension
    * @lastreviewed null
    */
   private getVersionNotes(currentVersion: string): void {
     const storedVersion = this.state.get('version');
+    this.parent.logger.info(`B6P: Stored version: ${storedVersion}, Current version is ${currentVersion}`);
 
-    // Check if this is a fresh install or an update
-    if (storedVersion !== currentVersion) {
-      const isNewInstall = storedVersion === currentVersion; // Default value matches current means first run
-      const message = isNewInstall
-        ? 'Welcome to BlueStep JavaScript Push/Pull!'
-        : `BlueStep extension updated to v${currentVersion}`;
 
-      this.parent.logger.info(`B6P: Version change detected (${storedVersion} -> ${currentVersion})`);
-      //TODO implement release notes display
-      this.parent.logger.info(message);
-    }
+    // // Check if this is a fresh install or an update
+    // if (storedVersion !== currentVersion) {
+    //   const isNewInstall = storedVersion === currentVersion; // Default value matches current means first run
+    //   const message = isNewInstall
+    //     ? 'Welcome to BlueStep JavaScript Push/Pull!'
+    //     : `BlueStep extension updated to v${currentVersion}`;
+
+    //   this.parent.logger.info(`B6P: Version change detected (${storedVersion} -> ${currentVersion})`);
+    //   //TODO implement release notes display
+    //   this.parent.logger.info(message);
+    // }
   }
 
   /**
