@@ -20,7 +20,6 @@ export default function () {
     try {
         eval(B6P.activeEditorDocument.getText());
     } catch (error) {
-        vscode.window.showInformationMessage('horay!');
         vscode.window.showErrorMessage(`Error executing script: ${error}`);
         vscode.window.activeTerminal?.sendText(`Error executing script: ${error}`);
     }

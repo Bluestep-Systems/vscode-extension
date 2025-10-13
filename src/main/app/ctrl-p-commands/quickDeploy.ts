@@ -36,8 +36,7 @@ export default async function (): Promise<void> {
         execute: async () => {
           const webDavId = await getScriptWebdavId(origin, topId);
           if (webDavId !== null) {
-            await push(
-              {
+            await push({
                 overrideFormulaUrl: `${origin}${ApiEndpoints.FILES}${webDavId}/`,
                 sourceOps: { sourceOrigin, topId },
                 skipMessage: true
