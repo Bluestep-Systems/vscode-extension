@@ -1,11 +1,14 @@
 import * as path from 'path';
 import * as vscode from "vscode";
-import { PrimitiveNestedObject, Serializable, SourceOps } from "../../../../types";
+import { PrimitiveNestedObject, Serializable, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from "../../../../types";
 import { IdUtility } from "./data/IdUtility";
 import { Err } from './Err';
 import { FileSystem } from "./fs/FileSystem";
 import { ScriptFactory } from './script/ScriptFactory';
 import type { ScriptFolder } from './script/ScriptFolder';
+import { ApiEndpoints, Http, MimeTypes } from '../../resources/constants';
+import { SESSION_MANAGER as SM } from '../b6p_session/SessionManager';
+import { Alert } from './ui/Alert';
 
 const fs = FileSystem.getInstance;
 /**
@@ -275,6 +278,10 @@ export namespace Util {
     }
     return result;
   }
+
+  /**
+   * Gets the {@link vscode.Uri} of the active workspace folder.
+   */
   export function getActiveWorkspaceFolderUri() {
     const activeFolder = vscode.workspace.workspaceFolders?.[0];
     if (!activeFolder) {
@@ -285,5 +292,67 @@ export namespace Util {
     return curPath;
   }
 
+  /**
+   * Gets the WebDAV ID of a script.
+   * @param origin The origin of the script.
+   * @param topId The top ID of the script.
+   * @returns The WebDAV ID of the script, or null if not found.
+   */
+  export async function getScriptWebdavId(origin: string, topId: string): Promise<string | null> {
+    const originUrl = new URL(origin);
+    const gqlBody = (topId: string) => `{\"query\":\"query ObjectData($id: String!) {\\n  children(parentId: $id) {\\n    ... on Parent {\\n      children {\\n        items {\\n          id\\n        }\\n      }\\n    }\\n  }\\n}\",\"variables\":{\"id\":\"${topId}\"},\"operationName\":\"ObjectData\"}`;
+
+    try {
+      const GQL_RESP = await SM.csrfFetch(originUrl.origin + ApiEndpoints.GQL, {
+        method: Http.Methods.POST,
+        headers: {
+          [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
+          [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON
+        },
+        body: gqlBody(topId)
+      }).then((res: Response) => res.json()).catch(e => {
+        throw new Err.GraphQLFetchError(e);
+      }) as ScriptGqlResp;
+      if ((GQL_RESP as ScriptGQLBadResp).errors) {
+        Alert.error("GraphQL errors found");
+        throw new Err.GraphQLError((GQL_RESP as ScriptGQLBadResp).errors);
+      }
+      const targetScriptRootFolderId = (GQL_RESP as ScriptGQLGoodResp).data.children[0]?.children.items[0]?.id;
+      if (!targetScriptRootFolderId) {
+        Alert.error(`No script root folder found for topId: ${topId}`);
+        throw new Err.ScriptRootFolderNotFoundError(topId);
+      }
+      try {
+        const targetScriptWebdavId = new WebDavId(targetScriptRootFolderId).seqnum;
+        return targetScriptWebdavId;
+      } catch (e) {
+        throw new Err.WebdavParsingError(`Error parsing WebDAV ID from: ${targetScriptRootFolderId}`);
+      }
+    } catch (e) {
+      if (e instanceof Err.WebdavParsingError) {
+        return null;
+      } else if (e instanceof Error) {
+        Alert.error(e.stack || e.message || String(e));
+      } else {
+        Alert.error(String(e));
+      }
+      throw new Err.WebdavIdFetchError(origin, topId);
+    }
+  }
+  export class WebDavId {
+    classid: string;
+    seqnum: string;
+    constructor(id: string) {
+      // take an id of this format "530003___1082638" and parse it into classid and seqnum using regex
+      const match = id.match(/^(\d+)___(\d+)$/);
+      if (!match) {
+        throw new Err.WebdavParsingError(`Invalid WebDAV ID format: ${id}`);
+      }
+      this.classid = match[1];
+      this.seqnum = match[2];
+    }
+  }
 }
+
+
 
