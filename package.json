@@ -2,7 +2,7 @@
   "name": "bsjs-push-pull",
   "displayName": "B6P Push/Pull",
   "description": "Sync JavaScript files with BlueStep systems via WebDAV",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "publisher": "bluestep-systems",
   "repository": {
     "type": "git",
@@ -22,9 +22,7 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "workspaceContains:**/.b6p_metadata.json"
-  ],
+  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "configuration": [
@@ -66,7 +64,8 @@
             "default": "U131364=https://templateassisted.myassn.com/"
           }
         }
-      }, {
+      },
+      {
         "title": "Squelch Popups",
         "order": 2,
         "id": "bsjs-push-pull.squelch",
