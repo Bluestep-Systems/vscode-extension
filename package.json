@@ -66,6 +66,24 @@
             "default": "U131364=https://templateassisted.myassn.com/"
           }
         }
+      }, {
+        "title": "Squelch Popups",
+        "order": 2,
+        "id": "bsjs-push-pull.squelch",
+        "properties": {
+          "bsjs-push-pull.squelch.pushComplete": {
+            "order": 0,
+            "type": "boolean",
+            "description": "Squelch push-complete popup",
+            "default": false
+          },
+          "bsjs-push-pull.squelch.pullComplete": {
+            "order": 1,
+            "type": "boolean",
+            "description": "Squelch pull-complete popup",
+            "default": false
+          }
+        }
       }
     ],
     "commands": [

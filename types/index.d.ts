@@ -487,6 +487,20 @@ export type Settings = {
      */
     showNotifications: boolean;
   };
+
+  /**
+   * Settings for which popups to squelch
+   */
+  squelch: {
+    /**
+     * the pull-complete notification
+     */
+    pullComplete: boolean;
+    /**
+     * the push-complete notification
+     */
+    pushComplete: boolean;
+  }
 };
 
 /**

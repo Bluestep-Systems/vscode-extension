@@ -59,7 +59,7 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
     await cleanupUnusedUpstairsPaths(sr.getRootUri(), targetFormulaOverride, isSnapshot);
 
     if (!skipMessage) {
-      Alert.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
+      !(App.settings.get("squelch").pushComplete) && Alert.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
     }
   } catch (e) {
     if (!(e instanceof Err.AlreadyAlertedError)) {

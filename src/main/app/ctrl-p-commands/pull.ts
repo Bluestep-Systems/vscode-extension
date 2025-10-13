@@ -48,7 +48,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     const flattenedDirectory = await Util.flattenDirectory(directory);
     await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
 
-    Alert.popup('Pull complete!');
+    !(App.settings.get("squelch").pullComplete) && Alert.popup('Pull complete!');
   } catch (e) {
     Alert.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);
     throw e;
