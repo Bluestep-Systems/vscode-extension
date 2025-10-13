@@ -93,6 +93,8 @@ function createVsix() {
     // Add dist directory
     if (fs.existsSync('dist')) {
       archive.directory('dist/', 'extension/dist/');
+    } else {
+      console.error('⚠️  WARNING: dist directory not found!');
     }
     
     // Add resources
@@ -116,9 +118,34 @@ async function main() {
     runCommand('npm run clean || true', 'Cleaning previous builds');
     runCommand('npm run package', 'Building extension for production');
 
+    // Save the built dist directory before npm ci modifies it
+    console.log('💾 Saving dist directory...');
+    if (fs.existsSync('dist')) {
+      const distBackup = 'dist-backup';
+      if (fs.existsSync(distBackup)) {
+        fs.rmSync(distBackup, { recursive: true, force: true });
+      }
+      fs.cpSync('dist', distBackup, { recursive: true });
+      console.log('✅ dist directory backed up');
+    } else {
+      console.error('❌ dist directory missing after build!');
+      process.exit(1);
+    }
+
     // Install only production dependencies
     console.log('🔧 Installing production dependencies...');
     runCommand('npm ci --only=production', 'Installing production dependencies');
+
+    // Restore the dist directory
+    console.log('🔄 Restoring dist directory...');
+    if (fs.existsSync('dist-backup')) {
+      if (fs.existsSync('dist')) {
+        fs.rmSync('dist', { recursive: true, force: true });
+      }
+      fs.cpSync('dist-backup', 'dist', { recursive: true });
+      fs.rmSync('dist-backup', { recursive: true, force: true });
+      console.log('✅ dist directory restored');
+    }
 
     // Create the VSIX file
     await createVsix();
@@ -129,7 +156,7 @@ async function main() {
 
     console.log('🎉 Extension packaging completed successfully!');
     console.log(`📁 Package file: ${vsixFileName}`);
-    
+
   } catch (error) {
     console.error('❌ Packaging failed:', error);
     process.exit(1);
