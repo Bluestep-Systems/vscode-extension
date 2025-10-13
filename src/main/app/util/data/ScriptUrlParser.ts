@@ -105,7 +105,7 @@ export class ScriptUrlParser {
     return await this.orgWorker().getU();
   }
 
-  public async getScriptKey(): Promise<{ seqnum: string; classid: string; }> {
+  public async getScriptBaseKey(): Promise<{ seqnum: string; classid: string; }> {
     if (this._scriptKey !== null) {
       return this._scriptKey;
     }

@@ -178,7 +178,7 @@ export class ScriptRoot {
         scriptName = await this.scriptParser.getScriptName() || (() => { throw new Err.FileReadError("Missing script name and no parser available"); })();
         U = await this.scriptParser.getU() || (() => { throw new Err.FileReadError("Missing U and no parser available"); })();
         webdavId = this.scriptParser.webDavId || (() => { throw new Err.FileReadError("Missing webdavId and no parser available"); })();
-        scriptKey = await this.scriptParser.getScriptKey() || (() => { throw new Err.FileReadError("Missing scriptKey and no parser available"); })();
+        scriptKey = await this.scriptParser.getScriptBaseKey() || (() => { throw new Err.FileReadError("Missing scriptKey and no parser available"); })();
       }
 
       contentObj = {
@@ -313,7 +313,7 @@ export class ScriptRoot {
    */
   async getScriptKey() {
     if (this.scriptParser !== null) {
-      return this.scriptParser.getScriptKey();
+      return this.scriptParser.getScriptBaseKey();
     }
     const metadata = await this.getMetaData();
     if (!metadata) {
@@ -326,7 +326,7 @@ export class ScriptRoot {
     try {
       // this will fail if there is no webdavId.
       this.scriptParser = new ScriptUrlParser((await this.toScriptBaseUpstairsUrl()).toString());
-      const key = await this.scriptParser.getScriptKey();
+      const key = await this.scriptParser.getScriptBaseKey();
       await this.modifyMetaData(meta => {
         meta.scriptKey = key;
       });
