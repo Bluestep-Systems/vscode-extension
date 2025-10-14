@@ -6,6 +6,7 @@ import { ScriptFactory } from '../util/script/ScriptFactory';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
+import * as path from 'path';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -117,7 +118,7 @@ async function createOrUpdateIndividualNode(downstairsRest: string, parser: Scri
   const U = await parser.getU();
   const ultimatePath = vscode.Uri.joinPath(activePath, U, downstairsRest);
 
-  const isDirectory = ultimatePath.toString().endsWith("/");
+  const isDirectory = ultimatePath.toString().endsWith(path.sep);
 
   if (isDirectory) {
     let dirExists = false;

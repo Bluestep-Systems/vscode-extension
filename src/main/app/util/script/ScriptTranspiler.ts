@@ -130,7 +130,7 @@ export class ScriptTranspiler {
    * @returns A Promise that resolves to an array of emitted file paths.
    * @lastreviewed 2025-10-01
    */
-  public async compile(sharedRoot?: ScriptRoot): Promise<string[]> {
+  public async transpile(sharedRoot?: ScriptRoot): Promise<string[]> {
     const emittedFiles: string[] = [];
     for (const [tsConfigPath, sfList] of this.projects.entries()) {
       if (sfList.length === 0) {

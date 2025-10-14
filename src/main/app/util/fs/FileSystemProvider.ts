@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import type { ScriptPathElement } from '../script/PathElement';
 import type { ScriptFolder } from '../script/ScriptFolder';
 import { Err } from '../Err';
-
+import * as path from 'path';
 /**
  * Interface defining the file system operations we need.
  * This allows us to create both real and mock implementations.
@@ -591,7 +591,7 @@ export class MockFileSystem implements FileSystemProvider {
       
       // Check if the file is under the base URI and matches the pattern
       const isUnderBase = baseUri.path === '' || uri.path.startsWith(baseUri.path);
-      const matchesPattern = uri.path.endsWith('/' + targetFile) || uri.path.endsWith(targetFile);
+      const matchesPattern = uri.path.endsWith(path.sep + targetFile) || uri.path.endsWith(targetFile);
       
       if (isUnderBase && matchesPattern) {
         results.push(uri);
@@ -740,12 +740,12 @@ export class MockFileSystem implements FileSystemProvider {
    * This implementation searches through the mock files for the target filename.
    */
   async closest(startUri: vscode.Uri, fileName: string, maxDepth: number = 10): Promise<vscode.Uri | null> {
-    let currentPath = startUri.path;
+    let currentPath = startUri.fsPath;
     let depth = 0;
 
     while (depth < maxDepth) {
       // Normalize the path to ensure it ends with '/' for directory operations
-      const searchPath = currentPath.endsWith('/') ? currentPath : currentPath + '/';
+      const searchPath = currentPath.endsWith(path.sep) ? currentPath : currentPath + path.sep;
       const targetPath = searchPath + fileName;
       const targetUri = vscode.Uri.file(targetPath);
 
@@ -755,10 +755,10 @@ export class MockFileSystem implements FileSystemProvider {
       }
 
       // Move to parent directory
-      const parentPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+      const parentPath = currentPath.substring(0, currentPath.lastIndexOf(path.sep));
       
       // Check if we've reached the root
-      if (parentPath === currentPath || parentPath === '' || currentPath === '/') {
+      if (parentPath === currentPath || parentPath === '' || currentPath === path.sep) {
         break;
       }
 

@@ -538,10 +538,10 @@ export class ScriptRoot {
     await this.deleteBuildFolder();
     const draftFolder = this.getDraftFolder();
     const allDraftFiles = await draftFolder.flatten();
-    const compiler = new ScriptTranspiler();
+    const transpiler = new ScriptTranspiler();
     const copiedFiles: string[] = [];
     for (const file of allDraftFiles) {
-      if (await file.isFile() && (file as ScriptFile).isNotTypescript() ||
+      if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
         await file.isInItsRespectiveBuildFolder() ||
         await file.isInDraftInfo() || // TODO delete this after this is obviated
         await file.isFolder()) {
@@ -549,13 +549,13 @@ export class ScriptRoot {
       }
 
       if ([FileExtensions.TYPESCRIPT, FileExtensions.TYPESCRIPT_JSX].some(ext => file.path().endsWith(ext))) {
-        await compiler.addFile(file);
+        await transpiler.addFile(file);
       } else if (!(file as ScriptFile).isTsConfig()) {
         copiedFiles.push(file.path());
         await file.copyDraftFileToBuild();
       }
     }
-    const emittedEntries = await compiler.compile(this);
+    const emittedEntries = await transpiler.transpile(this);
     const emittedScriptNodes = emittedEntries.map(e => ScriptFactory.createNode(vscode.Uri.file(e), this));
 
     // now we need to delete any files in the build folder(s) that were not emitted by the compiler

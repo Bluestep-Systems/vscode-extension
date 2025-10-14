@@ -5,7 +5,7 @@ import type { ScriptNode } from "./ScriptNode";
 import * as vscode from "vscode";
 import { ScriptRoot } from "./ScriptRoot";
 import { TsConfig } from "./TsConfig";
-
+import * as path from 'path';
 /**
  * Factory namespace for creating ScriptNode instances (files and folders).
  * 
@@ -40,7 +40,7 @@ export namespace ScriptFactory {
    */
   export function createNode(uriSupplier: (() => vscode.Uri) | vscode.Uri, scriptRoot?: ScriptRoot): ScriptNode {
     const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
-    if (uri.fsPath.endsWith('/')) {
+    if (uri.fsPath.endsWith(path.sep)) {
       return new ScriptFolder(uri, scriptRoot);
     } else {
       return new ScriptFile(uri, scriptRoot);
