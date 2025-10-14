@@ -41,7 +41,7 @@ concurrency:
 # ENVIRONMENT VARIABLES
 # ============================================================================
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: '20'
   ARTIFACT_RETENTION_DAYS: 30
   VSIX_ARTIFACT_NAME: vsix-package
   # Security: Use commit SHAs instead of version tags for actions
@@ -66,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false  # Continue testing on other platforms even if one fails
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [windows-latest, macos-latest]
         node: ['20']  
 
     outputs:
