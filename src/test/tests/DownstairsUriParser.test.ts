@@ -290,7 +290,7 @@ suite('DownstairsUriParser Tests', () => {
       // Should be able to create new URIs relative to this one
       const childUri = vscode.Uri.joinPath(prependingUri, 'subfolder', 'file.txt');
       assert.strictEqual(childUri.scheme, 'file');
-      assert.strictEqual(childUri.fsPath.includes('workspace/projects'), true);
+      assert.strictEqual(childUri.fsPath.includes('workspace' + path.sep + 'projects'), true);
     });
 
     test('should handle metadata files correctly', () => {
