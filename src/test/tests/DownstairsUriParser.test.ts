@@ -12,7 +12,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/workspace/12345/draft');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.prependingPath, '/workspace');
+      assert.strictEqual(parser.prependingPath, path.sep + 'workspace');
       assert.strictEqual(parser.scriptName, '12345');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, '');
@@ -23,7 +23,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/workspace/67890/declarations');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.prependingPath, '/workspace');
+      assert.strictEqual(parser.prependingPath, path.sep + 'workspace');
       assert.strictEqual(parser.scriptName, '67890');
       assert.strictEqual(parser.type, 'declarations');
       assert.strictEqual(parser.rest, '');
@@ -33,7 +33,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/workspace/11111/.b6p_metadata.json');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.prependingPath, '/workspace');
+      assert.strictEqual(parser.prependingPath, path.sep + 'workspace');
       assert.strictEqual(parser.scriptName, '11111');
       assert.strictEqual(parser.type, 'metadata');
       assert.strictEqual(parser.rest, '');
@@ -43,7 +43,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/workspace/22222/.gitignore');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.prependingPath, '/workspace');
+      assert.strictEqual(parser.prependingPath, path.sep + 'workspace');
       assert.strictEqual(parser.scriptName, '22222');
       assert.strictEqual(parser.type, 'metadata');
       assert.strictEqual(parser.rest, '');
@@ -53,7 +53,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/workspace/44444/draft/subfolder/script.js');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.prependingPath, '/workspace');
+      assert.strictEqual(parser.prependingPath, path.sep + 'workspace');
       assert.strictEqual(parser.scriptName, '44444');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, 'subfolder/script.js');
@@ -63,7 +63,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/workspace/55555/declarations/types/interfaces.d.ts');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.prependingPath, '/workspace');
+      assert.strictEqual(parser.prependingPath, path.sep + 'workspace');
       assert.strictEqual(parser.scriptName, '55555');
       assert.strictEqual(parser.type, 'declarations');
       assert.strictEqual(parser.rest, 'types/interfaces.d.ts');
@@ -73,7 +73,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/very/deep/nested/workspace/folder/66666/draft/file.js');
       const parser = new DownstairsUriParser(uri);
       
-      assert.strictEqual(parser.prependingPath, '/very/deep/nested/workspace/folder');
+      assert.strictEqual(parser.prependingPath, path.sep + 'very' + path.sep + 'deep' + path.sep + 'nested' + path.sep + 'workspace' + path.sep + 'folder');
       assert.strictEqual(parser.scriptName, '66666');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, 'file.js');
@@ -246,7 +246,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       const prependingUri = parser.prependingPathUri();
-      assert.strictEqual(prependingUri.fsPath, '/very/deep/nested/workspace/folder');
+      assert.strictEqual(prependingUri.fsPath, path.sep + 'very' + path.sep + 'deep' + path.sep + 'nested' + path.sep + 'workspace' + path.sep + 'folder');
       assert.strictEqual(prependingUri.scheme, 'file');
     });
 
@@ -257,7 +257,7 @@ suite('DownstairsUriParser Tests', () => {
       const prependingUri = parser.prependingPathUri();
       // Note: When prepending path is empty, vscode.Uri.file('') normalizes to '/'
       // This is expected VS Code behavior for root paths
-      assert.strictEqual(prependingUri.fsPath, '/');
+      assert.strictEqual(prependingUri.fsPath, path.sep);
       assert.strictEqual(prependingUri.scheme, 'file');
       assert.strictEqual(parser.prependingPath, ''); // The raw property should still be empty
     });
