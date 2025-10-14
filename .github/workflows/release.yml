@@ -177,6 +177,7 @@ jobs:
     permissions:
       contents: read
       id-token: write  # For artifact attestation
+      attestations: write  # For creating attestations
 
     outputs:
       vsix-file: ${{ steps.package-info.outputs.vsix-file }}
