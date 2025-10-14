@@ -56,7 +56,7 @@ suite('DownstairsUriParser Tests', () => {
       assert.strictEqual(parser.prependingPath, path.sep + 'workspace');
       assert.strictEqual(parser.scriptName, '44444');
       assert.strictEqual(parser.type, 'draft');
-      assert.strictEqual(parser.rest, 'subfolder/script.js');
+      assert.strictEqual(parser.rest, 'subfolder' + path.sep + 'script.js');
     });
 
     test('should parse declarations URI with nested file correctly', () => {
@@ -66,7 +66,7 @@ suite('DownstairsUriParser Tests', () => {
       assert.strictEqual(parser.prependingPath, path.sep + 'workspace');
       assert.strictEqual(parser.scriptName, '55555');
       assert.strictEqual(parser.type, 'declarations');
-      assert.strictEqual(parser.rest, 'types/interfaces.d.ts');
+      assert.strictEqual(parser.rest, 'types' + path.sep + 'interfaces.d.ts');
     });
 
     test('should handle deeply nested prepending path', () => {
@@ -115,7 +115,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/workspace/12345/draft');
       const parser = new DownstairsUriParser(uri);
       
-      const expected = '/workspace' + path.sep + '12345';
+      const expected = path.sep + 'workspace' + path.sep + '12345';
       assert.strictEqual(parser.getShavedName(), expected);
     });
 
@@ -123,7 +123,7 @@ suite('DownstairsUriParser Tests', () => {
       const uri = vscode.Uri.file('/very/deep/workspace/67890/declarations/file.d.ts');
       const parser = new DownstairsUriParser(uri);
       
-      const expected = '/very/deep/workspace' + path.sep + '67890';
+      const expected = path.sep + 'very' + path.sep + 'deep' + path.sep + 'workspace' + path.sep + '67890';
       assert.strictEqual(parser.getShavedName(), expected);
     });
 
@@ -237,7 +237,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       const prependingUri = parser.prependingPathUri();
-      assert.strictEqual(prependingUri.fsPath, '/workspace');
+      assert.strictEqual(prependingUri.fsPath, path.sep + 'workspace');
       assert.strictEqual(prependingUri.scheme, 'file');
     });
 
@@ -298,7 +298,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       const prependingUri = parser.prependingPathUri();
-      assert.strictEqual(prependingUri.fsPath, '/workspace');
+      assert.strictEqual(prependingUri.fsPath, path.sep + 'workspace');
       assert.strictEqual(prependingUri.scheme, 'file');
     });
 
@@ -307,7 +307,7 @@ suite('DownstairsUriParser Tests', () => {
       const parser = new DownstairsUriParser(uri);
       
       const prependingUri = parser.prependingPathUri();
-      assert.strictEqual(prependingUri.fsPath, '/workspace');
+      assert.strictEqual(prependingUri.fsPath, path.sep + 'workspace');
       assert.strictEqual(prependingUri.scheme, 'file');
     });
 
