@@ -332,6 +332,10 @@ export class ScriptFile extends ScriptNode {
     return path.extname(this.name()).toLowerCase();
   }
   async upload(arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean; }): Promise<Response | void> {
+    if (await this.isFolder()) {
+      App.logger.warn("A folder somehow got to ScriptFile.upload(); this is a bug");
+      return void 0;
+    }
     App.logger.info("Preparing to send file:", this.uri().fsPath);
     App.logger.info("To target formula URI:", arg?.upstairsUrlOverrideString);
     const upstairsOverride = new URL(arg?.upstairsUrlOverrideString || this.upstairsUrl().toString());
