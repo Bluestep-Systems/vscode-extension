@@ -229,10 +229,6 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Toggle Debug Mode](command:bsjs-push-pull.toggleDebug)"
-      },
-      {
-        "view": "b6pMenuView",
         "contents": "---- UNDER DEVELOPMENT ----",
         "when": "bsjs-push-pull.debugMode.enabled"
       },

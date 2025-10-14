@@ -133,7 +133,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     url = new URL(url);
     const origin = url.origin;
     if (!this.sessions.has(origin)) {
-      await this.sessions.set(origin, { lastCsrfToken: null, [Http.Cookies.INGRESSCOOKIE]: null, [Http.Cookies.JSESSIONID]: null, lastTouched: Date.now() });
+      await this.login(url);
     }
     const session = this.sessions.get(origin);
     if (!session) {
@@ -269,24 +269,26 @@ export const SESSION_MANAGER = new class extends ContextNode {
       const response = await HttpClient.getInstance().fetch(url, options);
       return await this.processResponse(response);
     } else {
-      this.parent.logger.info("performing login to:" + url.origin);
-      const authLoginBodyValue = await this.authManager.authLoginBodyValue();
-      this.parent.isDebugMode() && this.parent.logger.info("login body:" + authLoginBodyValue);
-      //TODO have this moved use the proper login servlet instead of this dummy endpoint
-      const response = await HttpClient.getInstance().fetch(url.origin + ApiEndpoints.LOOKUP_TEST, {
-        method: Http.Methods.POST,
-        headers: {
-          [Http.Headers.AUTHORIZATION]: `${await this.authManager.authHeaderValue()}`,
-        }
-      });
-      this.parent.logger.info("login status:" + response.status);
-      if (response.status >= ResponseCodes.BAD_REQUEST) {
-        throw new Err.HttpResponseError(`HTTP Error: ${response.status} ${response.statusText}`);
-      }
-      await this.processResponse(response);
+      await this.login(url);
       return await this.fetch(url, options);
 
     }
+  }
+
+  private async login(url: URL) {
+    this.parent.logger.info("performing login to:" + url.origin);
+    //TODO have this moved use the proper login servlet instead of this dummy endpoint
+    const response = await HttpClient.getInstance().fetch(url.origin + ApiEndpoints.LOOKUP_TEST, {
+      method: Http.Methods.POST,
+      headers: {
+        [Http.Headers.AUTHORIZATION]: `${await this.authManager.authHeaderValue()}`,
+      }
+    });
+    this.parent.logger.info("login status:" + response.status);
+    if (response.status >= ResponseCodes.BAD_REQUEST) {
+      throw new Err.HttpResponseError(`HTTP Error: ${response.status} ${response.statusText}`);
+    }
+    await this.processResponse(response);
   }
 
   /**

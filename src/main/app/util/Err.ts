@@ -795,4 +795,11 @@ export namespace Err {
       this.name = "OrgCacheError";
     }
   }
+
+  export class ScriptUrlParserError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = "ScriptUrlParserError";
+    }
+  }
 }

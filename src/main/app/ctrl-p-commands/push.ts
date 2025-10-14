@@ -40,7 +40,7 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
 
     const detectedIssues = await sr.preflightCheck();
     if (detectedIssues) {
-      Alert.error(detectedIssues);
+      Alert.popup(detectedIssues);
       return;
     }
     const snList = await sr.getPushableNodes(isSnapshot);

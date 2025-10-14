@@ -111,7 +111,7 @@ export class ScriptUrlParser {
     }
     await this.getGrandparentInfo();
     if (this._scriptKey === null) {
-      throw new Err.MetadataDotJsonFetchError("Failed to fetch script key");
+      throw new Err.ScriptUrlParserError("Failed to fetch script key");
     }
     return this._scriptKey;
   }
@@ -122,7 +122,7 @@ export class ScriptUrlParser {
     }
     await this.getGrandparentInfo();
     if (this._scriptName === null) {
-      throw new Err.MetadataDotJsonFetchError("Failed to fetch script name");
+      throw new Err.ScriptUrlParserError("Failed to fetch script name");
     }
     return this._scriptName;
   }
@@ -132,13 +132,13 @@ export class ScriptUrlParser {
    */
   private async getGrandparentInfo(): Promise<void> {
     if (this._scriptName !== null || this._scriptKey !== null) {
-      throw new Err.MetadataDotJsonFetchError("Script name or key already fetched");
+      throw new Err.ScriptUrlParserError("Script name or key already fetched");
     }
     const gqlUrl = this.urlCopy();
     const scriptRootId = "530001___" + this.webDavId;
     const parentQuery = (id: string) => `{"query":"query ObjectData($id: String!) {\n  parents(childId: $id) {\n    id\n    displayName\n  }\n}","variables":{"id":"${id}"},"operationName":"ObjectData"}`;
     try {
-      
+
       gqlUrl.pathname = `gql`;
       const res1 = await SM.csrfFetch(gqlUrl, {
         method: Http.Methods.POST,
@@ -148,13 +148,13 @@ export class ScriptUrlParser {
         body: parentQuery(scriptRootId)
       });
       if (!res1.ok) {
-        throw new Err.MetadataDotJsonFetchError(`Failed to fetch metadata from ${gqlUrl.href}: ${res1.status} ${res1.statusText}`);
+        throw new Err.ScriptUrlParserError(`Failed to fetch first parent for ${scriptRootId} from ${gqlUrl.href}: ${res1.status} ${res1.statusText}`);
       }
       const json1 = await res1.json() as GqlParentNameResp;
       //TODO type the error response as well
       const parents = json1?.data?.parents;
       if (!parents || parents.length !== 1) {
-        throw new Err.MetadataDotJsonFetchError(`Problem looking up parents from ${gqlUrl.href}, ${JSON.stringify(json1)}`);
+        throw new Err.ScriptUrlParserError(`Problem looking up parents for ${scriptRootId} from ${gqlUrl.href}, ${JSON.stringify(json1)}`);
       }
       const mediaLibraryId = parents[0].id;
       const res2 = await SM.csrfFetch(gqlUrl, {
@@ -166,23 +166,22 @@ export class ScriptUrlParser {
       });
 
       if (!res2.ok) {
-        throw new Err.MetadataDotJsonFetchError(`Failed to fetch metadata from ${gqlUrl.href}: ${res2.status} ${res2.statusText}`);
+        throw new Err.ScriptUrlParserError(`Failed to fetch parent for mediaLibrary (${mediaLibraryId}) from ${gqlUrl.href}: ${res2.status} ${res2.statusText}`);
       }
       const json2 = await res2.json() as GqlParentNameResp;
       const parents2 = json2?.data?.parents;
       if (!parents2 || parents2.length !== 1) {
-        throw new Err.MetadataDotJsonFetchError(`Problem looking up parents from ${gqlUrl.href}, ${JSON.stringify(json2)}`);
+        throw new Err.ScriptUrlParserError(`Problem looking up parents for mediaLibrary (${mediaLibraryId}) from ${gqlUrl.href}, ${JSON.stringify(json2)}`);
       }
-
-      this._scriptName = parents2[0].displayName;
       const parts = parents2[0].id.split("___");
       if (parts.length !== 2) {
-        throw new Err.MetadataDotJsonFetchError(`Problem parsing script ID from ${gqlUrl.href}, got unexpected format: ${parents2[0].id}`);
+        throw new Err.ScriptUrlParserError(`Problem parsing script ID from ${gqlUrl.href}, got unexpected format: ${parents2[0].id}`);
       }
+      this._scriptName = parents2[0].displayName;
       this._scriptKey = { seqnum: parts[1], classid: parts[0] };
       return void 0;
     } catch (e) {
-      throw new Err.MetadataDotJsonFetchError(`Failed to parse metadata JSON from ${gqlUrl.href}: ${(e as Error).message}`);
+      throw new Err.ScriptUrlParserError(`Failed to parse metadata JSON from ${gqlUrl.href}: ${(e as Error).message}`);
     }
   }
 
