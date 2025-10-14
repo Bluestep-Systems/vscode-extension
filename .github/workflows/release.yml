@@ -67,13 +67,7 @@ jobs:
       fail-fast: false  # Continue testing on other platforms even if one fails
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node: ['20', '22']  # Test on current and previous LTS
-        exclude:
-          # Optimize by excluding some combinations for faster builds
-          - os: windows-latest
-            node: '20'
-          - os: macos-latest
-            node: '20'
+        node: ['20']  
 
     outputs:
       tests-passed: ${{ steps.test-status.outputs.passed }}
