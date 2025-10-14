@@ -1,14 +1,10 @@
-import { ScriptUrlParser } from "../util/data/ScriptUrlParser";
+import { DownstairsUriParser } from "../util/data/DownstairsUrIParser";
+import * as vscode from 'vscode';
 
 export default async function () {
-  const WEBDAV_URL = "https://templateassisted.myassn.com/files/1439716/draft/";
-  const parser = new ScriptUrlParser(WEBDAV_URL);
+  const TEST_URI = "/home/brendan/test/extensiontest/U131364/Typedoc Check/draft/static/index.html";
+  const parser = new DownstairsUriParser(vscode.Uri.parse(TEST_URI));
   console.log(parser);
-  try {
-    const scriptName = await parser.getScriptName();
-    console.log("scriptName", scriptName);
-  } catch (e) {
-    console.error(e);
-  }
+  debugger;
   
 }

@@ -331,6 +331,15 @@ export class ScriptFile extends ScriptNode {
   public get extension() {
     return path.extname(this.name()).toLowerCase();
   }
+
+  public isTypescript(): boolean {
+    return [FileExtensions.TYPESCRIPT, FileExtensions.TYPESCRIPT_JSX].includes(this.extension);
+  }
+
+  public isNotTypescript(): boolean {
+    return !this.isTypescript();
+  }
+
   async upload(arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean; }): Promise<Response | void> {
     if (await this.isFolder()) {
       App.logger.warn("A folder somehow got to ScriptFile.upload(); this is a bug");

@@ -541,7 +541,7 @@ export class ScriptRoot {
     const compiler = new ScriptTranspiler();
     const copiedFiles: string[] = [];
     for (const file of allDraftFiles) {
-      if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
+      if (await file.isFile() && (file as ScriptFile).isNotTypescript() ||
         await file.isInItsRespectiveBuildFolder() ||
         await file.isInDraftInfo() || // TODO delete this after this is obviated
         await file.isFolder()) {

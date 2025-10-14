@@ -118,7 +118,8 @@ export class ScriptFolder extends ScriptNode {
    */
   public async flatten(): Promise<ScriptNode[]> {
     const rawUris = await this.flattenRaw();
-    return rawUris.map(uri => ScriptFactory.createNode(uri, this.scriptRoot));
+    const mappedUris = rawUris.map(uri => ScriptFactory.createNode(uri, this.scriptRoot));
+    return mappedUris;
   }
 
   /**
