@@ -49,7 +49,7 @@ env:
   ACTIONS_SETUP_NODE_SHA: '60edb5dd545a775178f52524783378180af0d1f8'  # v4.0.2
   ACTIONS_UPLOAD_ARTIFACT_SHA: '5d5d22a31266ced268874388b861e4b58bb5c2f3'  # v4.3.1
   ACTIONS_DOWNLOAD_ARTIFACT_SHA: 'c850b930e6ba138125429b7e5c93fc707a7f8427'  # v4.1.4
-  SOFTPROPS_RELEASE_SHA: '7b4da11513bf3f43f9999e90eabced41ab8bb048'  # v2.2.0
+  SOFTPROPS_RELEASE_SHA: '6da8fa9354ddfdc4aeace5fc48d7f679b5214090'  # v2.4.1
 
 # ============================================================================
 # JOBS
@@ -494,7 +494,7 @@ jobs:
       - name: Create GitHub Release
         id: create-release
         if: steps.check-release.outputs.exists == 'false'
-        uses: softprops/action-gh-release@7b4da11513bf3f43f9999e90eabced41ab8bb048  # v2.2.0
+        uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090  # v2.4.1
         with:
           name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
