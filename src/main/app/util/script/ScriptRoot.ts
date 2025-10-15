@@ -1,4 +1,3 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
@@ -11,11 +10,11 @@ import { OrgWorker } from '../data/OrgWorker';
 import { ScriptUrlParser } from '../data/ScriptUrlParser';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
-import { ScriptTranspiler } from './ScriptTranspiler';
 import { ScriptFactory } from './ScriptFactory';
 import { ScriptFile } from './ScriptFile';
 import type { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
+import { ScriptTranspiler } from './ScriptTranspiler';
 import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
 
@@ -539,7 +538,6 @@ export class ScriptRoot {
     const draftFolder = this.getDraftFolder();
     const allDraftFiles = await draftFolder.flatten();
     const transpiler = new ScriptTranspiler();
-    const copiedFiles: string[] = [];
     for (const file of allDraftFiles) {
       if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
         await file.isInItsRespectiveBuildFolder() ||
@@ -553,24 +551,10 @@ export class ScriptRoot {
       }
     }
     const emittedEntries = await transpiler.transpile(this);
+    App.logger.info(`Transpiled ${emittedEntries.length} TypeScript files.`);
+    App.logger.info(`Emitted Files: \n${emittedEntries.join("\n")}`);
     const emittedScriptNodes = emittedEntries.map(e => ScriptFactory.createNode(vscode.Uri.file(e), this));
-
-    // now we need to delete any files in the build folder(s) that were not emitted by the compiler
-    // or copied (like JSON files, js files, etc).
-    //TODO at this time (2024-10-01) this is really only serving as a safety check until
-    // we stop starting by wholesale deleting the build folder.
-    for (const buildNode of emittedScriptNodes) {
-      if (await buildNode.isFolder()) {
-        continue;
-      }
-      if (
-        !emittedEntries.includes(buildNode.path()) &&
-        !copiedFiles.includes(buildNode.path()
-          .replace(path.sep + (await buildNode.getBuildFolder()).name() + path.sep, path.sep))) {
-        App.logger.warn("file detected for deletion" + buildNode.path());
-        await buildNode.delete();
-      }
-    }
+    App.logger.info(`Emitted ScriptNodes: \n${emittedScriptNodes.map(n => n.path()).join("\n")}`);
     await this.tidyMetadataFile();
   }
 
@@ -604,7 +588,7 @@ export class ScriptRoot {
    */
   public async getDraftBuildFolder() {
     const tsConfig = await this.getDraftTsConfig();
-    
+
     return tsConfig.getBuildFolder();
   }
 
