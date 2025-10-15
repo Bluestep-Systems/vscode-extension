@@ -3,7 +3,7 @@
  *
  * Contains HTTP headers, methods, schemes, and cookies organized under a single namespace.
  *
- * @lastreviewed null
+ * @lastreviewed 2025-10-15
  */
 export namespace Http {
   /**

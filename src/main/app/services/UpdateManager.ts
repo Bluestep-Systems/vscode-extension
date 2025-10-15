@@ -11,7 +11,7 @@ const fs = FileSystem.getInstance;
 /**
  * Singleton update checker for the BlueStep VS Code extension.
  * Checks for new releases on GitHub and notifies users when updates are available.
- * @lastreviewed null
+ * @lastreviewed 2025-10-15
  */
 export const UPDATE_MANAGER = new class extends ContextNode {
   private readonly LAST_CHECKED_KEY = 'lastChecked';
@@ -153,7 +153,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Get GitHub authentication headers if token is available
    * @returns Headers object with authentication if configured
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async getGitHubHeaders(): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
@@ -195,7 +195,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Force check for updates regardless of timing
    * @returns UpdateInfo if a newer version is available, null otherwise
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   public async checkForUpdates(): Promise<UpdateInfo | null> {
     try {
@@ -230,7 +230,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Get current extension version from App singleton
    * @returns Current extension version string
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private getCurrentVersion(): string {
     if (this.parent.isDebugMode()) {
@@ -246,7 +246,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Get the latest release from GitHub API
    * @returns The latest non-draft, non-prerelease GitHub release or null if none found
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async getLatestRelease(): Promise<GithubRelease | null> {
     try {
@@ -291,7 +291,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @param newVersion The new version string to compare
    * @param currentVersion The current version string to compare against
    * @returns True if newVersion is newer than currentVersion
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private isNewerVersion(newVersion: string, currentVersion: string): boolean {
     const parseVersion = (version: string) => {
@@ -325,7 +325,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * Get download URL for the extension package from release assets
    * @param release The GitHub release object
    * @returns The download URL for the .vsix file or the release page
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private getDownloadUrl(release: GithubRelease): string {
     // Look for .vsix file in assets
@@ -341,7 +341,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Show update notification to user
    * @param updateInfo Information about the available update
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async notifyUserAndInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
     const config = this.parent.settings;
@@ -378,7 +378,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Automatically download and install the extension update
    * @param updateInfo Information about the available update
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async autoInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
     try {
@@ -434,7 +434,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @param downloadUrl URL to download the .vsix file from
    * @param version Version string for temporary file naming
    * @returns Path to the downloaded .vsix file
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async downloadVsixFile(downloadUrl: string, version: string): Promise<string> {
     try {
@@ -443,7 +443,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
         headers: {
           [Http.Headers.USER_AGENT]: Http.Headers.USER_AGENT_B6P,
         },
-        signal: AbortSignal.timeout(30000) // 30 second timeout
+        signal: AbortSignal.timeout(30_000) // 30 second timeout
       });
 
       if (!response.ok) {
@@ -477,7 +477,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Install a .vsix file using VS Code's extension API
    * @param vsixPath Local file path to the .vsix file
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async installVsixFile(vsixPath: string): Promise<void> {
     try {
@@ -490,7 +490,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Open the download URL in default browser
    * @param url The URL to open
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async openDownloadUrl(url: string): Promise<void> {
     try {
@@ -504,7 +504,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   /**
    * Show release notes in a webview panel
    * @param updateInfo Information about the update including release notes
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async showReleaseNotes(updateInfo: UpdateInfo): Promise<void> {
     const panel = vscode.window.createWebviewPanel(
@@ -584,7 +584,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
   /**
    * Disable automatic update checking
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   private async disableUpdateChecking(): Promise<void> {
     const curUpdateSettings = this.parent.settings.get('updateCheck');

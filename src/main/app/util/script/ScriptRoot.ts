@@ -352,7 +352,7 @@ export class ScriptRoot {
   /**
    * The domain extracted from the file path.
    *
-   * @lastreviewed null
+   * @lastreviewed 2025-10-15
    */
   public async anyOrigin() {
     return await OC.getAnyBaseUrl(await this.getU());
