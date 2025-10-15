@@ -210,7 +210,7 @@ export class ScriptUrlParser {
   async getScript(): Promise<GetScriptRet> {
     try {
       const url = this.urlCopy();
-      url.pathname = `${ApiEndpoints.FILES}/${this.webDavId}/`;
+      url.pathname = `${ApiEndpoints.FILES}${this.webDavId}/`;
       SM.parent.logger.info("Fetching script from URL:", url.href);
       const scriptName = await this.getScriptName();
       return await this.getSubScript(url, scriptName);
@@ -288,5 +288,18 @@ export class ScriptUrlParser {
       console.trace(e);
       throw e;
     }
+  }
+
+  toString(): string {
+    return JSON.stringify({
+      rawUrlString: this.rawUrlString,
+      url: this.url.href,
+      filesOrPublic: this.filesOrPublic,
+      webDavId: this.webDavId,
+      trailing: this.trailing,
+      trailingFolder: this.trailingFolder,
+      scriptName: this._scriptName,
+      scriptKey: this._scriptKey,
+    }, null, 2);
   }
 }

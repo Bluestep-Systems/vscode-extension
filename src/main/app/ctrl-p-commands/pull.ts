@@ -6,7 +6,6 @@ import { ScriptFactory } from '../util/script/ScriptFactory';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
-import * as path from 'path';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -20,6 +19,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     }
     const fetchedScriptObject = await scriptUrlParser.getScript();
     if (fetchedScriptObject === null) {
+      App.logger.warn("fetchedScriptObject is null");
       return;
     }
     const ultimateUris: vscode.Uri[] = [];
@@ -114,11 +114,17 @@ async function getStartingParser(overrideFormulaUrl?: string) {
 }
 
 async function createOrUpdateIndividualNode(downstairsRest: string, parser: ScriptUrlParser): Promise<vscode.Uri> {
+  if (App.isDebugMode()) {
+    App.logger.debug("createOrUpdateIndividualNode for downstairsRest:", downstairsRest);
+    App.logger.debug("with parser:", parser.toString());
+  }
   const activePath = Util.getActiveWorkspaceFolderUri();
   const U = await parser.getU();
   const ultimatePath = vscode.Uri.joinPath(activePath, U, downstairsRest);
 
-  const isDirectory = ultimatePath.toString().endsWith(path.sep);
+  // this needs to be a forward slash because that is what the parser works on a raw URL string and produces the trailing
+  // slash if it is a directory
+  const isDirectory = ultimatePath.toString().endsWith("/");
 
   if (isDirectory) {
     let dirExists = false;
