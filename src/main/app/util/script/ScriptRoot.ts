@@ -550,9 +550,6 @@ export class ScriptRoot {
 
       if ([FileExtensions.TYPESCRIPT, FileExtensions.TYPESCRIPT_JSX].some(ext => file.path().endsWith(ext))) {
         await transpiler.addFile(file);
-      } else if (!(file as ScriptFile).isTsConfig()) {
-        copiedFiles.push(file.path());
-        await file.copyDraftFileToBuild();
       }
     }
     const emittedEntries = await transpiler.transpile(this);

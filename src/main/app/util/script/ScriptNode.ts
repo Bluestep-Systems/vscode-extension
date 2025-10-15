@@ -467,12 +467,13 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @throws an {@link Err.ConfigFileError} When no tsconfig.json file is found
    * @lastreviewed 2025-10-10
    */
-  public async pathWithRespectToTsConfig() {
-    const closestTsConfigUri = await this.getClosestTsConfigUri();
-    if (!closestTsConfigUri) {
+  public async pathWithRespectToTsConfigFolder() {
+    const closestTsConfigFile = await this.getClosestTsConfigFile();
+    if (!closestTsConfigFile) {
       throw new Err.ConfigFileError(TsConfig.NAME, 0);
     }
-    return path.relative(closestTsConfigUri.fsPath, this.uri().fsPath);
+    const closestTsConfigFolderUri = closestTsConfigFile.folder().uri();
+    return path.relative(closestTsConfigFolderUri.fsPath, this.uri().fsPath);
   }
 
   /**
@@ -517,7 +518,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     return !(await this.isFolder());
   }
 
-  abstract getReasonToNotPush(arg?: { upstairsOverride?: URL  }): Promise<string | null>;
+  abstract getReasonToNotPush(arg?: { upstairsOverride?: URL; }): Promise<string | null>;
 
   /**
    * Copies the current draft file to its respective build folder.
@@ -536,7 +537,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     const buildUri = vscode.Uri.joinPath(
       tsConfig.folder().uri(),
       await tsConfig.relativePathToBuildFolder(),
-      await this.pathWithRespectToTsConfig()
+      await this.pathWithRespectToTsConfigFolder()
     );
     await this.copyTo(buildUri);
   }

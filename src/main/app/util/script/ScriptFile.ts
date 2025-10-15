@@ -342,8 +342,8 @@ export class ScriptFile extends ScriptNode {
 
   async upload(arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean; }): Promise<Response | void> {
     if (await this.isFolder()) {
-      App.logger.warn("A folder somehow got to ScriptFile.upload(); this is a bug");
-      return void 0;
+      //TODO remove this when we are confident it isn't needed anymore
+      throw new Err.ScriptOperationError("somehow a folder got created to upload with this method. ");
     }
     App.logger.info("Preparing to send file:", this.uri().fsPath);
     App.logger.info("To target formula URI:", arg?.upstairsUrlOverrideString);
