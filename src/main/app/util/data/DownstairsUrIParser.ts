@@ -71,11 +71,11 @@ export class DownstairsUriParser {
 
   /**
    * Returns the portion of the URI string from after "file://" up to the type folder
-   * 
+   *
    * This reconstructs the path using the extracted components instead of substring operations
    */
   public getShavedName(): string {
-    return this.prependingPath + path.sep + this.scriptName;
+    return path.join(this.prependingPath, this.scriptName);
   }
 
   /**

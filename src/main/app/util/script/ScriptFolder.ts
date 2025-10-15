@@ -69,7 +69,10 @@ export class ScriptFolder extends ScriptNode {
     if (!(other instanceof ScriptFolder)) {
       return false;
     }
-    return this.uri().fsPath === other.uri().fsPath;
+    // Normalize paths for cross-platform comparison
+    const thisPath = path.normalize(this.uri().fsPath);
+    const otherPath = path.normalize(other.uri().fsPath);
+    return thisPath === otherPath;
   }
 
   /**
@@ -106,10 +109,11 @@ export class ScriptFolder extends ScriptNode {
    * @lastreviewed 2025-09-29
    */
   public contains(other: ScriptPathElement | vscode.Uri): boolean {
-    if (other instanceof vscode.Uri) {
-      return other.fsPath.includes(this.path());
-    }
-    return other.path().includes(this.path());
+    const thisPath = path.normalize(this.path());
+    const otherPath = path.normalize(other instanceof vscode.Uri ? other.fsPath : other.path());
+
+    // Check if otherPath starts with thisPath followed by a separator, or is equal to thisPath
+    return otherPath === thisPath || otherPath.startsWith(thisPath + path.sep);
   }
 
   /**

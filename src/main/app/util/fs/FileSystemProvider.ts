@@ -291,7 +291,7 @@ export class VSCodeFileSystem implements FileSystemProvider {
       try {
         // Check if the target file exists in the current directory
         const targetFile = vscode.Uri.joinPath(currentDir, fileName);
-        
+
         try {
           await this.stat(targetFile);
           // File exists, return its URI
@@ -302,9 +302,10 @@ export class VSCodeFileSystem implements FileSystemProvider {
 
         // Get the parent directory
         const parentDir = vscode.Uri.joinPath(currentDir, '..');
-        
+
         // Check if we've reached the root (parent is same as current)
-        if (parentDir.path === currentDir.path || currentDir.path === '/' || currentDir.path === '') {
+        // This works cross-platform: on Unix at /, on Windows at C:/, etc.
+        if (parentDir.path === currentDir.path) {
           break;
         }
 
@@ -744,9 +745,8 @@ export class MockFileSystem implements FileSystemProvider {
     let depth = 0;
 
     while (depth < maxDepth) {
-      // Normalize the path to ensure it ends with '/' for directory operations
-      const searchPath = currentPath.endsWith(path.sep) ? currentPath : currentPath + path.sep;
-      const targetPath = searchPath + fileName;
+      // Use path.join for proper cross-platform path construction
+      const targetPath = path.join(currentPath, fileName);
       const targetUri = vscode.Uri.file(targetPath);
 
       // Check if the target file exists in our mock files
@@ -754,11 +754,12 @@ export class MockFileSystem implements FileSystemProvider {
         return targetUri;
       }
 
-      // Move to parent directory
-      const parentPath = currentPath.substring(0, currentPath.lastIndexOf(path.sep));
-      
-      // Check if we've reached the root
-      if (parentPath === currentPath || parentPath === '' || currentPath === path.sep) {
+      // Move to parent directory using path.dirname for cross-platform support
+      const parentPath = path.dirname(currentPath);
+
+      // Check if we've reached the root (parent is same as current)
+      // This works cross-platform: on Unix at /, on Windows at C:\, etc.
+      if (parentPath === currentPath) {
         break;
       }
 

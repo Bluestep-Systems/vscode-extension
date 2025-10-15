@@ -20,31 +20,45 @@ export namespace ScriptFactory {
 
   /**
    * Creates a ScriptNode instance (either ScriptFile or ScriptFolder) based on the URI path.
-   * Automatically determines the appropriate type by checking if the path ends with '/'.
-   * 
+   * Automatically determines the appropriate type by checking path characteristics.
+   *
    * @param uriSupplier A function that returns the {@link vscode.Uri} for the script node, or a raw {@link vscode.Uri} itself.
    * @param scriptRoot Optional {@link ScriptRoot} associated with this script node.
-   * 
+   *
    * @returns A {@link ScriptNode} which is either a {@link ScriptFile} or {@link ScriptFolder} instance.
-   * The type is determined by whether the URI path ends with a '/' character.
-   * 
+   * The type is determined by checking if the path ends with a separator or has a file extension.
+   *
    * @example
    * ```typescript
    * // Creates a ScriptFile
    * const file = ScriptFactory.createNode(() => vscode.Uri.file('/path/to/script.ts'));
-   * 
+   *
    * // Creates a ScriptFolder
    * const folder = ScriptFactory.createNode(() => vscode.Uri.file('/path/to/folder/'));
    * ```
+   *
+   * @remarks
+   * For better reliability, prefer using {@link createFile} or {@link createFolder} when the type is known.
+   *
    * @lastreviewed 2025-10-01
    */
   export function createNode(uriSupplier: (() => vscode.Uri) | vscode.Uri, scriptRoot?: ScriptRoot): ScriptNode {
     const uri = uriSupplier instanceof Function ? uriSupplier() : uriSupplier;
-    if (uri.fsPath.endsWith(path.sep)) {
+    const fsPath = uri.fsPath;
+
+    // Check if path explicitly ends with a separator (caller's intent to mark as folder)
+    if (fsPath.endsWith(path.sep) || fsPath.endsWith('/')) {
       return new ScriptFolder(uri, scriptRoot);
-    } else {
+    }
+
+    // Check if path has a file extension (indicates it's likely a file)
+    const basename = path.basename(fsPath);
+    if (basename.includes('.')) {
       return new ScriptFile(uri, scriptRoot);
     }
+
+    // Default to file for backwards compatibility
+    return new ScriptFile(uri, scriptRoot);
   }
 
   /**

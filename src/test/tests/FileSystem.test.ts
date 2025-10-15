@@ -433,4 +433,495 @@ suite('FileSystem Factory Tests', () => {
       assert.ok(true, 'Mock providers should be isolated');
     });
   });
+
+  suite('FileSystem.closest() Method Tests', () => {
+    let mockProvider: MockFileSystem;
+
+    setup(() => {
+      mockProvider = FileSystem.enableTestMode();
+      mockProvider.clearMocks();
+    });
+
+    teardown(() => {
+      FileSystem.enableProductionMode();
+    });
+
+    suite('Basic Functionality', () => {
+      test('should find file in current directory', async () => {
+        // Test finding a file in the same directory as the starting point
+        const startDir = vscode.Uri.file('/project/src/components');
+        const targetFile = vscode.Uri.file('/project/src/components/package.json');
+
+        mockProvider.setMockFile(targetFile, '{"name": "test"}');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        assert.ok(result, 'Should find file in current directory');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath, 'Should return correct file URI');
+      });
+
+      test('should find file in parent directory', async () => {
+        // Test finding a file one level up
+        const startDir = vscode.Uri.file('/project/src/components');
+        const targetFile = vscode.Uri.file('/project/src/tsconfig.json');
+
+        mockProvider.setMockFile(targetFile, '{"compilerOptions": {}}');
+
+        const result = await mockProvider.closest(startDir, 'tsconfig.json');
+
+        assert.ok(result, 'Should find file in parent directory');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath, 'Should return correct file URI');
+      });
+
+      test('should find file in grandparent directory', async () => {
+        // Test finding a file two levels up
+        const startDir = vscode.Uri.file('/project/src/components/buttons');
+        const targetFile = vscode.Uri.file('/project/package.json');
+
+        mockProvider.setMockFile(targetFile, '{"name": "myproject"}');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        assert.ok(result, 'Should find file in grandparent directory');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath, 'Should return correct file URI');
+      });
+
+      test('should return null when file is not found', async () => {
+        // Test when target file doesn't exist anywhere in the hierarchy
+        const startDir = vscode.Uri.file('/project/src/components');
+
+        // Don't set up any mock files, so nothing will be found
+        const result = await mockProvider.closest(startDir, 'nonexistent.json');
+
+        assert.strictEqual(result, null, 'Should return null when file not found');
+      });
+
+      test('should respect maxDepth parameter', async () => {
+        // Test that search stops at maxDepth even if file exists beyond
+        const startDir = vscode.Uri.file('/project/src/components/buttons/primary');
+        const targetFile = vscode.Uri.file('/project/package.json'); // 4 levels up
+
+        mockProvider.setMockFile(targetFile, '{"name": "myproject"}');
+
+        // Search with maxDepth of 2 (can only go up to /project/src/components)
+        const result = await mockProvider.closest(startDir, 'package.json', 2);
+
+        assert.strictEqual(result, null, 'Should not find file beyond maxDepth');
+      });
+
+      test('should find file within maxDepth limit', async () => {
+        // Test that file is found when within maxDepth
+        const startDir = vscode.Uri.file('/project/src/components');
+        const targetFile = vscode.Uri.file('/project/package.json'); // 2 levels up
+
+        mockProvider.setMockFile(targetFile, '{"name": "myproject"}');
+
+        // Search with maxDepth of 3 (enough to reach /project)
+        const result = await mockProvider.closest(startDir, 'package.json', 3);
+
+        assert.ok(result, 'Should find file within maxDepth');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath, 'Should return correct file URI');
+      });
+    });
+
+    suite('Cross-Platform Edge Cases', () => {
+      test('should handle Unix-style root path', async () => {
+        // Test root detection on Unix-style paths (/)
+        const startDir = vscode.Uri.file('/home/user');
+
+        // Don't set up any target file
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        // Should search up to root and return null
+        assert.strictEqual(result, null, 'Should handle Unix root path');
+      });
+
+      test('should stop at Unix root even with high maxDepth', async () => {
+        // Test that search stops at root / even if maxDepth allows more
+        const startDir = vscode.Uri.file('/home');
+
+        // Don't set up any target file
+        const result = await mockProvider.closest(startDir, 'package.json', 100);
+
+        assert.strictEqual(result, null, 'Should stop at root regardless of maxDepth');
+      });
+
+      test('should handle Windows-style root path (C:\\)', async () => {
+        // Test root detection on Windows-style paths
+        const startDir = vscode.Uri.file('C:\\Users\\user');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        // Should search up to root and return null
+        assert.strictEqual(result, null, 'Should handle Windows root path');
+      });
+
+      test('should handle Windows-style path with different drive letter', async () => {
+        // Test Windows D: drive
+        const startDir = vscode.Uri.file('D:\\projects\\myapp');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        assert.strictEqual(result, null, 'Should handle different drive letters');
+      });
+
+      test('should handle UNC paths on Windows', async () => {
+        // Test UNC paths (\\server\share)
+        const startDir = vscode.Uri.file('\\\\server\\share\\projects\\myapp');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        // UNC paths should be handled without errors
+        assert.strictEqual(result, null, 'Should handle UNC paths');
+      });
+
+      test('should handle deeply nested directory structure', async () => {
+        // Test with deep nesting, but within the default maxDepth of 10
+        // Start at 8 levels deep, target 2 levels up = well within limit
+        const deepPath = '/a/b/c/d/e/f/g/h';
+        const startDir = vscode.Uri.file(deepPath);
+        const targetFile = vscode.Uri.file('/a/b/c/d/e/f/package.json');
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        assert.ok(result, 'Should handle deeply nested paths');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath, 'Should find file in deep hierarchy');
+      });
+
+      test('should handle path normalization correctly', async () => {
+        // Test that paths with different separators are normalized correctly
+        const startDir = vscode.Uri.file('/project/src/../src/components');
+        const targetFile = vscode.Uri.file('/project/package.json');
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        // VS Code should normalize the path internally
+        assert.ok(result, 'Should handle path normalization');
+      });
+    });
+
+    suite('Error Handling', () => {
+      test('should handle non-existent start directory gracefully', async () => {
+        // Test when the starting directory doesn't exist
+        const startDir = vscode.Uri.file('/nonexistent/directory');
+
+        // The method should handle this gracefully and return null
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        assert.strictEqual(result, null, 'Should handle non-existent start directory');
+      });
+
+      test('should handle maxDepth of 0', async () => {
+        // Test edge case of maxDepth = 0 (only check current directory)
+        const startDir = vscode.Uri.file('/project/src');
+        const targetFile = vscode.Uri.file('/project/src/package.json');
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const result = await mockProvider.closest(startDir, 'package.json', 0);
+
+        // With maxDepth=0, should not enter the while loop, so returns null
+        assert.strictEqual(result, null, 'Should handle maxDepth of 0');
+      });
+
+      test('should handle maxDepth of 1', async () => {
+        // Test maxDepth = 1 (check current dir, then one parent)
+        const startDir = vscode.Uri.file('/project/src/components');
+        const targetInCurrent = vscode.Uri.file('/project/src/components/local.json');
+
+        mockProvider.setMockFile(targetInCurrent, '{}');
+
+        const result = await mockProvider.closest(startDir, 'local.json', 1);
+
+        assert.ok(result, 'Should find file in current directory with maxDepth=1');
+        assert.strictEqual(result?.fsPath, targetInCurrent.fsPath);
+      });
+
+      test('should handle files with special characters in names', async () => {
+        // Test files with spaces, symbols, etc.
+        const startDir = vscode.Uri.file('/project/src');
+        const specialFileName = 'package (copy).json';
+        const targetFile = vscode.Uri.file(`/project/${specialFileName}`);
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const result = await mockProvider.closest(startDir, specialFileName);
+
+        assert.ok(result, 'Should handle special characters in file names');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath);
+      });
+
+      test('should handle Unicode characters in file names', async () => {
+        // Test files with Unicode characters
+        const startDir = vscode.Uri.file('/project/src');
+        const unicodeFileName = 'package-日本語-αβγ.json';
+        const targetFile = vscode.Uri.file(`/project/${unicodeFileName}`);
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const result = await mockProvider.closest(startDir, unicodeFileName);
+
+        assert.ok(result, 'Should handle Unicode in file names');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath);
+      });
+
+      test('should handle empty file name gracefully', async () => {
+        // Test edge case of empty string file name
+        const startDir = vscode.Uri.file('/project/src');
+
+        const result = await mockProvider.closest(startDir, '');
+
+        // Should not find anything with empty file name
+        assert.strictEqual(result, null, 'Should handle empty file name');
+      });
+
+      test('should handle file name with path separators', async () => {
+        // Test invalid file name containing path separator
+        const startDir = vscode.Uri.file('/project/src');
+
+        // This is an invalid file name (contains path separator)
+        const result = await mockProvider.closest(startDir, 'subfolder/package.json');
+
+        // Should not find it as a simple file name
+        assert.strictEqual(result, null, 'Should not find file with path separators in name');
+      });
+    });
+
+    suite('Performance and Edge Cases', () => {
+      test('should stop at maxDepth even if root not reached', async () => {
+        // Test that maxDepth is respected even on deep paths
+        const startDir = vscode.Uri.file('/a/b/c/d/e/f/g/h');
+        const targetFile = vscode.Uri.file('/a/b/c/target.json');
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        // maxDepth of 3 should stop at /a/b/c/d/e, not finding file at /a/b/c
+        const result = await mockProvider.closest(startDir, 'target.json', 3);
+
+        assert.strictEqual(result, null, 'Should stop at maxDepth before reaching file');
+      });
+
+      test('should not search beyond root even if maxDepth not reached', async () => {
+        // Test that root terminates search even with high maxDepth
+        const startDir = vscode.Uri.file('/home/user');
+
+        // No file set up, so will search to root
+        const result = await mockProvider.closest(startDir, 'package.json', 1000);
+
+        assert.strictEqual(result, null, 'Should stop at root before maxDepth');
+      });
+
+      test('should prefer closer file over farther file', async () => {
+        // Test that closest file is found (not continuing to search after found)
+        const startDir = vscode.Uri.file('/project/src/components');
+        const closerFile = vscode.Uri.file('/project/src/package.json');
+        const fartherFile = vscode.Uri.file('/project/package.json');
+
+        mockProvider.setMockFile(closerFile, '{"name": "closer"}');
+        mockProvider.setMockFile(fartherFile, '{"name": "farther"}');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        assert.ok(result, 'Should find a file');
+        assert.strictEqual(result?.fsPath, closerFile.fsPath, 'Should return the closer file');
+      });
+
+      test('should handle concurrent calls to closest', async () => {
+        // Test concurrent calls to ensure no race conditions
+        const startDir = vscode.Uri.file('/project/src');
+        const targetFile = vscode.Uri.file('/project/package.json');
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const promises = [];
+        for (let i = 0; i < 10; i++) {
+          promises.push(mockProvider.closest(startDir, 'package.json'));
+        }
+
+        const results = await Promise.all(promises);
+
+        // All results should be identical
+        results.forEach((result, index) => {
+          assert.ok(result, `Call ${index} should find file`);
+          assert.strictEqual(result?.fsPath, targetFile.fsPath, `Call ${index} should find correct file`);
+        });
+      });
+
+      test('should handle multiple different files in hierarchy', async () => {
+        // Test with multiple different target files in the hierarchy
+        const startDir = vscode.Uri.file('/project/src/components');
+        const tsconfig = vscode.Uri.file('/project/tsconfig.json');
+        const packageJson = vscode.Uri.file('/project/package.json');
+        const gitignore = vscode.Uri.file('/project/.gitignore');
+
+        mockProvider.setMockFile(tsconfig, '{}');
+        mockProvider.setMockFile(packageJson, '{}');
+        mockProvider.setMockFile(gitignore, '');
+
+        const tsconfigResult = await mockProvider.closest(startDir, 'tsconfig.json');
+        const packageResult = await mockProvider.closest(startDir, 'package.json');
+        const gitignoreResult = await mockProvider.closest(startDir, '.gitignore');
+
+        assert.ok(tsconfigResult, 'Should find tsconfig.json');
+        assert.ok(packageResult, 'Should find package.json');
+        assert.ok(gitignoreResult, 'Should find .gitignore');
+
+        assert.strictEqual(tsconfigResult?.fsPath, tsconfig.fsPath);
+        assert.strictEqual(packageResult?.fsPath, packageJson.fsPath);
+        assert.strictEqual(gitignoreResult?.fsPath, gitignore.fsPath);
+      });
+
+      test('should handle file in root directory', async () => {
+        // Test finding a file directly at root (edge case)
+        const startDir = vscode.Uri.file('/project');
+        const targetFile = vscode.Uri.file('/project/package.json');
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        assert.ok(result, 'Should find file in root directory');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath);
+      });
+
+      test('should handle search starting from system root', async () => {
+        // Test starting search from system root itself
+        const startDir = vscode.Uri.file('/');
+        const targetFile = vscode.Uri.file('/package.json');
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const result = await mockProvider.closest(startDir, 'package.json');
+
+        assert.ok(result, 'Should find file at root level');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath);
+      });
+
+      test('should return null when searching from root with no file', async () => {
+        // Test that searching from root returns null when file not found
+        const startDir = vscode.Uri.file('/');
+
+        const result = await mockProvider.closest(startDir, 'nonexistent.json');
+
+        assert.strictEqual(result, null, 'Should return null when not found at root');
+      });
+    });
+
+    suite('Real-World Use Cases', () => {
+      test('should find package.json for typical npm project', async () => {
+        // Simulate typical npm project structure
+        const packageJson = vscode.Uri.file('/home/user/projects/myapp/package.json');
+
+        mockProvider.setMockFile(packageJson, '{"name": "myapp"}');
+
+        // Get directory of component file
+        const componentDir = vscode.Uri.file('/home/user/projects/myapp/src/components');
+        const result = await mockProvider.closest(componentDir, 'package.json');
+
+        assert.ok(result, 'Should find package.json');
+        assert.strictEqual(result?.fsPath, packageJson.fsPath);
+      });
+
+      test('should find tsconfig.json in monorepo structure', async () => {
+        // Simulate monorepo with nested tsconfig files
+        const packageTsConfig = vscode.Uri.file('/workspace/packages/ui/tsconfig.json');
+
+        mockProvider.setMockFile(packageTsConfig, '{"extends": "../../tsconfig.json"}');
+
+        const componentDir = vscode.Uri.file('/workspace/packages/ui/src');
+        const result = await mockProvider.closest(componentDir, 'tsconfig.json');
+
+        assert.ok(result, 'Should find nearest tsconfig.json');
+        assert.strictEqual(result?.fsPath, packageTsConfig.fsPath);
+      });
+
+      test('should find .gitignore in project root', async () => {
+        // Test finding .gitignore for git operations
+        const gitignore = vscode.Uri.file('/project/.gitignore');
+
+        mockProvider.setMockFile(gitignore, 'node_modules/\n.env');
+
+        const nestedDir = vscode.Uri.file('/project/src/lib/utils');
+        const result = await mockProvider.closest(nestedDir, '.gitignore');
+
+        assert.ok(result, 'Should find .gitignore');
+        assert.strictEqual(result?.fsPath, gitignore.fsPath);
+      });
+
+      test('should find .env file for configuration', async () => {
+        // Test finding environment configuration
+        const envFile = vscode.Uri.file('/app/.env');
+
+        mockProvider.setMockFile(envFile, 'API_KEY=secret');
+
+        const srcDir = vscode.Uri.file('/app/src/config');
+        const result = await mockProvider.closest(srcDir, '.env');
+
+        assert.ok(result, 'Should find .env file');
+        assert.strictEqual(result?.fsPath, envFile.fsPath);
+      });
+
+      test('should not find file in sibling directory', async () => {
+        // Test that closest doesn't search sideways, only upward
+        const startDir = vscode.Uri.file('/project/src/components');
+        const siblingFile = vscode.Uri.file('/project/src/utils/config.json');
+
+        mockProvider.setMockFile(siblingFile, '{}');
+
+        const result = await mockProvider.closest(startDir, 'config.json');
+
+        // Should not find file in sibling directory (only searches upward)
+        assert.strictEqual(result, null, 'Should not find file in sibling directory');
+      });
+
+      test('should handle VS Code workspace with multiple roots', async () => {
+        // Test in workspace with multiple root folders
+        const configInWorkspace1 = vscode.Uri.file('/workspaces/project1/tsconfig.json');
+
+        mockProvider.setMockFile(configInWorkspace1, '{}');
+
+        const dirInWorkspace1 = vscode.Uri.file('/workspaces/project1/src');
+        const result = await mockProvider.closest(dirInWorkspace1, 'tsconfig.json');
+
+        assert.ok(result, 'Should find config in multi-root workspace');
+        assert.strictEqual(result?.fsPath, configInWorkspace1.fsPath);
+      });
+    });
+
+    suite('Default maxDepth Behavior', () => {
+      test('should use default maxDepth of 10 when not specified', async () => {
+        // Test that default maxDepth is sufficient for typical projects
+        const deepPath = '/a/b/c/d/e/f/g/h/i/j/k'; // 11 levels deep
+        const startDir = vscode.Uri.file(deepPath);
+        const targetFile = vscode.Uri.file('/a/target.json'); // 10 levels up from deepPath
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        // Without specifying maxDepth, should use default of 10
+        const result = await mockProvider.closest(startDir, 'target.json');
+
+        // With 11 levels, target is 10 levels up, which is at the limit
+        // The default maxDepth=10 means we check current + 10 parents
+        assert.strictEqual(result, null, 'Should not find file beyond default maxDepth of 10');
+      });
+
+      test('should find file within default maxDepth', async () => {
+        // Test finding file within the default maxDepth
+        const deepPath = '/a/b/c/d/e/f/g/h/i';
+        const startDir = vscode.Uri.file(deepPath);
+        const targetFile = vscode.Uri.file('/a/target.json'); // 8 levels up
+
+        mockProvider.setMockFile(targetFile, '{}');
+
+        const result = await mockProvider.closest(startDir, 'target.json');
+
+        assert.ok(result, 'Should find file within default maxDepth');
+        assert.strictEqual(result?.fsPath, targetFile.fsPath);
+      });
+    });
+  });
 });
