@@ -5,7 +5,6 @@ import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
 import { Err } from "../Err";
 import { Alert } from "../ui/Alert";
 import { OrgWorker } from "./OrgWorker";
-import * as path from 'path';
 
 type GetScriptRet = { upstairsPath: string; downstairsPath: string; trailing?: string; }[] | null;
 type RawFiles = { upstairsPath: string; downstairsPath: string; trailing?: string; }[];
@@ -178,7 +177,7 @@ export class ScriptUrlParser {
       if (parts.length !== 2) {
         throw new Err.ScriptUrlParserError(`Problem parsing script ID from ${gqlUrl.href}, got unexpected format: ${parents2[0].id}`);
       }
-      this._scriptName = parents2[0].displayName.replaceAll(path.sep, '_');
+      this._scriptName = parents2[0].displayName.replaceAll(/\/|\\/g, '_');
       this._scriptKey = { seqnum: parts[1], classid: parts[0] };
       return void 0;
     } catch (e) {
