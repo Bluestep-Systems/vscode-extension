@@ -48,7 +48,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       try {
         this.parent.logger.info("B6P: Starting automatic update check...");
         // Check for version change and show setup guide if needed
-        this.showSetupGuide();
+        //this.showSetupGuide();
         this.getVersionNotes(version);
         await this.checkForUpdatesIfNeeded();
       } catch (error) {
@@ -89,6 +89,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @param message Optional message to show in a notification
    * @lastreviewed null
    */
+  //@ts-ignore
   private async showSetupGuide(message?: string): Promise<void> {
     try {
       if (this.state.get('setupShown')) {

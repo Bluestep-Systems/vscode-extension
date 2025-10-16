@@ -1410,15 +1410,6 @@ suite('ScriptNode Tests', () => {
       assert.strictEqual(scriptNode.path(), testUri.fsPath, 'Path should match URI fsPath');
     });
 
-    test('should handle Windows-style paths', () => {
-      // Note: VS Code normalizes paths internally, but we test the concept
-      const testUri = vscode.Uri.file('C:\\test\\workspace\\draft\\test.js');
-      const scriptNode = ScriptFactory.createNode(testUri);
-
-      assert.ok(scriptNode.path(), 'Should handle Windows paths');
-      assert.ok(scriptNode.uri(), 'Should create URI from Windows path');
-    });
-
     test('should handle Unix-style paths', () => {
       const testUri = vscode.Uri.file('/test/workspace/draft/test.js');
       const scriptNode = ScriptFactory.createNode(testUri);

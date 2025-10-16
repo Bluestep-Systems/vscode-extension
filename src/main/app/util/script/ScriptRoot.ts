@@ -16,6 +16,7 @@ import type { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
 import { ScriptTranspiler } from './ScriptTranspiler';
 import { TsConfig } from './TsConfig';
+import * as path from 'path';
 const fs = FileSystem.getInstance;
 
 /**
@@ -167,8 +168,9 @@ export class ScriptRoot {
 
       if (this.scriptParser === null) {
         // the absence of a parser indicates that this is coming from a local file, thus these elements should exist
+        // this should only happen if the user somehow deletes the `.b6p_metadata.json`
         const metaDataDotJson = await this.getAsFolder().getMetadataDotJson();
-        scriptName = metaDataDotJson.displayName || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })();
+        scriptName = metaDataDotJson.displayName.replaceAll(path.sep, '_') || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })();
         U = await this.getU() || (() => { throw new Err.FileReadError("Missing U in metadata"); })();
         webdavId = await this.getWebdavId() || (() => { throw new Err.FileReadError("Missing webdavId in metadata"); })();
         scriptKey = await this.getScriptKey() || (() => { throw new Err.FileReadError("Missing scriptKey in metadata"); })();

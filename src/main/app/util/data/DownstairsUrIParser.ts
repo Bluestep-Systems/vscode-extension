@@ -2,17 +2,14 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Err } from '../Err';
 import { ScriptRoot } from '../script/ScriptRoot';
+import { FolderNames } from '../../../resources/constants';
 
 /**
  * A utility class to parse downstairs URIs into their components.
  */
 export class DownstairsUriParser {
 
-  public rawUri:vscode.Uri;
-  /**
-   * Regex to match and extract components from a downstairs URI.
-   */
-    private static readonly URI_DISAMBIGUATION_REGEX = /^(.*?)[\/\\]([\w ]+)[\/\\](draft|declarations|snapshot|\.b6p_metadata\.json|\.gitignore)?(?:[\/\\](.*))?$/;
+
   /**
    * The type of the downstairs file: "draft", "declarations", or "metadata" (for .b6p_metadata.json files)
    */
@@ -25,48 +22,109 @@ export class DownstairsUriParser {
 
   /**
    * the path portion before the WebDAV ID
-   * 
+   *
    * This is everything from the start of the path up to (but not including) the WebDAV ID
    */
   public readonly prependingPath: string;
 
   /**
    * the scriptName portion of the path
-   * 
+   *
    * This is the numeric ID that comes after the prepending path and before the type folder
    * e.g. in /some/path/12345/draft/script.b6p, the scriptName is "12345"
-   * 
+   *
    */
   public readonly scriptName: string;
 
-  constructor(downstairsUri: vscode.Uri) {
-    const cleanPath = downstairsUri.fsPath;
-    this.rawUri = downstairsUri;
-    const match = cleanPath.match(DownstairsUriParser.URI_DISAMBIGUATION_REGEX);
+  constructor(readonly rawUri: vscode.Uri) {
+    // Use Uri.fsPath to get the properly decoded, platform-specific path
+    const fsPath = rawUri.fsPath;
+    const isAbsolute = path.isAbsolute(fsPath);
 
-    if (!match) {
-      throw new Err.InvalidUriStructureError(downstairsUri.toString(), DownstairsUriParser.URI_DISAMBIGUATION_REGEX.toString());
+    // Split path into segments, filtering out empty strings
+    const segments = fsPath.split(path.sep).filter(s => s !== '');
+
+    if (segments.length < 2) {
+      throw new Err.InvalidUriStructureError(
+        rawUri.toString(),
+        "path must have at least prepending path and scriptName"
+      );
     }
 
-    this.prependingPath = match[1]; // Extract the path before the script name
-    this.scriptName = match[2]; // Extract the scriptName
-    
-    const typeStr = match[3] as "draft" | "declarations" | ".b6p_metadata.json" | ".gitignore" | "snapshot" || undefined; // Extract the type string
-    this.rest = match[4] || ""; // Extract the relative path after the type
+    // Parse forward from the start:
+    // Structure: prependingPath/scriptName/[type]/[rest...]
+    // Strategy: Find the first occurrence of a type indicator, then work from there
 
-    if (typeStr === undefined) {
+    let scriptNameIndex = -1;
+    let typeIndex = -1;
+
+    // Step 1: Scan forward to find the scriptName position
+    // The scriptName is the segment BEFORE the first type indicator
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+
+      if (segment === ScriptRoot.METADATA_FILENAME
+        || segment === ScriptRoot.GITIGNORE_FILENAME
+        || segment === FolderNames.DRAFT
+        || segment === FolderNames.DECLARATIONS
+        || segment === FolderNames.SNAPSHOT) {
+        // This is a metadata file directly under scriptName
+        typeIndex = i;
+        scriptNameIndex = i - 1;
+        break;
+      }
+    }
+
+    // If no type indicator found, handle root case
+    if (typeIndex === -1) {
+      // No type folder or metadata file found
+      if (segments.length === 2) {
+        // Path is: prependingPath/scriptName (root type)
+        scriptNameIndex = 1;
+      } else {
+        // More than 2 segments but no valid type = error
+        throw new Err.InvalidUriStructureError(
+          rawUri.toString(),
+          `unrecognized type folder or file: "${segments[segments.length - 1]}"`
+        );
+      }
+    }
+
+    // Step 2: Validate scriptName position
+    if (scriptNameIndex < 1) {
+      throw new Err.InvalidUriStructureError(
+        rawUri.toString(),
+        "path must have at least one prepending path segment before scriptName"
+      );
+    }
+
+    // Step 3: Extract components based on positions
+    // Prepending path: everything before scriptName
+    const prependingSegments = segments.slice(0, scriptNameIndex);
+    this.prependingPath = (isAbsolute ? path.sep : '') + prependingSegments.join(path.sep);
+
+    // ScriptName: the segment at scriptNameIndex
+    this.scriptName = segments[scriptNameIndex];
+
+    // Type and rest: everything after scriptName
+    if (typeIndex === -1) {
+      // Root type: no type or rest
       this.type = "root";
-    } else if (typeStr === "draft" || typeStr === "declarations") {
-      this.type = typeStr;
-    } else if (typeStr === ScriptRoot.METADATA_FILENAME || typeStr === ScriptRoot.GITIGNORE_FILENAME) {
-      // both of these are considered "metadata" files
-      this.type = "metadata";
-    } else if (typeStr === "snapshot") {
-      this.type = "snapshot";
+      this.rest = "";
     } else {
-      throw new Err.InvalidUriStructureError(downstairsUri.toString(), "valid type folder");
+      const typeSegment = segments[typeIndex];
+      const restSegments = segments.slice(typeIndex + 1);
+
+      if (typeSegment === ScriptRoot.METADATA_FILENAME || typeSegment === ScriptRoot.GITIGNORE_FILENAME) {
+        this.type = "metadata";
+        this.rest = "";
+      } else if (typeSegment === FolderNames.DRAFT || typeSegment === FolderNames.DECLARATIONS || typeSegment === FolderNames.SNAPSHOT) {
+        this.type = typeSegment;
+        this.rest = restSegments.join(path.sep);
+      } else {
+        throw new Err.InvalidUriStructureError(rawUri.toString(), "valid type folder");
+      }
     }
-    
   }
 
   /**
@@ -95,11 +153,11 @@ export class DownstairsUriParser {
    * @returns `true` if the parser is for a declarations or draft file, `false` otherwise.
    */
   public isDeclarationsOrDraft(): boolean {
-    return ["draft", "declarations"].includes(this.type);
+    return [FolderNames.DRAFT, FolderNames.DECLARATIONS].includes(this.type);
   }
 
   public isInDefinedFolders(): boolean {
-    return ["draft", "declarations", "snapshot"].includes(this.type);
+    return [FolderNames.DRAFT, FolderNames.DECLARATIONS, FolderNames.SNAPSHOT].includes(this.type);
   }
 
   /**

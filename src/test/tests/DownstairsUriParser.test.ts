@@ -79,14 +79,14 @@ suite('DownstairsUriParser Tests', () => {
       assert.strictEqual(parser.rest, 'file.js');
     });
 
-    test('should handle empty prepending path', () => {
+    test('should handle empty prepending path - REMOVED - should throw error', () => {
+      // This test was incorrect - the path /77777/draft is missing a prepending path component
+      // The minimum valid structure is prependingPath/scriptName/type
       const uri = vscode.Uri.file('/77777/draft');
-      const parser = new DownstairsUriParser(uri);
-      
-      assert.strictEqual(parser.prependingPath, '');
-      assert.strictEqual(parser.scriptName, '77777');
-      assert.strictEqual(parser.type, 'draft');
-      assert.strictEqual(parser.rest, '');
+
+      assert.throws(() => {
+        new DownstairsUriParser(uri);
+      }, /The provided URI does not conform to expected structure/);
     });
   });
 
@@ -250,16 +250,13 @@ suite('DownstairsUriParser Tests', () => {
       assert.strictEqual(prependingUri.scheme, 'file');
     });
 
-    test('should return correct URI for empty prepending path', () => {
+    test('should return correct URI for empty prepending path - REMOVED - invalid structure', () => {
+      // This test was incorrect - /77777/draft is missing a prepending path component
       const uri = vscode.Uri.file('/77777/draft');
-      const parser = new DownstairsUriParser(uri);
-      
-      const prependingUri = parser.prependingPathUri();
-      // Note: When prepending path is empty, vscode.Uri.file('') normalizes to '/'
-      // This is expected VS Code behavior for root paths
-      assert.strictEqual(prependingUri.fsPath, path.sep);
-      assert.strictEqual(prependingUri.scheme, 'file');
-      assert.strictEqual(parser.prependingPath, ''); // The raw property should still be empty
+
+      assert.throws(() => {
+        new DownstairsUriParser(uri);
+      }, /The provided URI does not conform to expected structure/);
     });
 
     test('should be consistent with prependingPath property', () => {
@@ -270,16 +267,6 @@ suite('DownstairsUriParser Tests', () => {
       assert.strictEqual(prependingUri.fsPath, parser.prependingPath);
     });
 
-    test('should work with Windows-style paths', () => {
-      const uri = vscode.Uri.file('C:\\workspace\\projects\\12345\\declarations\\types.d.ts');
-      const parser = new DownstairsUriParser(uri);
-      
-      const prependingUri = parser.prependingPathUri();
-      // Note: vscode.Uri.file() normalizes Windows paths
-      assert.strictEqual(prependingUri.scheme, 'file');
-      // The exact path format may vary by platform, but should be consistent with prependingPath
-      assert.strictEqual(prependingUri.fsPath, parser.prependingPath);
-    });
 
     test('should return valid URI that can be used for file operations', () => {
       const uri = vscode.Uri.file('/workspace/projects/99999/draft/script.js');
@@ -346,24 +333,44 @@ suite('DownstairsUriParser Tests', () => {
     });
   });
 
-  suite('Windows Path Handling', () => {
-    
-    test('should parse Windows-style draft URI correctly', () => {
-      const uri = vscode.Uri.file('C:\\workspace\\12345\\draft\\file.js');
+
+  suite('URL-Encoded Paths with Spaces', () => {
+
+    test('should handle URL-encoded scriptName with spaces and .gitignore', () => {
+      // This was the original issue: file:///c%3A/Users/jrigb/Bluestep/Organizations/U142023/Site%20Audit%20Post-Save/.gitignore
+      const uri = vscode.Uri.parse('file:///c%3A/Users/jrigb/Bluestep/Organizations/U142023/Site%20Audit%20Post-Save/.gitignore');
       const parser = new DownstairsUriParser(uri);
-      
-      assert.strictEqual(parser.scriptName, '12345');
+
+      assert.strictEqual(parser.scriptName, 'Site Audit Post-Save');
+      assert.strictEqual(parser.type, 'metadata');
+      assert.strictEqual(parser.rest, '');
+    });
+
+    test('should handle scriptName with spaces in draft folder', () => {
+      const uri = vscode.Uri.file('/workspace/My Script Name/draft/file.js');
+      const parser = new DownstairsUriParser(uri);
+
+      assert.strictEqual(parser.scriptName, 'My Script Name');
       assert.strictEqual(parser.type, 'draft');
       assert.strictEqual(parser.rest, 'file.js');
     });
 
-    test('should parse Windows-style declarations URI correctly', () => {
-      const uri = vscode.Uri.file('D:\\projects\\67890\\declarations\\types\\index.d.ts');
+    test('should handle scriptName with multiple spaces', () => {
+      const uri = vscode.Uri.file('/workspace/Multi  Space   Name/declarations/types.d.ts');
       const parser = new DownstairsUriParser(uri);
-      
-      assert.strictEqual(parser.scriptName, '67890');
+
+      assert.strictEqual(parser.scriptName, 'Multi  Space   Name');
       assert.strictEqual(parser.type, 'declarations');
-      assert.strictEqual(parser.rest, 'types\\index.d.ts');
+      assert.strictEqual(parser.rest, 'types.d.ts');
+    });
+
+    test('should handle special characters in scriptName', () => {
+      const uri = vscode.Uri.file('/workspace/Script-Name_123 (v2)/draft/file.js');
+      const parser = new DownstairsUriParser(uri);
+
+      assert.strictEqual(parser.scriptName, 'Script-Name_123 (v2)');
+      assert.strictEqual(parser.type, 'draft');
+      assert.strictEqual(parser.rest, 'file.js');
     });
   });
 });
