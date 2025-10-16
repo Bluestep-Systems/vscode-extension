@@ -46,61 +46,63 @@ export class DownstairsUriParser {
 
     if (segments.length < 2) {
       throw new Err.InvalidUriStructureError(
-        rawUri.toString(),
-        "path must have at least prepending path and scriptName"
+        rawUri.toString()
       );
     }
 
     // Parse forward from the start:
-    // Structure: prependingPath/scriptName/[type]/[rest...]
-    // Strategy: Find the first occurrence of a type indicator, then work from there
+    // Structure: prependingPath/U######/scriptName/[type]/[rest...]
+    // Strategy: Find the U###### segment, then scriptName is next, then type indicator
 
+    const orgIdPattern = /^U\d{6}$/;
+    let orgIdIndex = -1;
     let scriptNameIndex = -1;
     let typeIndex = -1;
 
-    // Step 1: Scan forward to find the scriptName position
-    // The scriptName is the segment BEFORE the first type indicator
+    // Step 1: Find the organization ID (U######) segment
     for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-
-      if (segment === ScriptRoot.METADATA_FILENAME
-        || segment === ScriptRoot.GITIGNORE_FILENAME
-        || segment === FolderNames.DRAFT
-        || segment === FolderNames.DECLARATIONS
-        || segment === FolderNames.SNAPSHOT) {
-        // This is a metadata file directly under scriptName
-        typeIndex = i;
-        scriptNameIndex = i - 1;
+      if (orgIdPattern.test(segments[i])) {
+        orgIdIndex = i;
         break;
       }
     }
 
-    // If no type indicator found, handle root case
-    if (typeIndex === -1) {
-      // No type folder or metadata file found
-      if (segments.length === 2) {
-        // Path is: prependingPath/scriptName (root type)
-        scriptNameIndex = 1;
+    // Validate that we found an organization ID
+    if (orgIdIndex === -1) {
+      throw new Err.InvalidUriStructureError(
+        `URI must contain a segment matching U###### pattern: ${rawUri.toString()}`
+      );
+    }
+
+    // Step 2: ScriptName must be the segment immediately after the organization ID
+    if (orgIdIndex + 1 >= segments.length) {
+      throw new Err.InvalidUriStructureError(
+        `URI must have a scriptName after organization ID: ${rawUri.toString()}`
+      );
+    }
+    scriptNameIndex = orgIdIndex + 1;
+
+    // Step 3: Check if there's a type indicator after the scriptName
+    if (scriptNameIndex + 1 < segments.length) {
+      const potentialTypeSegment = segments[scriptNameIndex + 1];
+
+      if (potentialTypeSegment === ScriptRoot.METADATA_FILENAME
+        || potentialTypeSegment === ScriptRoot.GITIGNORE_FILENAME
+        || potentialTypeSegment === FolderNames.DRAFT
+        || potentialTypeSegment === FolderNames.DECLARATIONS
+        || potentialTypeSegment === FolderNames.SNAPSHOT) {
+        typeIndex = scriptNameIndex + 1;
       } else {
-        // More than 2 segments but no valid type = error
+        // There's a segment after scriptName but it's not a valid type
         throw new Err.InvalidUriStructureError(
-          rawUri.toString(),
-          `unrecognized type folder or file: "${segments[segments.length - 1]}"`
+          `Invalid type segment: ${potentialTypeSegment} in ${rawUri.toString()}`
         );
       }
     }
 
-    // Step 2: Validate scriptName position
-    if (scriptNameIndex < 1) {
-      throw new Err.InvalidUriStructureError(
-        rawUri.toString(),
-        "path must have at least one prepending path segment before scriptName"
-      );
-    }
-
-    // Step 3: Extract components based on positions
-    // Prepending path: everything before scriptName
-    const prependingSegments = segments.slice(0, scriptNameIndex);
+    // Step 4: Extract components based on positions
+    // Prepending path: everything up to and including the organization ID
+    const prependingSegments = segments.slice(0, orgIdIndex + 1);
     this.prependingPath = (isAbsolute ? path.sep : '') + prependingSegments.join(path.sep);
 
     // ScriptName: the segment at scriptNameIndex
@@ -122,7 +124,7 @@ export class DownstairsUriParser {
         this.type = typeSegment;
         this.rest = restSegments.join(path.sep);
       } else {
-        throw new Err.InvalidUriStructureError(rawUri.toString(), "valid type folder");
+        throw new Err.InvalidUriStructureError(rawUri.toString());
       }
     }
   }

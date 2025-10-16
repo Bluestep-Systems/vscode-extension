@@ -299,8 +299,8 @@ export namespace Err {
    * Error thrown when URI structure doesn't match expected pattern.
    */
   export class InvalidUriStructureError extends DataParsingError {
-    constructor(uri: string, expectedPattern: string) {
-      super(`The provided URI does not conform to expected structure: ${uri}, expected ${expectedPattern}`);
+    constructor(uri: string) {
+      super(`The provided URI does not conform to expected structure: \`${uri}\``);
       this.name = "InvalidUriStructureError";
     }
   }
