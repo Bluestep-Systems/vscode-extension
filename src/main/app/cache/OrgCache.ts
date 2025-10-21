@@ -6,6 +6,7 @@ import type { SESSION_MANAGER } from "../b6p_session/SessionManager";
 import { ContextNode } from "../context/ContextNode";
 import { OrgWorker } from "../util/data/OrgWorker";
 import { Err } from "../util/Err";
+import { HttpClient } from "../util/network/HttpClient";
 import { PublicKeys, PublicPersistanceMap } from "../util/PseudoMaps";
 import { Alert } from "../util/ui/Alert";
 
@@ -173,7 +174,7 @@ export const ORG_CACHE = new class extends ContextNode {
       return overrideUrl;
     }
     // finally we call the BlueHQ helper endpoint to do a hard-lookup
-    const resp = await this.parent.fetch(BlueHQ.getAnyDomainUrl(u));
+    const resp = await HttpClient.getInstance().fetch(BlueHQ.getAnyDomainUrl(u));
     if (!resp.ok) {
       throw new Err.BlueHqHelperEndpointError("Failed to fetch any domain from BlueHQ: " + resp.status + " " + resp.statusText);
     }
