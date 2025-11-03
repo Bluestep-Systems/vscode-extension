@@ -274,7 +274,7 @@ export class ScriptFile extends ScriptNode {
    * @returns Empty string if the file can be pushed, otherwise a descriptive reason why not
    * @lastreviewed 2025-09-15
    */
-  public async getReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string | null> {
+  public async getReasonToNotPush(ops?: { upstairsOverride?: URL; }): Promise<string | null> {
     if (this._reasonToNotPush !== undefined) {
       return this._reasonToNotPush;
     }
@@ -285,13 +285,15 @@ export class ScriptFile extends ScriptNode {
    * Sets the reason to not push this file (so it can be cached)
    * and returns it.
    */
-  private async setReasonToNotPush(ops?: { upstairsOverride?: URL }): Promise<string | null> {
+  private async setReasonToNotPush(ops?: { upstairsOverride?: URL; }): Promise<string | null> {
     if (this.parser.type === "root") {
       this._reasonToNotPush = "Node is the root folder";
     } else if (this.name() === SpecialFiles.B6P_METADATA) {
       this._reasonToNotPush = "Node is a metadata file";
     } else if (this.isInDeclarations()) {
       this._reasonToNotPush = "Node is in declarations";
+    } else if (this.isInGitFolder()) {
+      this._reasonToNotPush = "Node is in .git folder";
     } else if (await this.isExternalModel()) {
       this._reasonToNotPush = "Node is an external model";
     } else if (await this.isInGitIgnore()) {
@@ -304,6 +306,12 @@ export class ScriptFile extends ScriptNode {
       this._reasonToNotPush = null;
     }
     return this._reasonToNotPush;
+  }
+
+  private isInGitFolder(): boolean {
+    const gitFolder = path.sep + ".git" + path.sep;
+    const normalizedPath = path.normalize(this.uri().fsPath);
+    return normalizedPath.includes(gitFolder);
   }
 
   /**
