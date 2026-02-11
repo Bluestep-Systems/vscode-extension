@@ -26,7 +26,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     // Create tasks for progress helper
     const pullTasks = fetchedScriptObject.map(path => ({
       execute: async () => {
-        const createdUri = await createOrUpdateIndividualNode(path.downstairsPath, scriptUrlParser);
+        const createdUri = await createOrUpdateIndividualNode(path.localPath, scriptUrlParser);
         ultimateUris.push(createdUri);
         return createdUri;
       },
@@ -35,7 +35,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
 
     await ProgressHelper.withProgress(pullTasks, {
       title: "Pulling Script...",
-      cleanupMessage: "Cleaning up the downstairs folder..."
+      cleanupMessage: "Cleaning up the local folder..."
     });
 
     const directory = ScriptFactory.createFolder(
@@ -47,7 +47,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
       )
     );
     const flattenedDirectory = await Util.flattenDirectory(directory);
-    await cleanUnusedDownstairsPaths(flattenedDirectory, ultimateUris);
+    await cleanUnusedLocalPaths(flattenedDirectory, ultimateUris);
 
     !(App.settings.get("squelch").pullComplete) && Alert.popup('Pull complete!');
   } catch (e) {
@@ -61,7 +61,7 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
  * @param existingPaths 
  * @param validPaths 
  */
-async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPaths: vscode.Uri[]) {
+async function cleanUnusedLocalPaths(existingPaths: vscode.Uri[], validPaths: vscode.Uri[]) {
   // find all existing paths that are not in the valid paths list
   const toDelete: vscode.Uri[] = [];
   for (const ep of existingPaths) {
@@ -113,14 +113,14 @@ async function getStartingParser(overrideFormulaUrl?: string) {
   return new ScriptUrlParser(formulaURL);
 }
 
-async function createOrUpdateIndividualNode(downstairsRest: string, parser: ScriptUrlParser): Promise<vscode.Uri> {
+async function createOrUpdateIndividualNode(localRest: string, parser: ScriptUrlParser): Promise<vscode.Uri> {
   if (App.isDebugMode()) {
-    App.logger.debug("createOrUpdateIndividualNode for downstairsRest:", downstairsRest);
+    App.logger.debug("createOrUpdateIndividualNode for localRest:", localRest);
     App.logger.debug("with parser:", parser.toString());
   }
   const activePath = Util.getActiveWorkspaceFolderUri();
   const U = await parser.getU();
-  const ultimatePath = vscode.Uri.joinPath(activePath, U, downstairsRest);
+  const ultimatePath = vscode.Uri.joinPath(activePath, U, localRest);
 
   // this needs to be a forward slash because that is what the parser works on a raw URL string and produces the trailing
   // slash if it is a directory

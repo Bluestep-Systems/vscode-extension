@@ -193,7 +193,7 @@ type ScriptMetaData = {
     /**
      * actual location of the file locally
      */
-    downstairsPath: string;
+    localPath: string;
 
     /**
      * the time `new Date().toUTCString()` when the last push happened

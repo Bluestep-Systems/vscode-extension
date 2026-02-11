@@ -138,7 +138,7 @@ export namespace Util {
    * @param sourceOps The source options to use for determining the URI.
    * @returns The URI of the current file.
    */
-  export async function getDownstairsFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
+  export async function getLocalFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
     if (!sourceOps) {
       return vscode.window.activeTextEditor?.document.uri || (() => { throw new Err.NoActiveEditorError(); })();
     }

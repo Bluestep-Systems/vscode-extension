@@ -10,7 +10,7 @@ export default async function (): Promise<void> {
       return;
     } 
     const fileMetaData = ScriptFactory.createFile(activeEditorUri);
-    await pullScript(await fileMetaData.getScriptRoot().toScriptBaseUpstairsString());
+    await pullScript(await fileMetaData.getScriptRoot().toScriptBaseRemoteString());
   } catch (e) {
     if (e instanceof Error) {
       vscode.window.showErrorMessage(`Error pulling current file: ${e.message}`);

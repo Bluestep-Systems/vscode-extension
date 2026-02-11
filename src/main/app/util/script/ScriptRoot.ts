@@ -5,7 +5,7 @@ import { FileExtensions, FolderNames, SpecialFiles } from '../../../resources/co
 import { App } from '../../App';
 import { ORG_CACHE as OC } from '../../cache/OrgCache';
 import pushCurrent from '../../ctrl-p-commands/pushCurrent';
-import { DownstairsUriParser } from '../data/DownstairsUrIParser';
+import { LocalUriParser } from '../data/LocalUriParser';
 import { OrgWorker } from '../data/OrgWorker';
 import { ScriptUrlParser } from '../data/ScriptUrlParser';
 import { Err } from '../Err';
@@ -30,19 +30,19 @@ export class ScriptRoot {
   public static readonly GITIGNORE_FILENAME = SpecialFiles.GITIGNORE;
   private _orgWorker: OrgWorker | null;
   public readonly rootUri: vscode.Uri;
-  private parser: DownstairsUriParser;
+  private parser: LocalUriParser;
   private scriptParser: ScriptUrlParser | null;
   /**
    * Creates a script root utilizing any of the children in said script.
    * 
-   * The objective here is to use literally any file within the script's downstairs
+   * The objective here is to use literally any file within the script's local
    * folder to extrapolate the root of the script.
    * 
-   * @param childUri Any file within the downstairs root folder
+   * @param childUri Any file within the local root folder
    * @lastreviewed 2025-09-15
    */
   constructor(public readonly uri: vscode.Uri) {
-    this.parser = new DownstairsUriParser(uri);
+    this.parser = new LocalUriParser(uri);
     const shavedName = this.parser.getShavedName();
     this.rootUri = vscode.Uri.joinPath(vscode.Uri.file(shavedName), "/");
     this._orgWorker = null;
@@ -65,8 +65,8 @@ export class ScriptRoot {
    * @lastreviewed 2025-09-15
    */
   private getMetadataFileUri() {
-    const downstairsRoot = this.getRootUri();
-    return vscode.Uri.joinPath(downstairsRoot, ScriptRoot.METADATA_FILENAME);
+    const localRoot = this.getRootUri();
+    return vscode.Uri.joinPath(localRoot, ScriptRoot.METADATA_FILENAME);
   }
 
   /**
@@ -74,8 +74,8 @@ export class ScriptRoot {
    * @lastreviewed 2025-09-15
    */
   private getGitIgnoreFileUri() {
-    const downstairsRoot = this.getRootUri();
-    return vscode.Uri.joinPath(downstairsRoot, SpecialFiles.GITIGNORE);
+    const localRoot = this.getRootUri();
+    return vscode.Uri.joinPath(localRoot, SpecialFiles.GITIGNORE);
   }
 
   /**
@@ -273,7 +273,7 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the {@link vscode.Uri} for the downstairs root folder.
+   * Gets the {@link vscode.Uri} for the local root folder.
    * @lastreviewed 2025-09-15
    */
   public getRootUri() {
@@ -281,7 +281,7 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the {@link vscode.Uri Uri} for the downstairs U folder.
+   * Gets the {@link vscode.Uri Uri} for the local U folder.
    *
    * @lastreviewed 2025-10-09
    */
@@ -309,7 +309,7 @@ export class ScriptRoot {
    * Gets the script key from 
    * - the script parser (if available)
    * - the metadata file (if available)
-   * - by instantiating a script parser from the upstairs URL (if a webdavId is available)
+   * - by instantiating a script parser from the remote URL (if a webdavId is available)
    */
   async getScriptKey() {
     if (this.scriptParser !== null) {
@@ -325,7 +325,7 @@ export class ScriptRoot {
     }
     try {
       // this will fail if there is no webdavId.
-      this.scriptParser = new ScriptUrlParser((await this.toScriptBaseUpstairsUrl()).toString());
+      this.scriptParser = new ScriptUrlParser((await this.toScriptbaseRemoteUrl()).toString());
       const key = await this.scriptParser.getScriptBaseKey();
       await this.modifyMetaData(meta => {
         meta.scriptKey = key;
@@ -366,7 +366,7 @@ export class ScriptRoot {
    * Returns a base URL string suitable for pull and push operations to the appropriate org.
    * @lastreviewed 2025-09-15
    */
-  public async toScriptBaseUpstairsString() {
+  public async toScriptBaseRemoteString() {
     const origin = await this.anyOrigin();
     const webdavId = await this.getWebdavId();
     return `${origin.toString()}files/${webdavId}/`;
@@ -376,8 +376,8 @@ export class ScriptRoot {
    * Returns a base {@link URL} suitable for pull and push operations.
    * @lastreviewed 2025-09-15
    */
-  public async toScriptBaseUpstairsUrl(): Promise<URL> {
-    const urlString = await this.toScriptBaseUpstairsString();
+  public async toScriptbaseRemoteUrl(): Promise<URL> {
+    const urlString = await this.toScriptBaseRemoteString();
     return new URL(urlString);
   }
 
@@ -484,7 +484,7 @@ export class ScriptRoot {
 
   /**
    * Checks if this {@link ScriptRoot} is morally equivalent to another {@link ScriptRoot}.
-   * Compares origin, WebDAV ID, downstairs root path, and upstairs URL.
+   * Compares origin, WebDAV ID, local root path, and remote URL.
    * 
    * @param b The other ScriptRoot to compare against
    * @lastreviewed 2025-09-15
@@ -570,7 +570,7 @@ export class ScriptRoot {
     const draftFiles = (await draftFolder.flattenRaw()).map(uri => uri.fsPath);
     await this.modifyMetaData((meta) => {
       meta.pushPullRecords = meta.pushPullRecords.filter(record => {
-        return draftFiles.includes(record.downstairsPath);
+        return draftFiles.includes(record.localPath);
       });
     });
   }
