@@ -214,35 +214,7 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Push Current Script To...](command:bsjs-push-pull.pushScript)"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Update Credentials](command:bsjs-push-pull.updateCredentials)"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Check for Updates](command:bsjs-push-pull.checkForUpdates)"
-      },
-      {
-        "view": "b6pMenuView",
         "contents": "[Change Settings](command:bsjs-push-pull.openSettings)"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "---- Advanced ----"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Quick Deploy](command:bsjs-push-pull.quickDeploy)"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Run Custom Script](command:bsjs-push-pull.runTask)"
-      },
-      {
-        "view": "b6pMenuView",
-        "contents": "[Clear Sessions](command:bsjs-push-pull.clearSessions)"
       },
       {
         "view": "b6pMenuView",
