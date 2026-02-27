@@ -194,15 +194,15 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Pull Current](command:bsjs-push-pull.pullCurrent)"
+        "contents": "[$(cloud-download) Pull Current](command:bsjs-push-pull.pullCurrent)"
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Push Current](command:bsjs-push-pull.pushCurrent)"
+        "contents": "[$(cloud-upload) Push Current](command:bsjs-push-pull.pushCurrent)"
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Semi-Snapshot Current](command:bsjs-push-pull.snapshot)"
+        "contents": "[$(device-camera) Semi-Snapshot Current](command:bsjs-push-pull.snapshot)"
       },
       {
         "view": "b6pMenuView",
@@ -210,11 +210,11 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Pull New Script](command:bsjs-push-pull.pullScript)"
+        "contents": "[$(repo-clone) Pull New Script](command:bsjs-push-pull.pullScript)"
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Change Settings](command:bsjs-push-pull.openSettings)"
+        "contents": "[$(settings-gear) Change Settings](command:bsjs-push-pull.openSettings)"
       },
       {
         "view": "b6pMenuView",
@@ -223,17 +223,17 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Toggle Test Task](command:bsjs-push-pull.testTask)",
+        "contents": "[$(beaker) Toggle Test Task](command:bsjs-push-pull.testTask)",
         "when": "bsjs-push-pull.debugMode.enabled"
       },
       {
         "view": "b6pMenuView",
-        "contents": "[GOTO BlueSync](command:bsjs-push-pull.notify)",
+        "contents": "[$(link-external) GOTO BlueSync](command:bsjs-push-pull.notify)",
         "when": "bsjs-push-pull.debugMode.enabled"
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Trigger BlueSync Task](command:bsjs-push-pull.notify)",
+        "contents": "[$(play) Trigger BlueSync Task](command:bsjs-push-pull.notify)",
         "when": "bsjs-push-pull.debugMode.enabled"
       }
     ]
