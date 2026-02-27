@@ -565,9 +565,11 @@ export namespace Err {
    * Error thrown when GitHub API returns an error status.
    */
   export class GitHubApiError extends Error {
+    public readonly statusCode: number;
     constructor(status: number) {
       super(`GitHub API returned status ${status}`);
       this.name = "GitHubApiError";
+      this.statusCode = status;
     }
   }
 

@@ -7,6 +7,7 @@ import { FileSystem } from '../util/fs/FileSystem';
 import { PrivateKeys, TypedPersistable } from '../util/PseudoMaps';
 import { PrivateTypedPersistable } from '../util/PseudoMaps/TypedPrivatePersistable';
 import { Err } from '../util/Err';
+import { showReleaseNotesPanel } from '../util/ui/ReleaseNotesWebview';
 const fs = FileSystem.getInstance;
 /**
  * Singleton update checker for the BlueStep VS Code extension.
@@ -205,40 +206,38 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   }
 
   /**
+   * Performs a GET request against the GitHub API, parses the JSON response as `T`,
+   * and maps any network/parse errors to the appropriate typed errors.
+   * @param nullStatuses HTTP status codes that should resolve to `null` instead of throwing.
+   * @lastreviewed null
+   */
+  private async githubFetch<T>(url: string, nullStatuses: number[] = []): Promise<T | null> {
+    try {
+      const response = await fetch(url, {
+        method: Http.Methods.GET,
+        headers: this.getGitHubHeaders(),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (nullStatuses.includes(response.status)) return null;
+      if (!response.ok) throw new Err.GitHubApiError(response.status);
+      return await response.json() as T;
+    } catch (error) {
+      this.handleGitHubFetchError(error);
+    }
+  }
+
+  /**
    * Get the latest release from GitHub API
    * @returns The latest non-draft, non-prerelease GitHub release or null if none found
    * @lastreviewed 2025-10-15
    */
   private async getLatestRelease(): Promise<GithubRelease | null> {
-    try {
-      const url = `${this.repoApiBase}${GitHubUrls.RELEASES_LATEST_PATH}`;
-
-      const response = await fetch(url, {
-        method: Http.Methods.GET,
-        headers: this.getGitHubHeaders(),
-        signal: AbortSignal.timeout(10_000)
-      });
-
-      if (response.status === 404) {
-        // No releases found
-        return null;
-      }
-
-      if (!response.ok) {
-        throw new Err.GitHubApiError(response.status);
-      }
-
-      const release = await response.json() as GithubRelease;
-
-      // Filter out drafts and pre-releases by default
-      if (release.draft || release.prerelease) {
-        return null;
-      }
-
-      return release;
-    } catch (error) {
-      this.handleGitHubFetchError(error);
-    }
+    const release = await this.githubFetch<GithubRelease>(
+      `${this.repoApiBase}${GitHubUrls.RELEASES_LATEST_PATH}`,
+      [404]
+    );
+    if (!release || release.draft || release.prerelease) return null;
+    return release;
   }
 
   /**
@@ -322,7 +321,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
         await this.autoInstallUpdate(updateInfo);
         break;
       case Actions.VIEW_NOTES:
-        await this.showReleaseNotes(updateInfo);
+        showReleaseNotesPanel(updateInfo);
         break;
       case Actions.DISABLE:
         await this.disableUpdateChecking();
@@ -459,87 +458,6 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   }
 
   /**
-   * Show release notes in a webview panel
-   * @param updateInfo Information about the update including release notes
-   * @lastreviewed 2025-10-15
-   */
-  private async showReleaseNotes(updateInfo: UpdateInfo): Promise<void> {
-    const panel = vscode.window.createWebviewPanel(
-      'b6pReleaseNotes',
-      `B6P Release Notes v${updateInfo.version}`,
-      vscode.ViewColumn.One,
-      {}
-    );
-
-    panel.webview.html = this.getReleaseNotesHtml(updateInfo);
-  }
-
-  /**
-   * Generate HTML for release notes webview
-   * @param updateInfo Information about the update including release notes
-   * @returns HTML string for the webview
-   * @lastreviewed null
-   */
-  private getReleaseNotesHtml(updateInfo: UpdateInfo): string {
-    const releaseNotes = updateInfo.releaseNotes
-      .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Release Notes</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: var(--vscode-editor-foreground);
-            background-color: var(--vscode-editor-background);
-            padding: 20px;
-          }
-          h1 {
-            color: var(--vscode-textPreformat-foreground);
-            border-bottom: 1px solid var(--vscode-panel-border);
-            padding-bottom: 10px;
-          }
-          .meta {
-            color: var(--vscode-descriptionForeground);
-            font-size: 0.9em;
-            margin-bottom: 20px;
-          }
-          .download-link {
-            background-color: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 3px;
-            display: inline-block;
-            margin-top: 20px;
-          }
-          .download-link:hover {
-            background-color: var(--vscode-button-hoverBackground);
-          }
-        </style>
-      </head>
-      <body>
-        <h1>B6P Extension v${updateInfo.version}</h1>
-        <div class="meta">
-          Released: ${new Date(updateInfo.publishedAt).toLocaleDateString()}
-        </div>
-        <div class="content">
-          ${releaseNotes || 'No release notes available.'}
-        </div>
-        <a href="${updateInfo.downloadUrl}" class="download-link">Download Update</a>
-      </body>
-      </html>
-    `;
-  }
-
-  /**
    * Disable automatic update checking
    * @lastreviewed 2025-10-15
    */
@@ -563,32 +481,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @lastreviewed null
    */
   public async getAllReleases(includePrerelease = false): Promise<GithubRelease[]> {
-    try {
-      const response = await fetch(`${this.repoApiBase}${GitHubUrls.RELEASES_PATH}`, {
-        method: Http.Methods.GET,
-        headers: this.getGitHubHeaders(),
-        signal: AbortSignal.timeout(10_000),
-      });
-
-      if (!response.ok) {
-        throw new Err.GitHubApiError(response.status);
-      }
-
-      const releases = await response.json() as GithubRelease[];
-
-      const filteredReleases = releases.filter(release => {
-        if (release.draft) {
-          return false;
-        }
-        if (!includePrerelease && release.prerelease) {
-          return false;
-        }
-        return true;
-      });
-
-      return filteredReleases;
-    } catch (error) {
-      this.handleGitHubFetchError(error);
-    }
+    const releases = await this.githubFetch<GithubRelease[]>(`${this.repoApiBase}${GitHubUrls.RELEASES_PATH}`) ?? [];
+    return releases.filter(r => !r.draft && (includePrerelease || !r.prerelease));
   }
 }();
