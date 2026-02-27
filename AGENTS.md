@@ -131,7 +131,5 @@ This ensures all AI-generated documentation receives proper human oversight befo
   - Variable examples: `remoteUrl`, `remoteHash`, `baseRemoteUrl`
   - Function examples: `remoteUrl()`, `toScriptBaseRemoteUrl()`, `getRemoteHash()`
 
-**Historical Note**: This codebase previously used "downstairs" for local and "upstairs" for remote. Those terms are now deprecated and should not be used in new code.
-
 ## OVERRIDING GUIDELINES
 In exceptional cases where following these guidelines is impractical or impossible, AI agents may override them. However, any such overrides must be clearly documented with a `//HUMAN-REVIEW-NEEDED` comment in the relevant code or documentation, explaining the reason for the override and what needs to be reviewed by a human. This ensures transparency and allows for proper human oversight of any deviations from standard practices.
