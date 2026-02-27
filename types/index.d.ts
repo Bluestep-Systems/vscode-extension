@@ -373,6 +373,16 @@ export type UpdateInfo = {
   releaseNotes: string;
   publishedAt: string;
 };
+/**
+ * The shape of this extension's package.json as read from the VS Code extension API.
+ */
+export type ExtensionPackageJson = {
+  version: string;
+  repository: {
+    type: string;
+    url: string;
+  };
+};
 export type ClientInfo = {
   version: string;
   lastChecked: number;

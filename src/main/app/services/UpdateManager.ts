@@ -17,8 +17,17 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   private readonly LAST_CHECKED_KEY = 'lastChecked';
   private readonly UPDATE_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
-  private readonly REPO_OWNER: string = 'bluestep-systems';
-  private readonly REPO_NAME: string = 'vscode-extension';
+  /**
+   * Derives the GitHub API base URL for this extension's repository
+   * directly from the repository URL in package.json.
+   * e.g. "https://github.com/BlueStep-Platform/bluestep-develop"
+   *   -> "https://api.github.com/repos/BlueStep-Platform/bluestep-develop"
+   * @lastreviewed null
+   */
+  private get repoApiBase(): string {
+    return this.parent.getRepositoryUrl()
+      .replace(`${GitHubUrls.BASE}/`, `${GitHubUrls.API_BASE}${GitHubUrls.REPOS_PATH}`);
+  }
 
   /**
    * The ancestor context node that is used to instantiate this manager
@@ -251,7 +260,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   private async getLatestRelease(): Promise<GithubRelease | null> {
     try {
-      const url = `${GitHubUrls.API_BASE}${GitHubUrls.REPOS_PATH}${this.REPO_OWNER}/${this.REPO_NAME}${GitHubUrls.RELEASES_LATEST_PATH}`;
+      const url = `${this.repoApiBase}${GitHubUrls.RELEASES_LATEST_PATH}`;
 
       const response = await fetch(url, {
         method: Http.Methods.GET,
@@ -336,7 +345,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     }
 
     // Fallback to release page
-    return `${GitHubUrls.BASE}/${this.REPO_OWNER}/${this.REPO_NAME}/releases/tag/${release.tag_name}`;
+    return `${this.parent.getRepositoryUrl()}/releases/tag/${release.tag_name}`;
   }
 
   /**
@@ -609,7 +618,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   public async getAllReleases(includePrerelease = false): Promise<GithubRelease[]> {
     try {
-      const response = await fetch(`${GitHubUrls.API_BASE}${GitHubUrls.REPOS_PATH}${this.REPO_OWNER}/${this.REPO_NAME}${GitHubUrls.RELEASES_PATH}`, {
+      const response = await fetch(`${this.repoApiBase}${GitHubUrls.RELEASES_PATH}`, {
         method: Http.Methods.GET,
         headers: await this.getGitHubHeaders(),
       });
