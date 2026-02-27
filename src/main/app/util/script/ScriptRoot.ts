@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Util } from '..';
-import { ScriptMetaData } from '../../../../../types';
+import { ScriptMetaData, ScriptPackageJson } from '../../../../../types';
 import { FileExtensions, FolderNames, SpecialFiles } from '../../../resources/constants';
 import { App } from '../../App';
 import { ORG_CACHE as OC } from '../../cache/OrgCache';
@@ -581,6 +581,47 @@ export class ScriptRoot {
    */
   public getDraftFolder() {
     return ScriptFactory.createFolder(vscode.Uri.joinPath(this.rootUri, FolderNames.DRAFT), this);
+  }
+
+  /**
+   * Attempts to read and parse `draft/package.json`.
+   * Returns `null` if the file does not exist or cannot be parsed.
+   * @lastreviewed null
+   */
+  public async getDraftPackageJson(): Promise<ScriptPackageJson | null> {
+    const packageJsonUri = vscode.Uri.joinPath(this.getDraftFolder().uri(), SpecialFiles.PACKAGE_JSON);
+    try {
+      const bytes = await fs().readFile(packageJsonUri);
+      const text = Buffer.from(bytes).toString('utf-8');
+      return JSON.parse(text) as ScriptPackageJson;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Returns the git repository URL declared in `draft/package.json`, or `null` if:
+   * - the file does not exist,
+   * - it cannot be parsed, or
+   * - it has no `repository` field.
+   *
+   * Handles both the string shorthand (`"repository": "https://..."`) and the object form
+   * (`"repository": { "url": "https://..." }`).
+   * @lastreviewed null
+   */
+  public async getDraftGitRepository(): Promise<string | null> {
+    const pkg = await this.getDraftPackageJson();
+    if (!pkg) {
+      return null;
+    }
+    const repo = pkg.repository;
+    if (!repo) {
+      return null;
+    }
+    if (typeof repo === 'string') {
+      return repo;
+    }
+    return repo.url ?? null;
   }
 
   /**

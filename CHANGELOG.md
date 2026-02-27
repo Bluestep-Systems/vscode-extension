@@ -59,3 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   extension automatically performs a push followed by a snapshot whenever a B6P script file is
   saved. Non-B6P files are silently ignored. Push/snapshot messages are suppressed during
   auto-save to avoid notification spam.
+- **Git-managed pull** - Both "Pull Script" and "Pull Current Script" now detect whether the
+  script's `draft/package.json` contains a `repository` field. When one is found, the commands
+  run `git pull` inside the `draft/` directory instead of the normal WebDAV pull, and display
+  the git output in a popup.

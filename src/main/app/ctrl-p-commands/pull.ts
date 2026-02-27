@@ -6,6 +6,7 @@ import { ScriptFactory } from '../util/script/ScriptFactory';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
+import { gitPull } from '../util/GitUtil';
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
@@ -17,6 +18,25 @@ export default async function (overrideFormulaUri?: string): Promise<void> {
     if (scriptUrlParser === null) {
       return;
     }
+
+    // If this script already lives locally with a git-managed draft, use git pull instead
+    // of the WebDAV pull.  getU() / getScriptName() results are cached, so the subsequent
+    // WebDAV fetch will not repeat these network calls.
+    const U = await scriptUrlParser.getU();
+    const scriptName = await scriptUrlParser.getScriptName();
+    const workspaceUri = Util.getActiveWorkspaceFolderUri();
+    const potentialScriptRoot = ScriptRoot.fromRootUri(vscode.Uri.joinPath(workspaceUri, U, scriptName));
+    const gitRepo = await potentialScriptRoot.getDraftGitRepository();
+    if (gitRepo !== null) {
+      App.logger.info(`Git repository detected (${gitRepo}); running git pull in script root folder.`);
+      const rootPath = potentialScriptRoot.getRootUri().fsPath;
+      const result = await gitPull(rootPath);
+      App.logger.info(`git pull stdout: ${result.stdout}`);
+      result.stderr && App.logger.info(`git pull stderr: ${result.stderr}`);
+      Alert.popup(`Git pull complete!\n\n${result.stdout || result.stderr || 'No output.'}`);
+      return;
+    }
+
     const fetchedScriptObject = await scriptUrlParser.getScript();
     if (fetchedScriptObject === null) {
       App.logger.warn("fetchedScriptObject is null");

@@ -706,6 +706,20 @@ export type TsConfig = {
 };
 
 /**
+ * Minimal shape of a script's `draft/package.json` that the extension needs to inspect.
+ * Only the `repository` field is required; all other keys are treated as opaque Serializable
+ * data.
+ */
+export type ScriptPackageJson = {
+  /**
+   * Optional repository declaration, mirrors the npm `repository` field.
+   * Can be a plain URL string or an object with at minimum a `url` property.
+   */
+  repository?: string | { type?: string; url: string; };
+  [key: string]: Serializable;
+};
+
+/**
  * An element in the OrgCache, representing a known host and the last access time.
  */
 type OrgCacheElement = {

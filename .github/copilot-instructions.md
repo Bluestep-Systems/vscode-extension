@@ -91,6 +91,16 @@ npm run package-extension  # Create .vsix package
 - On save: performs a silent push then compiles draft + silent snapshot push
 - Non-B6P files are silently ignored via catch; errors already surfaced to the user are re-swallowed
 
+### Git-Managed Pull
+- Both "Pull Script" (`pull.ts`) and "Pull Current Script" (`pullCurrent.ts`) check for a
+  `repository` field in `draft/package.json` before performing any WebDAV operations.
+- If the field is present, `git pull` is run via `util/GitUtil.ts` in the script root directory
+  (the folder containing `draft/`, where `.git` lives), and the output is shown to the user.
+- If the field is absent or the file does not exist, the commands fall back to the normal
+  WebDAV pull flow.
+- `ScriptRoot.getDraftGitRepository()` and `ScriptRoot.getDraftPackageJson()` encapsulate the
+  file-reading logic for this feature.
+
 ## Integration Points
 
 ### VS Code APIs
