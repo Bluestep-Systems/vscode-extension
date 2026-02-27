@@ -51,3 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed credential storage issues
 - Fixed file path handling for different OSes
 - Fixed issues with large file uploads/downloads
+- 
+## [2026.2.27]
+
+### Added
+- **Auto-save push+snapshot** - New `bsjs-push-pull.autoSave.enabled` setting. When enabled, the
+  extension automatically performs a push followed by a snapshot whenever a B6P script file is
+  saved. Non-B6P files are silently ignored. Push/snapshot messages are suppressed during
+  auto-save to avoid notification spam.

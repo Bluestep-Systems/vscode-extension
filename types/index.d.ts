@@ -506,7 +506,17 @@ export type Settings = {
      * the push-complete notification
      */
     pushComplete: boolean;
-  }
+  };
+
+  /**
+   * Settings for the auto-save push+snapshot feature.
+   */
+  autoSave: {
+    /**
+     * When true, automatically pushes and snapshots the script whenever a file is saved.
+     */
+    enabled: boolean;
+  };
 };
 
 /**

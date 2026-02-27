@@ -7,6 +7,7 @@ import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { UPDATE_MANAGER as UM } from './services/UpdateManager';
+import { handleAutoSave } from './services/AutoSaveHandler';
 import { SettingsWrapper } from './util/PseudoMaps';
 import { Err } from './util/Err';
 import { Alert } from './util/ui/Alert';
@@ -146,6 +147,11 @@ export const App = new class extends ContextNode {
     });
     this.settings.sync();
     readOnlyCheck(); // run it once on startup
+
+    // Register the auto-save listener
+    vscode.workspace.onDidSaveTextDocument(document => {
+      void handleAutoSave(document);
+    }, undefined, this.context.subscriptions);
 
     // Initialize dependancies
     SM.init(this);

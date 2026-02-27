@@ -84,6 +84,13 @@ npm run package-extension  # Create .vsix package
 - Runs 5 seconds after startup, checks every 24 hours
 - Configured via `bsjs-push-pull.updateCheck.*` settings
 
+### Auto-Save Push+Snapshot
+- Implemented in `src/main/app/services/AutoSaveHandler.ts`
+- Registered as a `vscode.workspace.onDidSaveTextDocument` listener in `App.init()`
+- Controlled by the `bsjs-push-pull.autoSave.enabled` setting (default: `false`)
+- On save: performs a silent push then compiles draft + silent snapshot push
+- Non-B6P files are silently ignored via catch; errors already surfaced to the user are re-swallowed
+
 ## Integration Points
 
 ### VS Code APIs

@@ -92,6 +92,19 @@
             "default": "1.1.0"
           }
         }
+      },
+      {
+        "title": "Auto Save",
+        "order": 3,
+        "id": "bsjs-push-pull.autoSave",
+        "properties": {
+          "bsjs-push-pull.autoSave.enabled": {
+            "order": 0,
+            "type": "boolean",
+            "description": "Automatically push and snapshot the current B6P script whenever a file is saved",
+            "default": false
+          }
+        }
       }
     ],
     "commands": [
