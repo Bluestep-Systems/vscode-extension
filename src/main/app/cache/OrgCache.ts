@@ -19,6 +19,7 @@ import { Alert } from "../util/ui/Alert";
 export const ORG_CACHE = new class extends ContextNode {
   _parent: typeof SESSION_MANAGER | null = null;
   private _orgCache: PublicPersistanceMap<OrgCacheElement[]> | null = null;
+  private _cleanupTimer: ReturnType<typeof setTimeout> | null = null;
   init(parent: typeof SESSION_MANAGER): this {
     this._parent = parent;
     this._orgCache = new PublicPersistanceMap(PublicKeys.U_CACHE, this.context);
@@ -73,7 +74,7 @@ export const ORG_CACHE = new class extends ContextNode {
     }
     this.map().store();
     // we schedule the next cleanup in 24 hours; this should really never happen unless the extension is left running for a long time
-    setTimeout(() => this.cleanupOldEntries(), Numerical.millisecondsInXDays(1)); // schedule next cleanup in 24 hours
+    this._cleanupTimer = setTimeout(() => this.cleanupOldEntries(), Numerical.millisecondsInXDays(1)); // schedule next cleanup in 24 hours
   }
 
   /**
@@ -215,6 +216,13 @@ export const ORG_CACHE = new class extends ContextNode {
    */
   public async clearCache(): Promise<void> {
     await this.map().clear();
+  }
+
+  protected override disposeSelf() {
+    if (this._cleanupTimer) {
+      clearTimeout(this._cleanupTimer);
+      this._cleanupTimer = null;
+    }
   }
 
   /**

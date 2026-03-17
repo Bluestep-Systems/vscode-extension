@@ -42,7 +42,7 @@ export abstract class PersistablePseudoMap<T extends Serializable> extends Pseud
    * Sets the value associated with the given key. will also save the result when called
    * @lastreviewed 2025-10-07
    */
-  async set(key: string, value: T) {
+  override async set(key: string, value: T) {
     super.set(key, value);
     await this.store();
   }
@@ -51,7 +51,7 @@ export abstract class PersistablePseudoMap<T extends Serializable> extends Pseud
    * Clears all entries in the map and persists the change.
    * @lastreviewed 2025-10-07
    */
-  async clear(): Promise<void> {
+  override async clear(): Promise<void> {
     super.clear();
     await this.store();
   }

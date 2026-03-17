@@ -58,7 +58,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * @returns This instance for chaining
    * @lastreviewed 2025-10-01
    */
-  async set<K extends keyof T & string>(key: K, value: T[K]) {
+  override async set<K extends keyof T & string>(key: K, value: T[K]) {
     this.checkIsInitialized();
     await super.set(key, value);
     await this.store();
@@ -72,9 +72,9 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * @returns The value or default value
    * @lastreviewed 2025-10-01
    */
-  public get<K extends keyof T & string>(key: K, defaultValue: T[K]): T[K];
-  public get<K extends keyof T & string>(key: K): T[K] | undefined;
-  public get<K extends keyof T & string>(key: K, defaultValue?: T[K]): T[K] | undefined {
+  public override get<K extends keyof T & string>(key: K, defaultValue: T[K]): T[K];
+  public override get<K extends keyof T & string>(key: K): T[K] | undefined;
+  public override get<K extends keyof T & string>(key: K, defaultValue?: T[K]): T[K] | undefined {
     this.checkIsInitialized();
     return defaultValue !== undefined ? super.get(key, defaultValue) : super.get(key);
   }
@@ -86,7 +86,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * @returns True if the key exists
    * @lastreviewed 2025-10-01
    */
-  public has<K extends keyof T>(key: K): boolean {
+  public override has<K extends keyof T>(key: K): boolean {
     this.checkIsInitialized();
     return super.has(key);
   }
@@ -98,7 +98,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * @returns This instance for method chaining
    * @lastreviewed 2025-10-01
    */
-  public delete<K extends keyof T & string>(key: K) {
+  public override delete<K extends keyof T & string>(key: K) {
     this.checkIsInitialized();
     return super.delete(key);
   }
@@ -109,7 +109,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * @param callback Function to call for each key-value pair
    * @lastreviewed 2025-10-01
    */
-  public forEach<K extends keyof T>(callback: (value: T[K], key: K, map: this) => void): void {
+  public override forEach<K extends keyof T>(callback: (value: T[K], key: K, map: this) => void): void {
     this.checkIsInitialized();
     super.forEach(callback);
   }
@@ -119,7 +119,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @lastreviewed 2025-10-01
    */
-  public keys(): (keyof T & string)[] {
+  public override keys(): (keyof T & string)[] {
     this.checkIsInitialized();
     return super.keys();
   }
@@ -129,7 +129,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @lastreviewed 2025-10-01
    */
-  public values(): T[keyof T][] {
+  public override values(): T[keyof T][] {
     this.checkIsInitialized();
     return super.values();
   }
@@ -139,7 +139,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @lastreviewed 2025-10-01
    */
-  public entries(): [keyof T & string, T[keyof T]][] {
+  public override entries(): [keyof T & string, T[keyof T]][] {
     this.checkIsInitialized();
     return super.entries();
   }
@@ -149,7 +149,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @lastreviewed 2025-10-01
    */
-  public get size(): number {
+  public override get size(): number {
     this.checkIsInitialized();
     return super.size;
   }
@@ -159,7 +159,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @lastreviewed 2025-10-01
    */
-  public clear(): void {
+  public override clear(): void {
     this.checkIsInitialized();
     super.clear();
   }
@@ -169,7 +169,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @lastreviewed 2025-10-01
    */
-  toJSON(): string {
+  override toJSON(): string {
     this.checkIsInitialized();
     return super.toJSON();
   }
@@ -179,7 +179,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @lastreviewed 2025-10-01
    */
-  store(): Thenable<void> {
+  override store(): Thenable<void> {
     this.checkIsInitialized();
     return this.context.secrets.store(this.key, JSON.stringify(this.obj));
   }

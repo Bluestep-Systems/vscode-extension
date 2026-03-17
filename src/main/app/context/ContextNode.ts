@@ -23,7 +23,7 @@ export abstract class ContextNode {
    * the map that this context node manages.
    */
   protected abstract map(): PseudoMap<string, Serializable>;
-  
+
   /**
    * Initialize the manager with the given context.
    * if already initialized, throws an error.
@@ -34,9 +34,32 @@ export abstract class ContextNode {
   abstract init(contextOrManager: vscode.ExtensionContext | ContextNode): this;
 
   /**
+   * Child context nodes that should be disposed when this node is disposed.
+   */
+  protected readonly children: ContextNode[] = [];
+
+  /**
    * clears the persistance of this context node.
    */
-  clearMap() {
+  public clearMap() {
     this.map().clear();
+  }
+
+  /**
+   * Disposes this node's own resources. Override in subclasses that hold
+   * resources like timers or event listeners. Default is a no-op.
+   */
+  protected disposeSelf(): void {
+    // no-op by default
+  }
+
+  /**
+   * Disposes this node and all of its children, depth-first.
+   */
+  public dispose(): void {
+    for (const child of this.children) {
+      child.dispose();
+    }
+    this.disposeSelf();
   }
 }

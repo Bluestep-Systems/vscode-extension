@@ -21,7 +21,7 @@ export class PublicPersistanceMap<T extends Serializable> extends PersistablePse
   /**
    * Stores the current state of the of the map in the vscode workspaceState
    */
-  store(): Thenable<void> {
+  override store(): Thenable<void> {
     return this.context.workspaceState.update(this.key, this.obj);
   }
 }

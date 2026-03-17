@@ -33,7 +33,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
   }
 
 
-  get<K extends keyof Settings>(key: K): Settings[K] {
+  override get<K extends keyof Settings>(key: K): Settings[K] {
     let ret = super.get(key) || SettingsWrapper.DEFAULT[key];
     if (Object.keys(ret).length !== Object.keys(SettingsWrapper.DEFAULT[key]).length) {
       ret = { ...SettingsWrapper.DEFAULT[key], ...ret };
@@ -42,7 +42,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
   }
 
 
-  set<K extends keyof Settings>(key: K, value: Settings[K]): this {
+  override set<K extends keyof Settings>(key: K, value: Settings[K]): this {
     super.set(key, value);
     console.log(`Setting context key: bsjs-push-pull.${key} to ${JSON.stringify(value)}`);
     this.store();

@@ -62,6 +62,8 @@ export const SESSION_MANAGER = new class extends ContextNode {
   /**
    * The ancestor context node that is used to instantiate this manager
    */
+  private _cleanupTimer: ReturnType<typeof setTimeout> | null = null;
+
   private _parent: typeof App | null = null;
 
   /**
@@ -78,6 +80,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
     this.triggerNextCleanup(5_000); // TODO rethink if 5s is even needed
     Auth.initManagers(this);
     OC.init(this);
+    this.children.push(OC);
     this._authManager = Auth.determineManager();
     return this;
   }
@@ -191,13 +194,11 @@ export const SESSION_MANAGER = new class extends ContextNode {
           await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
           return await this.csrfFetch(url, options, retries - 1);
         }
-        if (retries > 0) {
-          session.lastCsrfToken = null; // force a refresh
-          Alert.info(`Request didn't work, retrying... (${retries} attempts left)`);
-          await this.sessions.delete(origin);
-          await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
-          return await this.csrfFetch(url, options, retries - 1);
-        }
+        session.lastCsrfToken = null; // force a refresh
+        Alert.info(`Request didn't work, retrying... (${retries} attempts left)`);
+        await this.sessions.delete(origin);
+        await Util.sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000); // (expanding) pause before retrying
+        return await this.csrfFetch(url, options, retries - 1);
       }
       throw e;
     }
@@ -263,7 +264,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
         ...options,
         headers: {
           ...options?.headers,
-          [Http.Headers.COOKIE]: `${Http.Cookies.JSESSIONID}=${sessionData.JSESSIONID}; ${Http.Cookies.INGRESSCOOKIE}=${sessionData.INGRESSCOOKIE}`,
+          [Http.Headers.COOKIE]: `${Http.Cookies.JSESSIONID}=${sessionData.JSESSIONID}` + (sessionData.INGRESSCOOKIE ? `; ${Http.Cookies.INGRESSCOOKIE}=${sessionData.INGRESSCOOKIE}` : ''),
         }
       };
       const response = await HttpClient.getInstance().fetch(url, options);
@@ -347,7 +348,7 @@ export const SESSION_MANAGER = new class extends ContextNode {
    * @param delay The delay before the next cleanup is triggered; defaults to {@link MAX_SESSION_DURATION}.
    */
   private triggerNextCleanup(delay: number = this.MAX_SESSION_DURATION) {
-    setTimeout(() => {
+    this._cleanupTimer = setTimeout(() => {
       const now = Date.now();
       this.sessions.forEach((session, origin, sessions) => {
         if (now - session.lastTouched > this.MAX_SESSION_DURATION) {
@@ -356,6 +357,13 @@ export const SESSION_MANAGER = new class extends ContextNode {
       });
       this.triggerNextCleanup();
     }, delay);
+  }
+
+  protected override disposeSelf() {
+    if (this._cleanupTimer) {
+      clearTimeout(this._cleanupTimer);
+      this._cleanupTimer = null;
+    }
   }
 }();
 

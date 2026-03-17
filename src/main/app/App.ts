@@ -147,9 +147,25 @@ export const App = new class extends ContextNode {
     this.settings.sync();
     readOnlyCheck(); // run it once on startup
 
+    // Register URI handler for vscode://bluestep-systems.bsjs-push-pull/pull?url=<formulaUrl>
+    this.context.subscriptions.push(vscode.window.registerUriHandler({
+      handleUri(uri: vscode.Uri) {
+        if (uri.path === '/pull') {
+          const params = new URLSearchParams(uri.query);
+          const formulaUrl = params.get('url');
+          if (formulaUrl) {
+            ctrlPCommands.pullScript(formulaUrl);
+          } else {
+            Alert.error('Missing "url" parameter in URI');
+          }
+        }
+      }
+    }));
+
     // Initialize dependancies
     SM.init(this);
     UM.init(this);
+    this.children.push(SM, UM);
 
     return this;
   }

@@ -93,7 +93,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
     // delete all unused paths
     for (const del of toDelete) {
       App.logger.warn("Deleting unused path:" + del.fsPath);
-      vscode.workspace.fs.delete(del, { recursive: true, useTrash: false });
+      await vscode.workspace.fs.delete(del, { recursive: true, useTrash: false });
     }
   }
 

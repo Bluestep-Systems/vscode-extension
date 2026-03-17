@@ -23,7 +23,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * @returns This instance for method chaining
    * @lastreviewed 2025-10-01
    */
-  public set<K extends keyof T & string>(key: K, value: T[K]) {
+  public override set<K extends keyof T & string>(key: K, value: T[K]) {
     this.obj[key] = value;
   }
 
@@ -34,9 +34,9 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * @returns The value or default value
    * @lastreviewed 2025-10-01
    */
-  public get<K extends keyof T & string>(key: K, defaultValue: T[K]): T[K];
-  public get<K extends keyof T & string>(key: K): T[K] | undefined;
-  public get<K extends keyof T & string>(key: K, defaultValue?: T[K]): T[K] | undefined {
+  public override get<K extends keyof T & string>(key: K, defaultValue: T[K]): T[K];
+  public override get<K extends keyof T & string>(key: K): T[K] | undefined;
+  public override get<K extends keyof T & string>(key: K, defaultValue?: T[K]): T[K] | undefined {
     const value = this.obj[key];
     return value !== undefined ? value as T[K] : defaultValue;
   }
@@ -47,7 +47,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * @returns True if the key exists
    * @lastreviewed 2025-10-01
    */
-  public has<K extends keyof T>(key: K): boolean {
+  public override has<K extends keyof T>(key: K): boolean {
     return key in this.obj;
   }
 
@@ -57,7 +57,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * @returns This instance for method chaining
    * @lastreviewed 2025-10-01
    */
-  public delete<K extends keyof T & string>(key: K) {
+  public override delete<K extends keyof T & string>(key: K) {
     if (key in this.obj) {
       delete this.obj[key];
     } else {
@@ -70,7 +70,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * @param callback Function to call for each key-value pair
    * @lastreviewed 2025-10-01
    */
-  public forEach<K extends keyof T>(callback: (value: T[K], key: K, map: this) => void): void {
+  public override forEach<K extends keyof T>(callback: (value: T[K], key: K, map: this) => void): void {
     for (const k in this.obj) {
       const value = this.obj[k];
       callback(value as unknown as T[K], k as unknown as K, this);
@@ -81,7 +81,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * Returns an array of all keys in the map.
    * @lastreviewed 2025-10-01
    */
-  public keys(): (keyof T & string)[] {
+  public override keys(): (keyof T & string)[] {
     return Object.keys(this.obj) as (keyof T & string)[];
   }
 
@@ -89,7 +89,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * Returns an array of all values in the map.
    * @lastreviewed 2025-10-01
    */
-  public values(): T[keyof T][] {
+  public override values(): T[keyof T][] {
     return Object.values(this.obj).filter(v => v !== undefined) as T[keyof T][];
   }
 
@@ -97,7 +97,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * @returns An array of [key, value] tuples
    * @lastreviewed 2025-10-01
    */
-  public entries(): [keyof T & string, T[keyof T]][] {
+  public override entries(): [keyof T & string, T[keyof T]][] {
     return this.keys().map(key => [key, this.obj[key]!]);
   }
 
@@ -114,7 +114,7 @@ export class TypedMap<T extends Record<string, Serializable>> extends PseudoMap<
    * Removes all key-value pairs from the map.
    * @lastreviewed 2025-10-01
    */
-  public clear(): void {
+  public override clear(): void {
     Object.keys(this.obj).forEach(key => delete this.obj[key]);
   }
 }
