@@ -171,11 +171,10 @@ export const SESSION_MANAGER = new class extends ContextNode {
           newToken = value;
         }
       }
-      if (!newToken) {
-        throw new Err.CsrfTokenNotFoundError();
+      if (newToken) {
+        session.lastCsrfToken = newToken;
+        await this.sessions.set(origin, session);
       }
-      session.lastCsrfToken = newToken;
-      await this.sessions.set(origin, session);
       return response;
     } catch (e) {
       if (retries <= 0) {

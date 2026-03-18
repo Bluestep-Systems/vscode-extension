@@ -234,7 +234,7 @@ export class ScriptUrlParser {
         "method": Http.Methods.PROPFIND
       });
       if (!response.ok) {
-        Alert.error(`Failed to fetch sub-script at ${url.href}: ${response.status} ${response.statusText}`);
+        Alert.error(`Failed to fetch sub-script at ${url.href}: ${response.status}. This is a server-side error — the WebDAV endpoint may be temporarily unavailable. Try again in a moment.`);
         return null;
       }
       const parser = new XMLParser();
