@@ -42,8 +42,8 @@ export class ScriptUrlParser {
   trailingFolder?: string;
 
   /**
-   * The script name, as fetched from metadata.json. Will be `null` if not yet fetched.
-   * 
+   * The script name, as fetched from the GraphQL parent hierarchy. Will be `null` if not yet fetched.
+   *
    * This primarily exists to cache the result of getScriptName so we don't have to fetch it multiple times.
    */
   private _scriptName: string | null;
@@ -128,7 +128,8 @@ export class ScriptUrlParser {
   }
 
   /**
-   * Fetches the script name from the metadata.json file associated with this script.
+   * Fetches the script name and key by traversing the GraphQL parent hierarchy.
+   * Queries: scriptRoot → mediaLibrary → script object
    */
   private async getGrandparentInfo(): Promise<void> {
     if (this._scriptName !== null || this._scriptKey !== null) {
@@ -137,9 +138,11 @@ export class ScriptUrlParser {
     const gqlUrl = this.urlCopy();
     const scriptRootId = "530001___" + this.webDavId;
     const parentQuery = (id: string) => `{"query":"query ObjectData($id: String!) {\n  parents(childId: $id) {\n    id\n    displayName\n  }\n}","variables":{"id":"${id}"},"operationName":"ObjectData"}`;
-    try {
 
+    try {
       gqlUrl.pathname = `gql`;
+
+      // First query: get parent of scriptRoot (should be mediaLibrary)
       const res1 = await SM.csrfFetch(gqlUrl, {
         method: Http.Methods.POST,
         headers: {
@@ -147,15 +150,26 @@ export class ScriptUrlParser {
         },
         body: parentQuery(scriptRootId)
       });
+
       if (!res1.ok) {
-        throw new Err.ScriptUrlParserError(`Failed to fetch first parent for ${scriptRootId} from ${gqlUrl.href}: ${res1.status} ${res1.statusText}`);
+        const errorText = await res1.text();
+        throw new Err.ScriptUrlParserError(`GraphQL query failed for scriptRoot ${scriptRootId}: HTTP ${res1.status} ${res1.statusText}. Response: ${errorText.substring(0, 500)}`);
       }
-      const json1 = await res1.json() as GqlParentNameResp;
-      //TODO type the error response as well
+
+      const responseText1 = await res1.text();
+      let json1: GqlParentNameResp;
+      try {
+        json1 = JSON.parse(responseText1) as GqlParentNameResp;
+      } catch (parseError) {
+        throw new Err.ScriptUrlParserError(`Failed to parse GraphQL response for ${scriptRootId}. Response was: ${responseText1.substring(0, 500)}`);
+      }
+
       const parents = json1?.data?.parents;
       if (!parents || parents.length !== 1) {
-        throw new Err.ScriptUrlParserError(`Problem looking up parents for ${scriptRootId} from ${gqlUrl.href}, ${JSON.stringify(json1)}`);
+        throw new Err.ScriptUrlParserError(`Expected exactly 1 parent for scriptRoot ${scriptRootId}, got ${parents?.length || 0}. Full response: ${JSON.stringify(json1)}`);
       }
+
+      // Second query: get parent of mediaLibrary (should be the script object)
       const mediaLibraryId = parents[0].id;
       const res2 = await SM.csrfFetch(gqlUrl, {
         method: Http.Methods.POST,
@@ -166,22 +180,43 @@ export class ScriptUrlParser {
       });
 
       if (!res2.ok) {
-        throw new Err.ScriptUrlParserError(`Failed to fetch parent for mediaLibrary (${mediaLibraryId}) from ${gqlUrl.href}: ${res2.status} ${res2.statusText}`);
+        const errorText = await res2.text();
+        throw new Err.ScriptUrlParserError(`GraphQL query failed for mediaLibrary ${mediaLibraryId}: HTTP ${res2.status} ${res2.statusText}. Response: ${errorText.substring(0, 500)}`);
       }
-      const json2 = await res2.json() as GqlParentNameResp;
+
+      const responseText2 = await res2.text();
+      let json2: GqlParentNameResp;
+      try {
+        json2 = JSON.parse(responseText2) as GqlParentNameResp;
+      } catch (parseError) {
+        throw new Err.ScriptUrlParserError(`Failed to parse GraphQL response for mediaLibrary ${mediaLibraryId}. Response was: ${responseText2.substring(0, 500)}`);
+      }
+
       const parents2 = json2?.data?.parents;
       if (!parents2 || parents2.length !== 1) {
-        throw new Err.ScriptUrlParserError(`Problem looking up parents for mediaLibrary (${mediaLibraryId}) from ${gqlUrl.href}, ${JSON.stringify(json2)}`);
+        throw new Err.ScriptUrlParserError(`Expected exactly 1 parent for mediaLibrary ${mediaLibraryId}, got ${parents2?.length || 0}. Full response: ${JSON.stringify(json2)}`);
       }
+
       const parts = parents2[0].id.split("___");
       if (parts.length !== 2) {
-        throw new Err.ScriptUrlParserError(`Problem parsing script ID from ${gqlUrl.href}, got unexpected format: ${parents2[0].id}`);
+        throw new Err.ScriptUrlParserError(`Script ID has unexpected format. Expected "classid___seqnum", got: ${parents2[0].id}`);
       }
-      this._scriptName = parents2[0].displayName.replaceAll(/\/|\\/g, '_');
+
+      const displayName = parents2[0].displayName;
+      if (!displayName) {
+        throw new Err.ScriptUrlParserError(`Script displayName is null or empty. Script ID: ${parents2[0].id}. This may indicate the script object doesn't have a name set in the BlueStep system.`);
+      }
+
+      this._scriptName = displayName.replaceAll(/\/|\\/g, '_');
       this._scriptKey = { seqnum: parts[1], classid: parts[0] };
       return void 0;
     } catch (e) {
-      throw new Err.ScriptUrlParserError(`Failed to parse metadata JSON from ${gqlUrl.href}: ${(e as Error).message}`);
+      if (e instanceof Err.ScriptUrlParserError) {
+        // Re-throw our own errors with full context
+        throw e;
+      }
+      // Wrap unexpected errors
+      throw new Err.ScriptUrlParserError(`Unexpected error fetching script info via GraphQL from ${gqlUrl.href}: ${(e as Error).message}`);
     }
   }
 

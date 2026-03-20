@@ -724,7 +724,7 @@ export type GqlParentNameResp = {
   data: {
     parents: {
       id: string;
-      displayName: string;
+      displayName: string | null;
     }[];
   };
 };
