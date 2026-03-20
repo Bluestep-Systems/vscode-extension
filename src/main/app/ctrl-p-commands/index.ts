@@ -9,6 +9,7 @@ import notify from "./notify";
 import quickDeploy from "./quickDeploy";
 import testTask from "./testTask";
 import snapshot from "./snapshot";
+import goToSetup from "./goToSetup";
 
 /**
  * Namespace for Ctrl+P command related functions.
@@ -24,5 +25,6 @@ export default {
   notify,
   quickDeploy,
   testTask,
-  snapshot
+  snapshot,
+  goToSetup
 };

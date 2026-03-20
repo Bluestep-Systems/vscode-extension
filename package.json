@@ -154,6 +154,10 @@
       {
         "command": "bsjs-push-pull.toggleDebug",
         "title": "B6P: Toggle Debug Mode"
+      },
+      {
+        "command": "bsjs-push-pull.goToSetup",
+        "title": "B6P: Go To Setup"
       }
     ],
     "viewsContainers": {
@@ -190,6 +194,10 @@
       {
         "view": "b6pMenuView",
         "contents": "[Semi-Snapshot Current](command:bsjs-push-pull.snapshot)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Go To Setup](command:bsjs-push-pull.goToSetup)"
       },
       {
         "view": "b6pMenuView",

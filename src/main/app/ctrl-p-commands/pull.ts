@@ -6,12 +6,27 @@ import { ScriptFactory } from '../util/script/ScriptFactory';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 import { Alert } from '../util/ui/Alert';
 import { ProgressHelper } from '../util/ui/ProgressHelper';
+let activePull: Promise<void> | null = null;
+
 /**
  * Pulls files from a WebDAV location to the local workspace.
  * @param overrideFormulaUri The URI to override the default formula URI.
  * @returns A promise that resolves when the pull is complete.
  */
 export default async function (overrideFormulaUri?: string): Promise<void> {
+  if (activePull !== null) {
+    Alert.warning("A pull operation is already in progress");
+    return;
+  }
+  activePull = pullImpl(overrideFormulaUri);
+  try {
+    await activePull;
+  } finally {
+    activePull = null;
+  }
+}
+
+async function pullImpl(overrideFormulaUri?: string): Promise<void> {
   try {
     const scriptUrlParser = await getStartingParser(overrideFormulaUri);
     if (scriptUrlParser === null) {

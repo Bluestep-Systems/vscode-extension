@@ -63,7 +63,8 @@ export const App = new class extends ContextNode {
       })],
       ['bsjs-push-pull.openSettings', vscode.commands.registerCommand('bsjs-push-pull.openSettings', async () => {
         vscode.commands.executeCommand('workbench.action.openSettings', "@ext:bluestep-systems.bsjs-push-pull");
-      })]
+      })],
+      ['bsjs-push-pull.goToSetup', vscode.commands.registerCommand('bsjs-push-pull.goToSetup', ctrlPCommands.goToSetup)]
     ]);
     constructor() {}
     forEach(callback: (disposable: vscode.Disposable, key: string, map: this) => void) {
