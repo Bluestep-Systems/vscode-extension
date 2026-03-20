@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
 import { Converter } from "./Converter";
-import { Converter1_0_1_to_1_1_0 } from "./Converter_1.0.1_1.1.0";
 import { ExtensionConfig } from '../resources/constants';
 
 export const REQUIRED_CONVERTERS: Converter[] = [
-  new Converter1_0_1_to_1_1_0(),
   // future converters go here; make sure they are in order.
 ];
 

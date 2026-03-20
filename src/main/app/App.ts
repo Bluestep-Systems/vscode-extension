@@ -11,6 +11,7 @@ import { SettingsWrapper } from './util/PseudoMaps';
 import { Err } from './util/Err';
 import { Alert } from './util/ui/Alert';
 import { ORG_CACHE as OC } from './cache/OrgCache';
+import { SCRIPT_METADATA_STORE as MDS } from './cache/ScriptMetaDataStore';
 
 
 
@@ -39,8 +40,12 @@ export const App = new class extends ContextNode {
       ['bsjs-push-pull.testTask', vscode.commands.registerCommand('bsjs-push-pull.testTask', ctrlPCommands.testTask)],
       ['bsjs-push-pull.snapshot', vscode.commands.registerCommand('bsjs-push-pull.snapshot', ctrlPCommands.snapshot)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
-        //Alert.info("Settings: " + App.settings.toJSON(), { modal: false });
-        Alert.info("NOT IMPLEMENTED YET");
+        const entries = MDS.all();
+        const summary = entries.length === 0
+          ? "No script metadata entries stored."
+          : entries.map(e => `${e.U}/${e.scriptName} (webdavId: ${e.webdavId}, records: ${e.pushPullRecords.length}, classid: ${e.scriptKey.classid}, seqnum: ${e.scriptKey.seqnum})`).join("\n");
+        App.logger.info("=== Script Metadata Store ===\n" + summary);
+        Alert.info(`${entries.length} script metadata ${entries.length === 1 ? "entry" : "entries"} stored. See output channel for details.`);
       })],
       ['bsjs-push-pull.clearSettings', vscode.commands.registerCommand('bsjs-push-pull.clearSettings', async () => {
         Alert.info("Reverting to default settings");
@@ -164,9 +169,10 @@ export const App = new class extends ContextNode {
     }));
 
     // Initialize dependancies
+    MDS.init(this);
     SM.init(this);
     UM.init(this);
-    this.children.push(SM, UM);
+    this.children.push(MDS, SM, UM);
 
     return this;
   }

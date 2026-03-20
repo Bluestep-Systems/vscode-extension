@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { App } from "../App";
 import { Util } from "../util";
 import { ScriptFile } from '../util/script/ScriptFile';
-import { ScriptRoot } from "../util/script/ScriptRoot";
 import { ScriptFactory } from '../util/script/ScriptFactory';
 
 export default async function () {
@@ -37,18 +36,7 @@ export default async function () {
  * @param sf 
  */
 async function determine(sf: ScriptFile) {
-  const curFileName = sf.name();
-  const specialFileNames = [ScriptRoot.METADATA_FILENAME];
-  if (specialFileNames.includes(curFileName)) {
-    return true;
-  }
   if (sf.isInDeclarations()) {
-    return true;
-  }
-  if (await sf.isInDraftInfoOrObjects()) {
-    return true;
-  }
-  if (await sf.isExternalModel()) {
     return true;
   }
   return false;

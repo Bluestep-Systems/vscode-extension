@@ -106,9 +106,6 @@ async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, 
       if (await sf.isInGitIgnore()) {
         App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
         continue;
-      } else if (await sf.isInDraftInfoOrObjects()) {
-        App.logger.info(`File is in Info or Objects folder; skipping deletion: ${rawFilePath.upstairsPath}`);
-        continue;
       } else if (!isSnapshot) {
         const inBuildFolder = await sf.isInItsRespectiveBuildFolder();
         if (inBuildFolder) {

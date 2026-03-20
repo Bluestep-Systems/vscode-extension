@@ -84,7 +84,7 @@ async function cleanUnusedDownstairsPaths(existingPaths: vscode.Uri[], validPath
     if (await node.isInGitIgnore()) {
       continue;
     }
-    if ([ScriptRoot.METADATA_FILENAME, ScriptRoot.GITIGNORE_FILENAME].some(special => ep.fsPath.endsWith(special))) {
+    if (ep.fsPath.endsWith(ScriptRoot.GITIGNORE_FILENAME)) {
       continue;
     }
     if (!validPaths.find(vp => vp.fsPath === ep.fsPath)) {
@@ -158,7 +158,7 @@ async function createOrUpdateIndividualNode(downstairsRest: string, parser: Scri
     const sf = ScriptFactory.createFile(ultimatePath);
     if (await sf.exists() && await sf.currentIntegrityMatches()) {
       App.logger.info("File integrity matches; skipping:", ultimatePath.fsPath);
-      await sf.touch("lastPulled");
+      await sf.touch();
       return sf.uri();
     }
     await sf.download(parser);

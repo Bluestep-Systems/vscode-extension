@@ -1,9 +1,11 @@
+import path from 'path';
 import * as vscode from 'vscode';
 import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { FileExtensions, FolderNames, SpecialFiles } from '../../../resources/constants';
 import { App } from '../../App';
 import { ORG_CACHE as OC } from '../../cache/OrgCache';
+import { SCRIPT_METADATA_STORE as MDS } from '../../cache/ScriptMetaDataStore';
 import pushCurrent from '../../ctrl-p-commands/pushCurrent';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { OrgWorker } from '../data/OrgWorker';
@@ -25,8 +27,6 @@ const fs = FileSystem.getInstance;
  * @lastreviewed 2025-09-15
  */
 export class ScriptRoot {
-  private static readonly ScriptContentFolders = [FolderNames.INFO, FolderNames.SCRIPTS, FolderNames.OBJECTS] as const;
-  public static readonly METADATA_FILENAME = SpecialFiles.B6P_METADATA;
   public static readonly GITIGNORE_FILENAME = SpecialFiles.GITIGNORE;
   private _orgWorker: OrgWorker | null;
   public readonly rootUri: vscode.Uri;
@@ -61,15 +61,6 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets where the metadata file *should* be located.
-   * @lastreviewed 2025-09-15
-   */
-  private getMetadataFileUri() {
-    const downstairsRoot = this.getRootUri();
-    return vscode.Uri.joinPath(downstairsRoot, ScriptRoot.METADATA_FILENAME);
-  }
-
-  /**
    * Gets where the .gitignore file *should* be located.
    * @lastreviewed 2025-09-15
    */
@@ -79,126 +70,53 @@ export class ScriptRoot {
   }
 
   /**
-   * Modifies the metadata for the script root.
-   * It will also save any changes you make to the object passed to the callback function.
-   * Creates a new metadata file with default values if it doesn't exist or is malformed.
-   * Includes retry logic for file system operations.
-   * 
+   * Derives the U value from the folder structure (parent folder name, e.g. "U100001").
+   */
+  private getUFromPath(): string {
+    return path.basename(this.getOrgUri().fsPath);
+  }
+
+  /**
+   * Derives the script folder name from the folder structure.
+   */
+  private getScriptNameFromPath(): string {
+    return path.basename(this.rootUri.fsPath);
+  }
+
+  /**
+   * Modifies the metadata for the script root via the persistent store.
+   * Creates a new entry with default values if none exists (requires a scriptParser for initial download).
+   *
    * @param callBack Optional callback function to modify the metadata object
    * @returns The current or modified metadata object
-   * @throws {Err.FileNotFoundError} When file system operations fail after retries or for unexpected errors
-   * @lastreviewed 2025-09-15
    */
-  public async modifyMetaData(callBack?: ((meta: ScriptMetaData) => void)): Promise<ScriptMetaData> {
-    const metadataFileUri = this.getMetadataFileUri();
-    let contentObj: ScriptMetaData | undefined;
-    let modified = false;
-    try {
-      try {
-        await fs().stat(metadataFileUri);
-      } catch (e) {
-        throw new Err.FileNotFoundError("Metadata file does not exist");
-      }
-      // Retry mechanism for file reading
-      let fileContents: Uint8Array;
-      let attempts = 0;
-      const maxAttempts = 3;
+  public async modifyMetaData(callBack?: (meta: ScriptMetaData) => void): Promise<ScriptMetaData> {
+    const pathU = this.getUFromPath();
+    const pathScriptName = this.getScriptNameFromPath();
 
-      while (attempts < maxAttempts) {
-        try {
-          fileContents = await fs().readFile(metadataFileUri);
+    let entry = MDS.findByScriptName(pathU, pathScriptName);
 
-          // Check if we got valid contents
-          if (fileContents && fileContents.length > 0) {
-            const fileString = Buffer.from(fileContents).toString('utf-8');
+    if (!entry) {
+      if (this.scriptParser !== null) {
+        const scriptName = await this.scriptParser.getScriptName() || (() => { throw new Err.FileReadError("Missing script name"); })();
+        const U = await this.scriptParser.getU() || (() => { throw new Err.FileReadError("Missing U"); })();
+        const webdavId = this.scriptParser.webDavId || (() => { throw new Err.FileReadError("Missing webdavId"); })();
+        const scriptKey = await this.scriptParser.getScriptBaseKey() || (() => { throw new Err.FileReadError("Missing scriptKey"); })();
 
-            // Ensure we have a valid JSON string
-            if (fileString.trim()) {
-              try {
-                contentObj = JSON.parse(fileString) as ScriptMetaData;
-                break; // Successfully read and parsed
-              } catch (jsonError) {
-                // JSON parsing error - don't retry, treat as malformed file
-                App.logger.warn("Malformed JSON in metadata file, creating new metadata");
-                throw new Err.FileReadError("Malformed JSON in metadata file");
-              }
-            } else {
-              // Empty string content - treat as malformed file
-              App.logger.warn("Empty content in metadata file, creating new metadata");
-              throw new Err.FileReadError("Empty content in metadata file");
-            }
-          } else {
-            // Empty file - treat as malformed file 
-            App.logger.warn("Empty metadata file, creating new metadata");
-            throw new Err.FileReadError("Empty metadata file");
-          }
-        } catch (readError) {
-          // Check if this is a JSON parsing error or file content error
-          if (readError instanceof Err.FileReadError) {
-            // Don't retry content/parsing errors, fall through to create new metadata
-            throw readError;
-          }
-
-          // For other file system errors, retry
-          attempts++;
-          if (attempts >= maxAttempts) {
-            throw readError; // Re-throw if we've exhausted retries
-          }
-          console.error(`File read error, retrying... (attempt ${attempts}/${maxAttempts}):`, readError);
-          await Util.sleep(1_000); // Wait 1000ms before retry
-        }
-      }
-
-      // If we get here without contentObj, we exhausted retries on file system errors
-      if (!contentObj) {
-        throw new Err.FileReadError("Failed to read file after multiple attempts");
-      }
-
-    } catch (e) {
-      App.logger.error("Error reading metadata file: " + e);
-      if (!(e instanceof Err.FileNotFoundError) && !(e instanceof Err.FileReadError)) {
-        throw e;
-      }
-      App.logger.warn("Metadata file does not exist or is invalid; creating a new one.");
-      let scriptName: string;
-      let U: string;
-      let webdavId: string;
-      let scriptKey: { seqnum: string; classid: string; };
-
-      if (this.scriptParser === null) {
-        // the absence of a parser indicates that this is coming from a local file, thus these elements should exist
-        // this should only happen if the user somehow deletes the `.b6p_metadata.json`
-        const metaDataDotJson = await this.getAsFolder().getMetadataDotJson();
-        scriptName = metaDataDotJson.displayName.replaceAll(/\/|\\/g, '_') || (() => { throw new Err.FileReadError("Missing displayName in metadata"); })();
-        U = await this.getU() || (() => { throw new Err.FileReadError("Missing U in metadata"); })();
-        webdavId = await this.getWebdavId() || (() => { throw new Err.FileReadError("Missing webdavId in metadata"); })();
-        scriptKey = await this.getScriptKey() || (() => { throw new Err.FileReadError("Missing scriptKey in metadata"); })();
+        entry = { scriptName, U, webdavId, pushPullRecords: [], scriptKey };
       } else {
-        //only time this should be happening is on initial download
-        scriptName = await this.scriptParser.getScriptName() || (() => { throw new Err.FileReadError("Missing script name and no parser available"); })();
-        U = await this.scriptParser.getU() || (() => { throw new Err.FileReadError("Missing U and no parser available"); })();
-        webdavId = this.scriptParser.webDavId || (() => { throw new Err.FileReadError("Missing webdavId and no parser available"); })();
-        scriptKey = await this.scriptParser.getScriptBaseKey() || (() => { throw new Err.FileReadError("Missing scriptKey and no parser available"); })();
+        throw new Err.InvalidStateError(
+          `No metadata found for script "${pathScriptName}" in org "${pathU}" and no parser available to create it.`
+        );
       }
+    }
 
-      contentObj = {
-        scriptName,
-        U,
-        webdavId,
-        pushPullRecords: [],
-        scriptKey,
-      };
-      modified = true;
-    }
     if (callBack) {
-      const preModified = JSON.parse(JSON.stringify(contentObj));
-      callBack(contentObj);
-      Util.isDeepEqual(preModified, contentObj) || (modified = true);
+      callBack(entry);
     }
-    if (modified) {
-      await fs().writeFile(this.getMetadataFileUri(), Buffer.from(JSON.stringify(contentObj, null, 2)));
-    }
-    return contentObj;
+
+    await MDS.upsert(entry);
+    return entry;
   }
 
   withParser(parser: ScriptUrlParser) {
@@ -206,18 +124,12 @@ export class ScriptRoot {
   }
 
   /**
-   * Gets the metadata for the script root.
-   * @lastreviewed 2025-09-15
+   * Gets the metadata for the script root, or null if none exists.
    */
   public async getMetaData(): Promise<ScriptMetaData | null> {
-    try {
-      return await this.modifyMetaData();
-    } catch (e) {
-      if (e instanceof Err.ConfigFileError) {
-        return null;
-      }
-      throw e;
-    }
+    const pathU = this.getUFromPath();
+    const pathScriptName = this.getScriptNameFromPath();
+    return MDS.findByScriptName(pathU, pathScriptName) || null;
   }
 
   /**
@@ -290,6 +202,18 @@ export class ScriptRoot {
   }
 
   /**
+   * Gets the script name from the metadata file.
+   * @throws an {@link Err.InvalidStateError} if the metadata is missing or has no scriptName
+   */
+  public async getScriptName(): Promise<string> {
+    const metadata = await this.getMetaData();
+    if (!metadata) {
+      throw new Err.InvalidStateError("Missing metadata");
+    }
+    return metadata.scriptName || (() => { throw new Err.InvalidStateError("Missing scriptName in metadata"); })();
+  }
+
+  /**
    * The WebDAV ID extracted from the metadata file.
    * @throws an {@link Err.FileNotFoundError} if the metadata file is missing or malformed.
    * @lastreviewed 2025-10-09
@@ -325,7 +249,7 @@ export class ScriptRoot {
     }
     try {
       // this will fail if there is no webdavId.
-      this.scriptParser = new ScriptUrlParser((await this.toScriptBaseUpstairsUrl()).toString());
+      this.scriptParser = new ScriptUrlParser((await this.getBaseWebDavUrl()).toString());
       const key = await this.scriptParser.getScriptBaseKey();
       await this.modifyMetaData(meta => {
         meta.scriptKey = key;
@@ -366,7 +290,7 @@ export class ScriptRoot {
    * Returns a base URL string suitable for pull and push operations to the appropriate org.
    * @lastreviewed 2025-09-15
    */
-  public async toScriptBaseUpstairsString() {
+  public async getBaseWebDavUrlString() {
     const origin = await this.anyOrigin();
     const webdavId = await this.getWebdavId();
     return `${origin.toString()}files/${webdavId}/`;
@@ -376,8 +300,8 @@ export class ScriptRoot {
    * Returns a base {@link URL} suitable for pull and push operations.
    * @lastreviewed 2025-09-15
    */
-  public async toScriptBaseUpstairsUrl(): Promise<URL> {
-    const urlString = await this.toScriptBaseUpstairsString();
+  public async getBaseWebDavUrl(): Promise<URL> {
+    const urlString = await this.getBaseWebDavUrlString();
     return new URL(urlString);
   }
 
@@ -392,94 +316,11 @@ export class ScriptRoot {
 
 
   /**
-   * Generic helper to get the contents of a folder.
-   * @param folderName The name of the folder to read contents from
-   * @returns Array of URIs for files and folders within the specified folder
-   * @lastreviewed 2025-09-15
-   */
-  private async getDraftFolderContents(folderName: typeof ScriptRoot.ScriptContentFolders[number]): Promise<vscode.Uri[]> {
-    const folder = this.getDraftFolder().getChildFolder(folderName);
-    const dirContents = await fs().readDirectory(folder);
-    return dirContents.map(([name, _type]) => vscode.Uri.joinPath(folder.uri(), name));
-  }
-
-  /**
-   * Gets the info {@link ScriptFolder} in the draft directory.
-   */
-  public async getDraftInfoFolder() {
-    return this.getDraftFolder().getChildFolder("info");
-  }
-
-  /**
-   * Gets the contents of the info  in the draft directory.
-   * @lastreviewed 2025-09-15
-   */
-  public async getDraftInfoFolderContents() {
-    return this.getDraftFolderContents("info");
-  }
-
-  /**
    * Gets the scripts {@link ScriptFolder} in the draft directory.
    * @lastreviewed 2025-10-01
    */
   public async getDraftScriptsFolder() {
     return this.getDraftFolder().getChildFolder("scripts");
-  }
-
-
-  /**
-   * Gets the {@link vscode.Uri}s of the scripts folder.
-   * @lastreviewed 2025-10-01
-   */
-  public async getScriptsFolderContents() {
-    return this.getDraftFolderContents("scripts");
-  }
-
-  public async getObjectsFolder() {
-    return this.getDraftFolder().getChildFolder("objects");
-  }
-
-  /**
-   * Gets the {@link vscode.Uri}s of the objects folder.
-   * @lastreviewed 2025-10-01
-   */
-  public async getDraftObjectsFolderContents() {
-    return this.getDraftFolderContents("objects");
-  }
-
-  /**
-   * Determines if this script root is for a file that is in good condition.
-   * Validates that the info folder contains exactly 3 required files (metadata.json, permissions.json, config.json)
-   * and that the objects folder contains exactly one file (imports.ts).
-   * @lastreviewed 2025-10-01
-   */
-  public async isCopacetic(): Promise<boolean> {
-    const infoContent = await this.getDraftInfoFolderContents();
-    const objectsContent = await this.getDraftObjectsFolderContents();
-    const reasonsWhyBad: string[] = [];
-    if (infoContent.length !== 3) {
-      reasonsWhyBad.push("`info` folder must have 3 elements");
-    }
-    SpecialFiles.SCRIPT_FILES.forEach(expectedFile => {
-      if (!infoContent.some(file => file.path.endsWith(expectedFile))) {
-        reasonsWhyBad.push(`Info folder is missing expected file: ${expectedFile}`);
-      }
-    });
-    if (objectsContent.length !== 1) {
-      reasonsWhyBad.push("`objects` folder must have exactly one file");
-    }
-    if (!objectsContent.map(v => v.path).some(path => path.endsWith("imports.ts"))) {
-      reasonsWhyBad.push("`objects` folder must contain an imports.ts file");
-    }
-    if (reasonsWhyBad.length > 0) {
-      App.logger.warn(`Script at ${this.getRootUri().fsPath} is not copacetic:`);
-      reasonsWhyBad.forEach(reason => App.logger.warn(` - ${reason}`));
-    }
-    if (reasonsWhyBad.length === 0) {
-      return true;
-    }
-    App.logger.warn("Script is not copacetic" + reasonsWhyBad.join("; "));
-    return false;
   }
 
   /**
@@ -542,7 +383,6 @@ export class ScriptRoot {
     for (const file of allDraftFiles) {
       if (await file.isFile() && (file as ScriptFile).isMarkdown() ||
         await file.isInItsRespectiveBuildFolder() ||
-        await file.isInDraftInfo() || // TODO delete this after this is obviated
         await file.isFolder()) {
         continue;
       }
@@ -591,11 +431,6 @@ export class ScriptRoot {
     const tsConfig = await this.getDraftTsConfig();
 
     return tsConfig.getBuildFolder();
-  }
-
-  public async getDraftBuildObjectsFolder() {
-    const buildFolder = await this.getDraftBuildFolder();
-    return buildFolder.getChildFolder(FolderNames.OBJECTS);
   }
 
   /**
@@ -674,9 +509,6 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-01
    */
   public async preflightCheck(): Promise<string> {
-    if (!(await this.isCopacetic())) {
-      throw new Err.ScriptNotCopaceticError();
-    }
     const badTsFiles = await this.getBadTsFiles();
     if (badTsFiles.length > 0) {
       return `The following tsconfig files are invalid:\n\n${badTsFiles.join("\n")}\n\n

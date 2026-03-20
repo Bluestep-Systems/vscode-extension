@@ -1,11 +1,9 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ConfigJsonContent as ConfigDotJsonContent, MetaDataDotJsonContent } from '../../../../../types';
-import { FolderNames, Http, SpecialFiles } from '../../../resources/constants';
+import { FolderNames, Http } from '../../../resources/constants';
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
-import { Util } from '../';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
@@ -179,58 +177,6 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Gets the last pulled time for the script file as a string in UTC format, or `null` if not found
-   * in the metadata object.
-   * @lastreviewed 2025-09-29
-   */
-  public async getLastPulledTimeStr(): Promise<string | null> {
-    const md = await this.getScriptRoot().getMetaData();
-    if (!md) {
-      return null;
-    }
-    return md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath)?.lastPulled || null;
-  }
-
-  /**
-   * Gets the last pulled time for the script file as a {@link Date}, or `null` if not found in the
-   * metadata object.
-   * @lastreviewed 2025-09-29
-   */
-  public async getLastPulledTime(): Promise<Date | null> {
-    const lastPulledStr = await this.getLastPulledTimeStr();
-    if (!lastPulledStr) {
-      return null;
-    }
-    return new Date(lastPulledStr);
-  }
-
-  /**
-   * Gets the last pushed time for the script file in UTC format, or `null` if not found
-   * in the metadata object.
-   * @lastreviewed 2025-09-29
-   */
-  public async getLastPushedTimeStr(): Promise<string | null> {
-    const md = await this.getScriptRoot().getMetaData();
-    if (!md) {
-      return null;
-    }
-    return md.pushPullRecords.find(record => record.downstairsPath === this.uri().fsPath)?.lastPushed || null;
-  }
-
-  /**
-   * Gets the last pushed time for the script file as a {@link Date}, or `null` if not
-   * found in the metadata object.
-   * @lastreviewed 2025-09-29
-   */
-  public async getLastPushedTime(): Promise<Date | null> {
-    const lastPushedStr = await this.getLastPushedTimeStr();
-    if (!lastPushedStr) {
-      return null;
-    }
-    return new Date(lastPushedStr);
-  }
-
-  /**
    * Overwrites the script root for this file.
    *
    * Be mindful, because it becomes easy to create inconsistencies since the underlying file may not even exist.
@@ -270,40 +216,6 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Generic method to find and parse a JSON configuration file in the draft/info folder.
-   * @param fileName The name of the file to search for
-   * @returns The parsed JSON content
-   * @throws an {@link Err.ConfigFileError} When the file is not found or multiple files are found
-   * @lastreviewed 2025-09-29
-   */
-  private async getInfoFile<T>(fileName: string): Promise<T> {
-    const files = await fs().findFiles(new vscode.RelativePattern(this.scriptRoot.getRootUri(), `draft/info/${fileName}`));
-    if (!files || files.length !== 1) {
-      throw new Err.ConfigFileError(fileName, files ? files.length : 0);
-    }
-    const configFileUri = files[0];
-    const configFileContent = await Util.readFileText(configFileUri);
-    const config = JSON.parse(configFileContent) as T;
-    return config;
-  }
-
-  /**
-   * Gets the configuration file for the script.
-   * @lastreviewed 2025-09-29
-   */
-  public async getConfigDotJson(): Promise<ConfigDotJsonContent> {
-    return this.getInfoFile<ConfigDotJsonContent>(SpecialFiles.CONFIG);
-  }
-
-  /**
-   * Gets the metadata file for the script.
-   * @lastreviewed 2025-09-15
-   */
-  public async getMetadataDotJson(): Promise<MetaDataDotJsonContent> {
-    return this.getInfoFile<MetaDataDotJsonContent>(SpecialFiles.METADATA);
-  }
-
-  /**
    * Checks if the script file is in the declarations folder.
    * @lastreviewed 2025-09-15
    */
@@ -316,46 +228,11 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Checks if the script node is in the info folder.
-   * @lastreviewed 2025-09-15
-   */
-  public async isInDraftInfo(): Promise<boolean> {
-    const infoFolder = await this.getScriptRoot().getDraftInfoFolderContents();
-    return infoFolder.some(file => file.fsPath === this.uri().fsPath);
-  }
-
-  /**
-   * Checks if the script node is in the objects folder.
-   * @lastreviewed 2025-09-15
-   */
-  public async isInDraftObjects(): Promise<boolean> {
-    const objectsFolder = await this.getScriptRoot().getDraftObjectsFolderContents();
-    return objectsFolder.some(file => file.fsPath === this.uri().fsPath);
-  }
-
-  /**
-   * Checks if the script node is in the info or objects folder.
-   * @lastreviewed 2025-09-15
-   */
-  public async isInDraftInfoOrObjects(): Promise<boolean> {
-    return await this.isInDraftInfo() || await this.isInDraftObjects();
-  }
-
-  /**
    * Checks if the script node is in the draft folder.
    * @lastreviewed 2025-09-15
    */
   public isInDraft(): boolean {
     return this.parser.type === "draft";
-  }
-
-  /**
-   * Determines if the script node is in the info folder.
-   * @lastreviewed 2025-09-15
-   */
-  public async isInInfoFolder(): Promise<boolean> {
-    const infoFolder = await this.getScriptRoot().getDraftInfoFolderContents();
-    return infoFolder.some(file => file.fsPath === this.uri().fsPath);
   }
 
   /**
@@ -582,9 +459,14 @@ export abstract class ScriptNode implements ScriptPathElement {
 
   /**
    * Renames the current node to something new; operation is aborted if the new name is the same as the current name.
+   * @throws an {@link Err.ScriptOperationError} if the node is the script root folder, as renaming it
+   * would break the metadata store lookup.
    */
   public async rename(newName: string): Promise<void> {
     await this.isCopacetic();
+    if (this.uri().fsPath === this.scriptRoot.getRootUri().fsPath) {
+      throw new Err.ScriptOperationError("Cannot rename the script root folder; the folder name is used as a metadata lookup key.");
+    }
     if (this.name() === newName) {
       App.logger.info("Ignoring rename operation; new name is the same as the current name.");
       return;

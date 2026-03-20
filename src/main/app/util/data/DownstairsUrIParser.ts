@@ -86,8 +86,7 @@ export class DownstairsUriParser {
     if (scriptNameIndex + 1 < segments.length) {
       const potentialTypeSegment = segments[scriptNameIndex + 1];
 
-      if (potentialTypeSegment === ScriptRoot.METADATA_FILENAME
-        || potentialTypeSegment === ScriptRoot.GITIGNORE_FILENAME
+      if (potentialTypeSegment === ScriptRoot.GITIGNORE_FILENAME
         || potentialTypeSegment === FolderNames.DRAFT
         || potentialTypeSegment === FolderNames.DECLARATIONS
         || potentialTypeSegment === FolderNames.SNAPSHOT) {
@@ -117,7 +116,7 @@ export class DownstairsUriParser {
       const typeSegment = segments[typeIndex];
       const restSegments = segments.slice(typeIndex + 1);
 
-      if (typeSegment === ScriptRoot.METADATA_FILENAME || typeSegment === ScriptRoot.GITIGNORE_FILENAME) {
+      if (typeSegment === ScriptRoot.GITIGNORE_FILENAME) {
         this.type = "metadata";
         this.rest = "";
       } else if (typeSegment === FolderNames.DRAFT || typeSegment === FolderNames.DECLARATIONS || typeSegment === FolderNames.SNAPSHOT) {

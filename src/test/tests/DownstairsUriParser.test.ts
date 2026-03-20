@@ -339,14 +339,11 @@ suite('DownstairsUriParser Tests', () => {
 
   suite('Integration with RemoteScriptRoot Constants', () => {
 
-    test('should correctly identify metadata files using RemoteScriptRoot constants', () => {
-      const metadataUri = vscode.Uri.file(`/workspace/U100029/12345/${ScriptRoot.METADATA_FILENAME}`);
+    test('should correctly identify gitignore files using RemoteScriptRoot constants', () => {
       const gitignoreUri = vscode.Uri.file(`/workspace/U100029/12345/${ScriptRoot.GITIGNORE_FILENAME}`);
 
-      const metadataParser = new DownstairsUriParser(metadataUri);
       const gitignoreParser = new DownstairsUriParser(gitignoreUri);
 
-      assert.strictEqual(metadataParser.type, 'metadata');
       assert.strictEqual(gitignoreParser.type, 'metadata');
     });
   });

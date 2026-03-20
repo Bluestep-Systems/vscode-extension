@@ -35,5 +35,10 @@ export enum PublicKeys {
   /**
    * Key for the data we persist for the org cache
    */
-  U_CACHE = 'b6p:u_cache'
+  U_CACHE = 'b6p:u_cache',
+
+  /**
+   * Key for persisted script metadata (replaces .b6p_metadata.json files)
+   */
+  SCRIPT_METADATA = 'b6p:script_metadata'
 }

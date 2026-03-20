@@ -196,16 +196,6 @@ type ScriptMetaData = {
     downstairsPath: string;
 
     /**
-     * the time `new Date().toUTCString()` when the last push happened
-     */
-    lastPushed: string | null;
-
-    /**
-     * the time `new Date().toUTCString()` when the last pull happened
-     */
-    lastPulled: string | null;
-
-    /**
      * the hash of the file when it was last verified (after a push or pull)
      */
     lastVerifiedHash: string | null;

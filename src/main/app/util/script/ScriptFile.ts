@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { CryptoAlgorithms, FileExtensions, FolderNames, Http, MimeTypes, SpecialFiles } from '../../../resources/constants';
+import { CryptoAlgorithms, FileExtensions, FolderNames, Http, MimeTypes } from '../../../resources/constants';
 import { App } from "../../App";
 import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { ScriptUrlParser } from "../data/ScriptUrlParser";
@@ -45,11 +45,6 @@ export class ScriptFile extends ScriptNode {
     }
     return new ScriptFile(downstairsUri, this.scriptRoot);
   }
-
-  /**
-   * Indicates whether this script file is an external model; this is cached after the first check.
-   */
-  private _isExternalModel: boolean | undefined;
 
   /**
    * Caches the reason to not push this file, if determined.
@@ -220,7 +215,7 @@ export class ScriptFile extends ScriptNode {
     }
 
     // touch the lastPulled time
-    await this.touch("lastPulled");
+    await this.touch();
     return response;
   }
   /**
@@ -259,17 +254,13 @@ export class ScriptFile extends ScriptNode {
    */
   public async upstairsUrl(parser?: ScriptUrlParser): Promise<URL> {
 
-    const upstairsBaseUrl = await this.getScriptRoot(parser).toScriptBaseUpstairsUrl();
+    const upstairsBaseUrl = await this.getScriptRoot(parser).getBaseWebDavUrl();
     App.isDebugMode() && console.log("base upstairs URL:", upstairsBaseUrl.toString());
     const newUrl = new URL(upstairsBaseUrl);
     if (this.parser.type === "root") {
       return newUrl;
     } else if (this.parser.type === "metadata") {
-      const fileName = this.name();
-      if (fileName === SpecialFiles.B6P_METADATA) {
-        throw new Err.MetadataFileOperationError("convert to upstairs URL");
-      }
-      newUrl.pathname = upstairsBaseUrl.pathname + fileName;
+      newUrl.pathname = upstairsBaseUrl.pathname + this.name();
     } else if (this.parser.isInDefinedFolders()) {
       newUrl.pathname = upstairsBaseUrl.pathname + this.parser.type + "/" + this.parser.rest;
     } else {
@@ -301,18 +292,12 @@ export class ScriptFile extends ScriptNode {
   private async setReasonToNotPush(ops?: { upstairsOverride?: URL; }): Promise<string | null> {
     if (this.parser.type === "root") {
       this._reasonToNotPush = "Node is the root folder";
-    } else if (this.name() === SpecialFiles.B6P_METADATA) {
-      this._reasonToNotPush = "Node is a metadata file";
     } else if (this.isInDeclarations()) {
       this._reasonToNotPush = "Node is in declarations";
     } else if (this.isInGitFolder()) {
       this._reasonToNotPush = "Node is in .git folder";
-    } else if (await this.isExternalModel()) {
-      this._reasonToNotPush = "Node is an external model";
     } else if (await this.isInGitIgnore()) {
       this._reasonToNotPush = "Node is ignored by .gitignore";
-    } else if (await this.isInDraftInfoOrObjects()) {
-      this._reasonToNotPush = "Node is in info or objects";
     } else if ((await this.isFile()) && await this.currentIntegrityMatches(ops)) {
       this._reasonToNotPush = "File integrity matches";
     } else if (!this._reasonToNotPush) {
@@ -325,24 +310,6 @@ export class ScriptFile extends ScriptNode {
     const gitFolder = path.sep + ".git" + path.sep;
     const normalizedPath = path.normalize(this.uri().fsPath);
     return normalizedPath.includes(gitFolder);
-  }
-
-  /**
-   * Determines if the file is an external model.
-   * 
-   * External models are defined in the config.json file, and are not to be pushed or pulled.
-   * @lastreviewed 2025-09-15
-   */
-  public async isExternalModel(): Promise<boolean> {
-    const config = await this.getConfigDotJson();
-    if (this._isExternalModel) {
-      return true;
-    }
-    if (config.models?.map(m => m.name).includes(this.name())) {
-      this._isExternalModel = true;
-      return true;
-    }
-    return false;
   }
 
   public shouldCopyRaw() {
@@ -420,7 +387,7 @@ export class ScriptFile extends ScriptNode {
 
       resp = await SM.fetch(snapshotOverride, requestOptions);
     }
-    await this.touch("lastPushed");
+    await this.touch();
     App.logger.info("File sent successfully:", this.uri().fsPath);
     return resp;
     async function getDetails(resp: Response) {
@@ -472,37 +439,25 @@ export class ScriptFile extends ScriptNode {
   }
 
   /**
-   * Touches a file by updating its last pulled or pushed timestamp.
-   * Updates the metadata to track when the file was last synchronized and its hash.
-   * 
-   * @param file The file to touch
-   * @param touchType The type of touch to perform - either "lastPulled" or "lastPushed"
+   * Records the current file's hash in the metadata for future integrity checks.
    * @lastreviewed 2025-09-15
    */
-  async touch(touchType: "lastPulled" | "lastPushed"): Promise<void> {
+  async touch(): Promise<void> {
     await this.requireExists();
     const lastHash = await this.getHash();
     const metaData = await this.getScriptRoot().modifyMetaData(md => {
       const downstairsPath = this.uri().fsPath;
       const existingEntryIndex = md.pushPullRecords.findIndex(entry => entry.downstairsPath === downstairsPath);
       if (existingEntryIndex !== -1) {
-        const newDateString = new Date().toUTCString();
-
-        md.pushPullRecords[existingEntryIndex][touchType] = newDateString;
         md.pushPullRecords[existingEntryIndex].lastVerifiedHash = lastHash;
       } else {
-
-        const now = new Date().toUTCString();
         md.pushPullRecords.push({
           downstairsPath,
-          lastPushed: touchType === "lastPushed" ? now : null,
-          lastPulled: touchType === "lastPulled" ? now : null,
           lastVerifiedHash: lastHash
         });
       }
     });
     App.isDebugMode() && console.log("Updated metadata:", metaData);
-    return void 0;
   }
 
   /**

@@ -225,117 +225,6 @@ suite('ScriptNode Tests', () => {
     });
   });
 
-  suite('Folder Detection', () => {
-    test('should detect if file is in info folder', async () => {
-      const infoUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config.json');
-      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info');
-
-      // Set up directory and file
-      mockFileSystemProvider.setMockDirectory(infoFolderUri);
-      mockFileSystemProvider.setMockFile(infoUri, '{}');
-
-      const scriptFile = ScriptFactory.createFile(infoUri);
-
-      const isInInfo = await scriptFile.isInDraftInfo();
-      const isInInfoFolder = await scriptFile.isInInfoFolder();
-
-      assert.strictEqual(isInInfo, true);
-      assert.strictEqual(isInInfoFolder, true);
-    });
-
-    test('should detect if file is in objects folder', async () => {
-      const objectsUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/objects/imports.ts');
-      const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/objects');
-
-      // Set up directory and file
-      mockFileSystemProvider.setMockDirectory(objectsFolderUri);
-      mockFileSystemProvider.setMockFile(objectsUri, 'export {};');
-
-      const scriptFile = ScriptFactory.createFile(objectsUri);
-
-      const isInObjects = await scriptFile.isInDraftObjects();
-
-      assert.strictEqual(isInObjects, true);
-    });
-
-    test('should detect if file is in info or objects folder', async () => {
-      const infoUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config.json');
-      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info');
-
-      // Set up directory and file
-      mockFileSystemProvider.setMockDirectory(infoFolderUri);
-      mockFileSystemProvider.setMockFile(infoUri, '{}');
-
-      const scriptFile = ScriptFactory.createFile(infoUri);
-
-      const isInInfoOrObjects = await scriptFile.isInDraftInfoOrObjects();
-
-      assert.strictEqual(isInInfoOrObjects, true);
-    });
-
-    test('should return false for files not in info or objects', async () => {
-      const scriptUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/scripts/main.js');
-      const scriptFile = ScriptFactory.createFile(scriptUri);
-
-      // Set up empty folders so the file isn't found in them
-      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info');
-      const objectsFolderUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/objects');
-
-      mockFileSystemProvider.setMockDirectory(infoFolderUri);
-      mockFileSystemProvider.setMockDirectory(objectsFolderUri);
-
-      const isInInfo = await scriptFile.isInDraftInfo();
-      const isInObjects = await scriptFile.isInDraftObjects();
-      const isInInfoOrObjects = await scriptFile.isInDraftInfoOrObjects();
-
-      assert.strictEqual(isInInfo, false);
-      assert.strictEqual(isInObjects, false);
-      assert.strictEqual(isInInfoOrObjects, false);
-    });
-  });
-
-  suite('Configuration Files', () => {
-
-    test('should get config file content', async () => {
-      const configUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config.json');
-      const configContent = {
-        models: [
-          { name: 'external-model.js', type: 'external' }
-        ]
-      };
-
-      // Set up config file
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-
-      const config = await scriptNode.getConfigDotJson();
-
-      assert.deepStrictEqual(config, configContent);
-    });
-
-    test('should get metadata file content', async () => {
-      const metadataUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/metadata.json');
-      const metadataContent = {
-        scriptName: 'Test Script',
-        description: 'A test script'
-      };
-
-      // Set up metadata file
-      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadataContent));
-
-      const metadata = await scriptNode.getMetadataDotJson();
-
-      assert.deepStrictEqual(metadata, metadataContent);
-    });
-
-    test('should throw error when config file not found', async () => {
-      // Don't set up any config files
-
-      await assert.rejects(
-        async () => await scriptNode.getConfigDotJson(),
-        /Could not find config.json file/
-      );
-    });
-  });
 
 
   suite('GitIgnore Operations', () => {
@@ -362,93 +251,6 @@ suite('ScriptNode Tests', () => {
       const isInGitIgnore = await scriptNode.isInGitIgnore();
 
       assert.strictEqual(isInGitIgnore, false);
-    });
-  });
-
-  suite('Metadata Time Operations', () => {
-    test('should get last pulled time from metadata', async () => {
-      const metadataUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/.b6p_metadata.json');
-      const metadata = {
-        scriptName: 'Test',
-        webdavId: '1466960',
-        pushPullRecords: [{
-          downstairsPath: scriptNode.uri().fsPath,
-          lastPulled: '2023-01-01T12:00:00.000Z',
-          lastPushed: null,
-          lastVerifiedHash: 'abcd1234'
-        }]
-      };
-
-      // Set up metadata file
-      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
-      mockFileSystemProvider.setMockStat(metadataUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
-        mtime: Date.now(),
-        size: 100
-      });
-
-      const lastPulledStr = await scriptNode.getLastPulledTimeStr();
-
-      assert.strictEqual(lastPulledStr, '2023-01-01T12:00:00.000Z');
-    });
-
-    test('should get last pushed time from metadata', async () => {
-      const metadataUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/.b6p_metadata.json');
-      const metadata = {
-        scriptName: 'Test',
-        webdavId: '1466960',
-        pushPullRecords: [{
-          downstairsPath: scriptNode.uri().fsPath,
-          lastPulled: null,
-          lastPushed: '2023-01-02T15:30:00.000Z',
-          lastVerifiedHash: 'abcd1234'
-        }]
-      };
-
-      // Set up metadata file
-      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
-      mockFileSystemProvider.setMockStat(metadataUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
-        mtime: Date.now(),
-        size: 100
-      });
-
-      const lastPushedStr = await scriptNode.getLastPushedTimeStr();
-      const lastPushedTime = await scriptNode.getLastPushedTime();
-
-      assert.strictEqual(lastPushedStr, '2023-01-02T15:30:00.000Z');
-      assert.ok(lastPushedTime instanceof Date);
-      assert.strictEqual(lastPushedTime?.toISOString(), '2023-01-02T15:30:00.000Z');
-    });
-
-    test('should return null when no metadata record exists', async () => {
-      const metadataUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/.b6p_metadata.json');
-      const metadata = {
-        scriptName: 'Test',
-        webdavId: '1466960',
-        pushPullRecords: []
-      };
-
-      // Set up metadata file
-      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
-      mockFileSystemProvider.setMockStat(metadataUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
-        mtime: Date.now(),
-        size: 100
-      });
-
-      const lastPulledStr = await scriptNode.getLastPulledTimeStr();
-      const lastPulledTime = await scriptNode.getLastPulledTime();
-      const lastPushedStr = await scriptNode.getLastPushedTimeStr();
-      const lastPushedTime = await scriptNode.getLastPushedTime();
-
-      assert.strictEqual(lastPulledStr, null);
-      assert.strictEqual(lastPulledTime, null);
-      assert.strictEqual(lastPushedStr, null);
-      assert.strictEqual(lastPushedTime, null);
     });
   });
 
@@ -594,49 +396,6 @@ suite('ScriptNode Tests', () => {
       const firstHash = hashes[0];
       hashes.forEach((hash, index) => {
         assert.strictEqual(hash, firstHash, `Hash ${index} should match the first hash`);
-      });
-    });
-
-    test('should handle concurrent metadata access', async () => {
-      const metadataUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/.b6p_metadata.json');
-      const metadata = {
-        scriptName: 'Concurrent Test',
-        webdavId: '1466960',
-        pushPullRecords: [{
-          downstairsPath: scriptNode.uri().fsPath,
-          lastPulled: '2023-01-01T12:00:00.000Z',
-          lastPushed: null,
-          lastVerifiedHash: 'abcd1234'
-        }]
-      };
-
-      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
-      mockFileSystemProvider.setMockStat(metadataUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
-        mtime: Date.now(),
-        size: 100
-      });
-
-      // Run multiple metadata operations concurrently
-      const operations = [];
-      for (let i = 0; i < 5; i++) {
-        operations.push(scriptNode.getLastPulledTimeStr());
-        operations.push(scriptNode.getLastPushedTimeStr());
-      }
-
-      const results = await Promise.all(operations);
-
-      // All pulled time results should be the same
-      const pulledResults = results.filter((_, index) => index % 2 === 0);
-      const pushedResults = results.filter((_, index) => index % 2 === 1);
-
-      pulledResults.forEach((result, index) => {
-        assert.strictEqual(result, '2023-01-01T12:00:00.000Z', `Pulled time ${index} should be consistent`);
-      });
-
-      pushedResults.forEach((result, index) => {
-        assert.strictEqual(result, null, `Pushed time ${index} should be consistent`);
       });
     });
 
@@ -789,35 +548,6 @@ suite('ScriptNode Tests', () => {
       assert.strictEqual(exists, true, 'Should handle special characters in file names');
     });
 
-    test('should handle metadata with extreme timestamps', async () => {
-      const metadataUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/.b6p_metadata.json');
-      const metadata = {
-        scriptName: 'Extreme Timestamp Test',
-        webdavId: '1466960',
-        pushPullRecords: [{
-          downstairsPath: scriptNode.uri().fsPath,
-          lastPulled: '1970-01-01T00:00:00.000Z', // Unix epoch
-          lastPushed: '2038-01-19T03:14:07.000Z',  // Year 2038 problem edge
-          lastVerifiedHash: 'abcd1234'
-        }]
-      };
-
-      mockFileSystemProvider.setMockFile(metadataUri, JSON.stringify(metadata, null, 2));
-      mockFileSystemProvider.setMockStat(metadataUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
-        mtime: Date.now(),
-        size: 100
-      });
-
-      const lastPulledTime = await scriptNode.getLastPulledTime();
-      const lastPushedTime = await scriptNode.getLastPushedTime();
-
-      assert.ok(lastPulledTime instanceof Date, 'Should parse extreme past timestamp');
-      assert.ok(lastPushedTime instanceof Date, 'Should parse extreme future timestamp');
-      assert.strictEqual(lastPulledTime?.getFullYear(), new Date(0).getFullYear(), 'Should handle Unix epoch');
-      assert.strictEqual(lastPushedTime?.getFullYear(), 2038, 'Should handle 2038 timestamp');
-    });
   });
 
   suite('Performance and Stress Testing', () => {
@@ -1524,81 +1254,6 @@ suite('ScriptNode Tests', () => {
     });
   });
 
-  suite('External Model Detection', () => {
-    test('should detect external models from config', async () => {
-      const configUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config.json');
-      const modelUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/external-model.js');
-
-      const configContent = {
-        models: [
-          { name: 'external-model.js', type: 'external' }
-        ]
-      };
-
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-      mockFileSystemProvider.setMockFile(modelUri, 'export class Model {}');
-      mockFileSystemProvider.setMockStat(modelUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
-        mtime: Date.now(),
-        size: 20
-      });
-
-      const scriptFile = ScriptFactory.createFile(modelUri);
-      const isExternal = await scriptFile.isExternalModel();
-
-      assert.strictEqual(isExternal, true, 'Should detect external model');
-    });
-
-    test('should detect non-external models', async () => {
-      const configUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config.json');
-      const modelUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/internal-model.js');
-
-      const configContent = {
-        models: [
-          { name: 'external-model.js', type: 'external' }
-        ]
-      };
-
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-      mockFileSystemProvider.setMockFile(modelUri, 'export class Model {}');
-      mockFileSystemProvider.setMockStat(modelUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
-        mtime: Date.now(),
-        size: 20
-      });
-
-      const scriptFile = ScriptFactory.createFile(modelUri);
-      const isExternal = await scriptFile.isExternalModel();
-
-      assert.strictEqual(isExternal, false, 'Should not detect as external model');
-    });
-
-    test('should handle missing models array in config', async () => {
-      const configUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config.json');
-      const modelUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/model.js');
-
-      const configContent = {
-        // No models array
-      };
-
-      mockFileSystemProvider.setMockFile(configUri, JSON.stringify(configContent));
-      mockFileSystemProvider.setMockFile(modelUri, 'export class Model {}');
-      mockFileSystemProvider.setMockStat(modelUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
-        mtime: Date.now(),
-        size: 20
-      });
-
-      const scriptFile = ScriptFactory.createFile(modelUri);
-      const isExternal = await scriptFile.isExternalModel();
-
-      assert.strictEqual(isExternal, false, 'Should return false when no models array');
-    });
-  });
-
   suite('Push Validation - Additional Cases', () => {
     test('should detect gitignored files via glob matcher', async () => {
       // This is a simplified test focusing on the gitignore functionality
@@ -1622,32 +1277,6 @@ suite('ScriptNode Tests', () => {
       const isIgnored = await scriptFile.isInGitIgnore();
 
       assert.strictEqual(isIgnored, true, 'Should detect file matching .gitignore pattern');
-    });
-  });
-
-  suite('Multiple Config File Scenarios', () => {
-    test('should throw error when multiple config files exist', async () => {
-      const config1Uri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config.json');
-      const config2Uri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config (1).json');
-
-      mockFileSystemProvider.setMockFile(config1Uri, '{}');
-      mockFileSystemProvider.setMockFile(config2Uri, '{}');
-
-      // This would need special mock setup to return multiple files from findFiles
-      // For now, we document this as a known edge case
-      assert.ok(true, 'Multiple config files scenario documented');
-    });
-
-    test('should throw error when no metadata file exists', async () => {
-      // Clear any existing metadata mocks
-      const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
-      const scriptNode = ScriptFactory.createNode(testUri);
-
-      await assert.rejects(
-        async () => await scriptNode.getMetadataDotJson(),
-        /Could not find metadata.json file/,
-        'Should throw when metadata file not found'
-      );
     });
   });
 
