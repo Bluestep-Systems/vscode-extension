@@ -24,6 +24,12 @@ export class ScriptFile extends ScriptNode {
   private static ComplexEtagPattern = /^"?\d{10,13}-\{.*?"class":\s*"myassn\.document\.(Proxy|LibraryServlet)MemoryDocumentKey".*?"classId":\s*\d+.*?\}"?$/;
 
   /**
+   * Regex for numeric etags (timestamp-based identifiers).
+   * Matches patterns like: "1774030968836-123800___411192"
+   */
+  private static NumericEtagPattern = /^"?\d{10,13}-[\d_]+"?$/;
+
+  /**
    * Regex for standard etags (SHA-512 hashes).
    */
   private static EtagPattern = /^"[a-f0-9]{128}"$/;
@@ -68,11 +74,11 @@ export class ScriptFile extends ScriptNode {
   /**
    * Gets the hash of the upstairs file, or `null` if it doesn't exist.
    * Extracts SHA-512 hash from the ETag header, handling both standard and weak ETags.
-   * Complex ETags (from memory documents) are not supported and return null.
-   * 
+   * Complex ETags (from memory documents) and numeric ETags are not supported and return null.
+   *
    * @param ops.required If true, throws an error when upstairs hash cannot be determined
    * @param ops.upstairsOverride Optional override URL to check instead of the default upstairs URL
-   * @returns The SHA-512 hash string in lowercase, or `null` if file doesn't exist or has complex ETag
+   * @returns The SHA-512 hash string in lowercase, or `null` if file doesn't exist or has complex/numeric ETag
    * @lastreviewed 2025-09-15
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL; }): Promise<string | null> {
@@ -89,6 +95,9 @@ export class ScriptFile extends ScriptNode {
       // weak etags are prefixed with W/ and we ignore the weakness for our purposes
       App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
       etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
+    } else if (ScriptFile.NumericEtagPattern.test(etagHeader || "")) {
+      App.isDebugMode() && console.log("numeric etagHeader:", etagHeader);
+      // numeric etags don't provide a hash for integrity checking, so we skip them
     } else {
       App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
     }
@@ -151,9 +160,10 @@ export class ScriptFile extends ScriptNode {
 
   /**
    * Downloads the file from the upstairs location and writes it to the local file system.
-   * Performs integrity verification using ETag headers and updates the lastPulled timestamp.
+   * Performs integrity verification using ETag headers (SHA-512 hashes only) and updates the lastPulled timestamp.
    * Skips download if the file is in .gitignore and removes it from metadata instead.
-   * 
+   * Skips integrity verification for numeric and complex ETags (no hash available).
+   *
    * @returns Response object with status 418 if file is in .gitignore, otherwise the actual HTTP response
    * @throws an {@link Err.HttpResponseError} When the download fails due to a bad response
    * @throws an {@link Err.FileIntegrityError} When the downloaded file's integrity check fails
@@ -199,6 +209,9 @@ export class ScriptFile extends ScriptNode {
       if (hash !== etag) {
         throw new Err.FileIntegrityError();
       }
+    } else if (ScriptFile.NumericEtagPattern.test(etagHeader || "")) {
+      App.isDebugMode() && console.log("numeric etagHeader:", etagHeader);
+      // numeric etags don't provide a hash for integrity checking, so we skip them
     } else if (ScriptFile.ComplexEtagPattern.test(etagHeader || "")) {
       App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
       // complex etags are from the illusory document files and we skip the integrity check on them
