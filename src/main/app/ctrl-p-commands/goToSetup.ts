@@ -18,9 +18,7 @@ export default async function (): Promise<void> {
     if (!jspPage) {
       throw new Error("no jsp page matching given id");
     }
-    const webDavUrl = await scriptRoot.getBaseWebDavUrlString();
-    const vscodeRedirect = encodeURIComponent('vscode://bluestep-systems.bsjs-push-pull/pull?url=' + webDavUrl);
-    const setupUrl = `${origin}shared/admin/applications/relate/${jspPage}?_event=edit&_id=${scriptKey.classid}___${scriptKey.seqnum}&_vscodeRedirect=${vscodeRedirect}`;
+    const setupUrl = `${origin}shared/admin/applications/relate/${jspPage}?_event=edit&_id=${scriptKey.classid}___${scriptKey.seqnum}`;
     await vscode.env.openExternal(vscode.Uri.parse(setupUrl));
   } catch (e) {
     Alert.error("Error opening setup: " + (e instanceof Error ? e.message : e));
