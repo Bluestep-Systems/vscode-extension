@@ -4,6 +4,7 @@ import { Http, Numerical } from "../../resources/constants";
 import { App } from "../App";
 import type { SESSION_MANAGER } from "../b6p_session/SessionManager";
 import { ContextNode } from "../context/ContextNode";
+import { MCP_SERVER_PROVIDER } from "../mcp/McpServerProvider";
 import { OrgWorker } from "../util/data/OrgWorker";
 import { Err } from "../util/Err";
 import { HttpClient } from "../util/network/HttpClient";
@@ -24,6 +25,8 @@ export const ORG_CACHE = new class extends ContextNode {
     this._parent = parent;
     this._orgCache = new PublicPersistanceMap(PublicKeys.U_CACHE, this.context);
     this.cleanupOldEntries();
+    MCP_SERVER_PROVIDER.init(this);
+    this.children.push(MCP_SERVER_PROVIDER);
     return this;
   }
 
@@ -37,6 +40,7 @@ export const ORG_CACHE = new class extends ContextNode {
   public async delete(u: string): Promise<void> {
     this.map().delete(u);
     await this.map().store();
+    MCP_SERVER_PROVIDER.fireChanged();
   }
 
   /**
@@ -182,11 +186,12 @@ export const ORG_CACHE = new class extends ContextNode {
     const json = await resp.json() as BlueHqAnyUrlResp;
     const retUrl = new URL(json.orgUrl);
     this.map().set(u, [{ host: retUrl.host, lastAccess: Date.now() }]);
+    MCP_SERVER_PROVIDER.fireChanged();
     return retUrl;
   }
 
   /**
-   * 
+   *
    * Associates a host with a U value in the cache, and updates the last access time if the host is already present.
    * 
    * @param u The U value to associate the host with
@@ -201,14 +206,17 @@ export const ORG_CACHE = new class extends ContextNode {
         const existingElement = elementArray.find(element => element.host === host);
         if (!existingElement) {
           elementArray.push({ host, lastAccess: Date.now() });
+          await this.map().set(u, elementArray);
+          MCP_SERVER_PROVIDER.fireChanged();
         } else {
           existingElement.lastAccess = Date.now();
+          await this.map().set(u, elementArray);
         }
-        await this.map().set(u, elementArray);
         return;
       }
     }
     await this.map().set(u, [{ host, lastAccess: Date.now() }]);
+    MCP_SERVER_PROVIDER.fireChanged();
   }
 
   /**
@@ -216,6 +224,7 @@ export const ORG_CACHE = new class extends ContextNode {
    */
   public async clearCache(): Promise<void> {
     await this.map().clear();
+    MCP_SERVER_PROVIDER.fireChanged();
   }
 
   protected override disposeSelf() {

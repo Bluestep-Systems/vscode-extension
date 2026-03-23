@@ -17,7 +17,7 @@
     "theme": "dark"
   },
   "engines": {
-    "vscode": ">=1.99.0"
+    "vscode": ">=1.101.0"
   },
   "categories": [
     "Other"
@@ -92,6 +92,12 @@
             "default": "1.1.0"
           }
         }
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "bluestep-mcp",
+        "label": "BlueStep MCP"
       }
     ],
     "commands": [
