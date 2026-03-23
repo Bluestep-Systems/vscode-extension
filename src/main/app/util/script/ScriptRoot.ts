@@ -17,6 +17,7 @@ import { ScriptFactory } from './ScriptFactory';
 import { ScriptFile } from './ScriptFile';
 import type { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
+import { SnapshotHistoryRecorder } from './SnapshotHistoryRecorder';
 import { ScriptTranspiler } from './ScriptTranspiler';
 import { TsConfig } from './TsConfig';
 const fs = FileSystem.getInstance;
@@ -216,8 +217,8 @@ export class ScriptRoot {
 
   /**
    * The WebDAV ID extracted from the metadata file.
-   * @throws an {@link Err.FileNotFoundError} if the metadata file is missing or malformed.
-   * @lastreviewed 2025-10-09
+   * @throws an {@link Err.InvalidStateError} if the metadata file is missing or malformed.
+   * @lastreviewed 2026-03-23
    */
   async getWebdavId() {
     if (this.scriptParser !== null) {
@@ -341,8 +342,17 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-13
    */
   public async snapshot() {
+    const message = await vscode.window.showInputBox({
+      prompt: 'Snapshot commit message (optional)',
+      placeHolder: 'Describe what changed...',
+    });
+    if (message === undefined) {
+      return; // user cancelled
+    }
+
     await this.compileDraftFolder();
     await pushCurrent({ isSnapshot: true, sr: this });
+    await SnapshotHistoryRecorder.record(this, message);
   }
 
   /**

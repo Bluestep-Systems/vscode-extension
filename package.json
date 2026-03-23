@@ -199,7 +199,7 @@
       },
       {
         "view": "b6pMenuView",
-        "contents": "[Semi-Snapshot Current](command:bsjs-push-pull.snapshot)"
+        "contents": "[Snapshot Current](command:bsjs-push-pull.snapshot)"
       },
       {
         "view": "b6pMenuView",

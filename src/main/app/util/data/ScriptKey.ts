@@ -10,9 +10,9 @@ const SERIALIZABLE_TAG = "ScriptKey";
  * Add new script types here as they become supported.
  */
 const SCRIPT_TYPE_REGISTRY = {
-  "654015": { type: "formula",  setupPage: "editformuladetails.jsp" },
-  "530024": { type: "report",   setupPage: "editdetailreport1.jsp" },
-  "363769": { type: "endpoint", setupPage: "editendpoint.jsp" },
+  "654015": { type: "formula",  setupPage: "editformuladetails.jsp", mutationName: "updateScriptFormula",     inputType: "UpdateScriptFormulaInput" },
+  "530024": { type: "report",   setupPage: "editdetailreport1.jsp",  mutationName: "updateScriptMergeReport", inputType: "UpdateScriptMergeReportInput" },
+  "363769": { type: "endpoint", setupPage: "editendpoint.jsp",       mutationName: "updateScriptEndpoint",    inputType: "UpdateScriptEndpointInput" },
 } as const;
 
 type ScriptTypeEntry = typeof SCRIPT_TYPE_REGISTRY;
@@ -73,6 +73,20 @@ export class ScriptKey implements SerializableClass {
    */
   get setupPage(): string | undefined {
     return this.registryEntry?.setupPage;
+  }
+
+  /**
+   * The GraphQL mutation name for updating this script type (e.g. "updateScriptFormula").
+   */
+  get mutationName(): string | undefined {
+    return this.registryEntry?.mutationName;
+  }
+
+  /**
+   * The GraphQL input type name for updating this script type (e.g. "UpdateScriptFormulaInput").
+   */
+  get inputType(): string | undefined {
+    return this.registryEntry?.inputType;
   }
 
   /**

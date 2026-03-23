@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { ScriptMetaData } from "../../../../types";
 import { ContextNode } from "../context/ContextNode";
 import { PublicKeys, PublicPersistanceMap } from "../util/PseudoMaps";
+import { ScriptKey } from "../util/data/ScriptKey";
 
 const STORE_KEY = "all";
 const LEGACY_METADATA_FILENAME = ".b6p_metadata.json";
@@ -43,6 +44,11 @@ export const SCRIPT_METADATA_STORE = new class extends ContextNode {
           if (!parsed.scriptName || !parsed.U || !parsed.webdavId || !parsed.scriptKey) {
             console.warn(`Skipping malformed legacy metadata: ${fileUri.fsPath}`);
             continue;
+          }
+
+          // hydrate plain-object scriptKey into a proper ScriptKey instance
+          if (!(parsed.scriptKey instanceof ScriptKey)) {
+            parsed.scriptKey = ScriptKey.from(parsed.scriptKey);
           }
 
           // strip legacy timestamp fields from pushPullRecords
