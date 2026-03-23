@@ -214,7 +214,7 @@ suite('ScriptNode Tests', () => {
     });
 
     test('should throw error when trying to overwrite script root of metadata file', () => {
-      const metadataUri = vscode.Uri.file('/test/workspace/U100004/123/.b6p_metadata.json');
+      const metadataUri = vscode.Uri.file('/test/workspace/U100004/123/.gitignore');
       const metadataFile = ScriptFactory.createFile(metadataUri);
       const newChildUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/other.js');
       const newRoot = ScriptFactory.createScriptRoot(newChildUri);
@@ -299,13 +299,12 @@ suite('ScriptNode Tests', () => {
   });
 
   suite('Push Validation', () => {
-    test('should return reason for metadata files', async () => {
+    test('should reject .b6p_metadata.json files at parse time', () => {
       const metadataUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/.b6p_metadata.json');
-      const metadataFile = ScriptFactory.createFile(() => metadataUri);
 
-      const reason = await metadataFile.getReasonToNotPush();
-
-      assert.strictEqual(reason, 'Node is a metadata file');
+      assert.throws(() => {
+        ScriptFactory.createFile(() => metadataUri);
+      }, /Invalid type segment: .b6p_metadata.json/);
     });
 
     test('should return reason for declarations files', async () => {
@@ -321,19 +320,8 @@ suite('ScriptNode Tests', () => {
 
 
 
-    test('should return reason for info/objects files', async () => {
-      const infoUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info/config.json');
-      const infoFolderUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/info');
-
-      // Set up directory and file
-      mockFileSystemProvider.setMockDirectory(infoFolderUri);
-      mockFileSystemProvider.setMockFile(infoUri, '{}');
-
-      const scriptFile = ScriptFactory.createFile(infoUri);
-      const reason = await scriptFile.getReasonToNotPush();
-
-      assert.strictEqual(reason, 'Node is in info or objects');
-    });
+    // info/objects check was removed in "removal of all non-script folders" commit
+    // these files are no longer treated specially by push validation
 
   });
 

@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from "vscode";
 import { PrimitiveNestedObject, Serializable, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from "../../../../types";
 import { IdUtility } from "./data/IdUtility";
+import { ScriptKey } from './data/ScriptKey';
 import { Err } from './Err';
 import { FileSystem } from "./fs/FileSystem";
 import { ScriptFactory } from './script/ScriptFactory';
@@ -323,13 +324,13 @@ export namespace Util {
         throw new Err.ScriptRootFolderNotFoundError(topId);
       }
       try {
-        const targetScriptWebdavId = new WebDavId(targetScriptRootFolderId).seqnum;
+        const targetScriptWebdavId = ScriptKey.fromCompoundId(targetScriptRootFolderId).seqnum;
         return targetScriptWebdavId;
       } catch (e) {
-        throw new Err.WebdavParsingError(`Error parsing WebDAV ID from: ${targetScriptRootFolderId}`);
+        throw new Err.ScriptKeyParsingError(`Error parsing WebDAV ID from: ${targetScriptRootFolderId}`);
       }
     } catch (e) {
-      if (e instanceof Err.WebdavParsingError) {
+      if (e instanceof Err.ScriptKeyParsingError) {
         return null;
       } else if (e instanceof Error) {
         Alert.error(e.stack || e.message || String(e));
@@ -337,19 +338,6 @@ export namespace Util {
         Alert.error(String(e));
       }
       throw new Err.WebdavIdFetchError(origin, topId);
-    }
-  }
-  export class WebDavId {
-    classid: string;
-    seqnum: string;
-    constructor(id: string) {
-      // take an id of this format "530003___1082638" and parse it into classid and seqnum using regex
-      const match = id.match(/^(\d+)___(\d+)$/);
-      if (!match) {
-        throw new Err.WebdavParsingError(`Invalid WebDAV ID format: ${id}`);
-      }
-      this.classid = match[1];
-      this.seqnum = match[2];
     }
   }
 }

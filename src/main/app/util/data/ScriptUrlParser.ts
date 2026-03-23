@@ -5,6 +5,7 @@ import { SESSION_MANAGER as SM } from "../../b6p_session/SessionManager";
 import { Err } from "../Err";
 import { Alert } from "../ui/Alert";
 import { OrgWorker } from "./OrgWorker";
+import { ScriptKey } from "./ScriptKey";
 
 type GetScriptRet = { upstairsPath: string; downstairsPath: string; trailing?: string; }[] | null;
 type RawFiles = { upstairsPath: string; downstairsPath: string; trailing?: string; }[];
@@ -53,7 +54,7 @@ export class ScriptUrlParser {
    */
   private _orgWorker: OrgWorker | null;
 
-  private _scriptKey: { seqnum: string; classid: string; } | null;
+  private _scriptKey: ScriptKey | null;
 
   constructor(public readonly rawUrlString: string) {
     this._scriptName = null;
@@ -105,7 +106,7 @@ export class ScriptUrlParser {
     return await this.orgWorker().getU();
   }
 
-  public async getScriptBaseKey(): Promise<{ seqnum: string; classid: string; }> {
+  public async getScriptBaseKey(): Promise<ScriptKey> {
     if (this._scriptKey !== null) {
       return this._scriptKey;
     }
@@ -208,7 +209,7 @@ export class ScriptUrlParser {
       }
 
       this._scriptName = displayName.replaceAll(/\/|\\/g, '_');
-      this._scriptKey = { seqnum: parts[1], classid: parts[0] };
+      this._scriptKey = new ScriptKey(parts[0], parts[1]);
       return void 0;
     } catch (e) {
       if (e instanceof Err.ScriptUrlParserError) {

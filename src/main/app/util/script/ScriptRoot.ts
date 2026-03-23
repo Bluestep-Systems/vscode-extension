@@ -9,6 +9,7 @@ import { SCRIPT_METADATA_STORE as MDS } from '../../cache/ScriptMetaDataStore';
 import pushCurrent from '../../ctrl-p-commands/pushCurrent';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { OrgWorker } from '../data/OrgWorker';
+import { ScriptKey } from '../data/ScriptKey';
 import { ScriptUrlParser } from '../data/ScriptUrlParser';
 import { Err } from '../Err';
 import { FileSystem } from '../fs/FileSystem';
@@ -235,7 +236,7 @@ export class ScriptRoot {
    * - the metadata file (if available)
    * - by instantiating a script parser from the upstairs URL (if a webdavId is available)
    */
-  async getScriptKey() {
+  async getScriptKey(): Promise<ScriptKey> {
     if (this.scriptParser !== null) {
       return this.scriptParser.getScriptBaseKey();
     }
@@ -245,7 +246,7 @@ export class ScriptRoot {
     }
     const potentialKey = metadata.scriptKey;
     if (potentialKey) {
-      return potentialKey;
+      return ScriptKey.from(potentialKey);
     }
     try {
       // this will fail if there is no webdavId.

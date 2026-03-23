@@ -29,14 +29,12 @@ suite('DownstairsUriParser Tests', () => {
       assert.strictEqual(parser.rest, '');
     });
     
-    test('should parse metadata file URI correctly', () => {
+    test('should reject .b6p_metadata.json as invalid type segment', () => {
       const uri = vscode.Uri.file('/workspace/U100003/11111/.b6p_metadata.json');
-      const parser = new DownstairsUriParser(uri);
 
-      assert.strictEqual(parser.prependingPath, path.sep + 'workspace' + path.sep + 'U100003');
-      assert.strictEqual(parser.scriptName, '11111');
-      assert.strictEqual(parser.type, 'metadata');
-      assert.strictEqual(parser.rest, '');
+      assert.throws(() => {
+        new DownstairsUriParser(uri);
+      }, /Invalid type segment: .b6p_metadata.json/);
     });
     test('should parse root file URI correctly', () => {
       const uri = vscode.Uri.file('/home/brendan/test/extensiontest/U900005/Fresh Test/');
@@ -158,7 +156,7 @@ suite('DownstairsUriParser Tests', () => {
     test('should be consistent regardless of type', () => {
       const uri1 = vscode.Uri.file('/workspace/U100012/12345/draft');
       const uri2 = vscode.Uri.file('/workspace/U100012/12345/declarations');
-      const uri3 = vscode.Uri.file('/workspace/U100012/12345/.b6p_metadata.json');
+      const uri3 = vscode.Uri.file('/workspace/U100012/12345/.gitignore');
 
       const parser1 = new DownstairsUriParser(uri1);
       const parser2 = new DownstairsUriParser(uri2);
@@ -233,11 +231,12 @@ suite('DownstairsUriParser Tests', () => {
       assert.strictEqual(parser.isDeclarationsOrDraft(), true);
     });
 
-    test('should return false for metadata type (.b6p_metadata.json)', () => {
+    test('should reject .b6p_metadata.json in isDeclarationsOrDraft context', () => {
       const uri = vscode.Uri.file('/workspace/U100020/12345/.b6p_metadata.json');
-      const parser = new DownstairsUriParser(uri);
 
-      assert.strictEqual(parser.isDeclarationsOrDraft(), false);
+      assert.throws(() => {
+        new DownstairsUriParser(uri);
+      }, /Invalid type segment: .b6p_metadata.json/);
     });
 
     test('should return false for metadata type (.gitignore)', () => {
@@ -300,7 +299,7 @@ suite('DownstairsUriParser Tests', () => {
     });
 
     test('should handle metadata files correctly', () => {
-      const uri = vscode.Uri.file('/workspace/U100026/11111/.b6p_metadata.json');
+      const uri = vscode.Uri.file('/workspace/U100026/11111/.gitignore');
       const parser = new DownstairsUriParser(uri);
 
       const prependingUri = parser.prependingPathUri();
@@ -320,7 +319,7 @@ suite('DownstairsUriParser Tests', () => {
     test('should be consistent across different types from same root', () => {
       const draftUri = vscode.Uri.file('/workspace/U100028/12345/draft/file.js');
       const declarationsUri = vscode.Uri.file('/workspace/U100028/12345/declarations/types.d.ts');
-      const metadataUri = vscode.Uri.file('/workspace/U100028/12345/.b6p_metadata.json');
+      const metadataUri = vscode.Uri.file('/workspace/U100028/12345/.gitignore');
 
       const draftParser = new DownstairsUriParser(draftUri);
       const declarationsParser = new DownstairsUriParser(declarationsUri);

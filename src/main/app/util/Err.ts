@@ -248,10 +248,10 @@ export namespace Err {
   /**
    * Error thrown when WebDAV response parsing fails.
    */
-  export class WebdavParsingError extends DataParsingError {
+  export class ScriptKeyParsingError extends DataParsingError {
     constructor(message: string) {
       super(message);
-      this.name = "WebdavParsingError";
+      this.name = "ScriptKeyParsingError";
     }
   }
 
