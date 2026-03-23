@@ -21,6 +21,7 @@ import { Persistable } from "./Persistable";
 export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
   public static readonly DEFAULT: Settings = {
     debugMode: { enabled: false, anyDomainOverrideUrl: "U131364=https://templateassisted.myassn.com/", versionOverride: "1.1.0" },
+    advancedMode: { enabled: false },
     updateCheck: { enabled: true, showNotifications: true },
     squelch: { pullComplete: false, pushComplete: false }
   };

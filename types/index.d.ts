@@ -496,6 +496,16 @@ export type Settings = {
   /**
    * Settings for which popups to squelch
    */
+  /**
+   * Whether advanced features are shown.
+   */
+  advancedMode: {
+    /**
+     * Whether advanced mode is enabled.
+     */
+    enabled: boolean;
+  };
+
   squelch: {
     /**
      * the pull-complete notification

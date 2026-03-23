@@ -63,6 +63,9 @@ export const App = new class extends ContextNode {
         OC.clearCache();
         Auth.clearManagers();
       })],
+      ['bsjs-push-pull.toggleAdvanced', vscode.commands.registerCommand('bsjs-push-pull.toggleAdvanced', async () => {
+        App.toggleAdvancedMode();
+      })],
       ['bsjs-push-pull.toggleDebug', vscode.commands.registerCommand('bsjs-push-pull.toggleDebug', async () => {
         App.toggleDebugMode();
       })],
@@ -181,7 +184,7 @@ export const App = new class extends ContextNode {
     this.settings.clear();
     !alreadyAlerted && Alert.info("Cleared all Settings");
     this.settings.set('debugMode', SettingsWrapper.DEFAULT.debugMode);
-
+    this.settings.set('advancedMode', SettingsWrapper.DEFAULT.advancedMode);
   }
 
   public isDebugMode() {
@@ -189,6 +192,14 @@ export const App = new class extends ContextNode {
       return false;
     }
     return this.settings.get('debugMode').enabled;
+  }
+
+  public toggleAdvancedMode() {
+    console.log("Toggling advanced mode");
+    this.settings.set('advancedMode', {
+      enabled: !this.settings.get('advancedMode').enabled
+    });
+    Alert.info(`Advanced mode ${this.settings.get('advancedMode').enabled ? "enabled" : "disabled"}`);
   }
 
   public toggleDebugMode() {
