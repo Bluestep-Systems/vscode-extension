@@ -281,16 +281,20 @@ export namespace Util {
   }
 
   /**
-   * Gets the {@link vscode.Uri} of the active workspace folder.
+   * Gets the {@link vscode.Uri} of the configured script root folder.
+   * Uses the `scriptRoot.path` setting if set, otherwise falls back to the first workspace folder.
    */
   export function getActiveWorkspaceFolderUri() {
+    const configuredPath = vscode.workspace.getConfiguration('bsjs-push-pull').get<string>('scriptRoot.path');
+    if (configuredPath && configuredPath.trim()) {
+      return vscode.Uri.file(configuredPath.trim());
+    }
     const activeFolder = vscode.workspace.workspaceFolders?.[0];
     if (!activeFolder) {
       vscode.window.showErrorMessage('No active file found');
       throw new Err.NoActiveFileError();
     }
-    const curPath = activeFolder.uri;
-    return curPath;
+    return activeFolder.uri;
   }
 
   /**

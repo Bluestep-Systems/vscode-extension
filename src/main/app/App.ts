@@ -79,7 +79,21 @@ export const App = new class extends ContextNode {
       ['bsjs-push-pull.openSettings', vscode.commands.registerCommand('bsjs-push-pull.openSettings', async () => {
         vscode.commands.executeCommand('workbench.action.openSettings', "@ext:bluestep-systems.bsjs-push-pull");
       })],
-      ['bsjs-push-pull.goToSetup', vscode.commands.registerCommand('bsjs-push-pull.goToSetup', ctrlPCommands.goToSetup)]
+      ['bsjs-push-pull.audit', vscode.commands.registerCommand('bsjs-push-pull.audit', ctrlPCommands.audit)],
+      ['bsjs-push-pull.auditPull', vscode.commands.registerCommand('bsjs-push-pull.auditPull', ctrlPCommands.auditPull)],
+      ['bsjs-push-pull.goToSetup', vscode.commands.registerCommand('bsjs-push-pull.goToSetup', ctrlPCommands.goToSetup)],
+      ['bsjs-push-pull.browseScriptRoot', vscode.commands.registerCommand('bsjs-push-pull.browseScriptRoot', async () => {
+        const result = await vscode.window.showOpenDialog({
+          canSelectFiles: false,
+          canSelectFolders: true,
+          canSelectMany: false,
+          openLabel: 'Select Script Root Folder',
+        });
+        if (result && result[0]) {
+          await vscode.workspace.getConfiguration('bsjs-push-pull').update('scriptRoot.path', result[0].fsPath, vscode.ConfigurationTarget.Global);
+          Alert.info(`Script root set to: ${result[0].fsPath}`);
+        }
+      })]
     ]);
     constructor() {}
     forEach(callback: (disposable: vscode.Disposable, key: string, map: this) => void) {
@@ -163,7 +177,7 @@ export const App = new class extends ContextNode {
     this.settings.sync();
     readOnlyCheck(); // run it once on startup
 
-    // Register URI handler for vscode://bluestep-systems.bsjs-push-pull/pull?url=<formulaUrl>
+    // Register URI handler for vscode://bluestep-systems.bsjs-push-pull/<path>?url=<formulaUrl>
     this.context.subscriptions.push(vscode.window.registerUriHandler({
       handleUri(uri: vscode.Uri) {
         if (uri.path === '/pull') {
@@ -174,6 +188,8 @@ export const App = new class extends ContextNode {
           } else {
             Alert.error('Missing "url" parameter in URI');
           }
+        } else if (uri.path === '/audit-pull') {
+          ctrlPCommands.auditPull();
         }
       }
     }));

@@ -10,6 +10,8 @@ import quickDeploy from "./quickDeploy";
 import testTask from "./testTask";
 import snapshot from "./snapshot";
 import goToSetup from "./goToSetup";
+import audit from "./audit";
+import auditPull from "./auditPull";
 
 /**
  * Namespace for Ctrl+P command related functions.
@@ -19,6 +21,8 @@ export default {
   pushScript,
   pullCurrent,
   pushCurrent,
+  audit,
+  auditPull,
   updateCredentials,
   runTask,
   checkForUpdates,

@@ -29,8 +29,21 @@
   "contributes": {
     "configuration": [
       {
-        "title": "Update Check",
+        "title": "Script Root",
         "order": 0,
+        "id": "bsjs-push-pull.scriptRoot",
+        "properties": {
+          "bsjs-push-pull.scriptRoot.path": {
+            "order": 0,
+            "type": "string",
+            "markdownDescription": "Absolute path to the local folder where scripts are pulled into. If empty, defaults to the first workspace folder.\n\n[Browse for folder...](command:bsjs-push-pull.browseScriptRoot)",
+            "default": ""
+          }
+        }
+      },
+      {
+        "title": "Update Check",
+        "order": 1,
         "id": "bsjs-push-pull.updateCheck",
         "properties": {
           "bsjs-push-pull.updateCheck.enabled": {
@@ -49,7 +62,7 @@
       },
       {
         "title": "Squelch Popups",
-        "order": 1,
+        "order": 2,
         "id": "bsjs-push-pull.squelch",
         "properties": {
           "bsjs-push-pull.squelch.pushComplete": {
@@ -68,7 +81,7 @@
       },
       {
         "title": "Advanced Mode",
-        "order": 2,
+        "order": 3,
         "id": "bsjs-push-pull.advancedMode",
         "properties": {
           "bsjs-push-pull.advancedMode.enabled": {
@@ -81,7 +94,7 @@
       },
       {
         "title": "Debug Mode",
-        "order": 3,
+        "order": 4,
         "id": "bsjs-push-pull.debugMode",
         "properties": {
           "bsjs-push-pull.debugMode.enabled": {
@@ -114,6 +127,10 @@
       }
     ],
     "commands": [
+      {
+        "command": "bsjs-push-pull.browseScriptRoot",
+        "title": "B6P: Browse Script Root Folder"
+      },
       {
         "command": "bsjs-push-pull.pushScript",
         "title": "B6P: Push Script"
@@ -179,6 +196,14 @@
         "title": "B6P: Toggle Debug Mode"
       },
       {
+        "command": "bsjs-push-pull.audit",
+        "title": "B6P: Audit Current Script"
+      },
+      {
+        "command": "bsjs-push-pull.auditPull",
+        "title": "B6P: Audit & Pull Current Script"
+      },
+      {
         "command": "bsjs-push-pull.goToSetup",
         "title": "B6P: Go To Setup"
       }
@@ -209,6 +234,10 @@
       {
         "view": "b6pMenuView",
         "contents": "[Pull Current](command:bsjs-push-pull.pullCurrent)"
+      },
+      {
+        "view": "b6pMenuView",
+        "contents": "[Audit Current](command:bsjs-push-pull.audit)"
       },
       {
         "view": "b6pMenuView",

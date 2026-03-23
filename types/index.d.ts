@@ -516,6 +516,17 @@ export type Settings = {
      */
     pushComplete: boolean;
   }
+
+  /**
+   * Settings for the local script root directory.
+   */
+  scriptRoot: {
+    /**
+     * The absolute path to the local folder where scripts are pulled into.
+     * If empty, defaults to the first workspace folder.
+     */
+    path: string;
+  }
 };
 
 /**
