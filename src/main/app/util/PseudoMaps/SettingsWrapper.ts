@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { Settings, Serializable } from "../../../../../types";
+import type { Settings, JsonValue } from "../../../../../types";
 import { App } from "../../App";
 import { Alert } from "../ui/Alert";
 import { Util } from "..";
@@ -55,12 +55,12 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
    * because otherwise it would cause an infinite loop when called from sync().
    */
   async store(update: boolean = true) {
-    const flattened: { key: string, value: Serializable; }[] = [];
+    const flattened: { key: string, value: JsonValue; }[] = [];
     for (const key of this.keys()) {
       Util.rethrow(flattenLayer, { key, obj: this.get(key) });
     }
 
-    function flattenLayer({ key, obj }: { key: string, obj: Serializable; }) {
+    function flattenLayer({ key, obj }: { key: string, obj: JsonValue; }) {
       if (typeof obj === 'object' && obj !== null) {
         for (const [k, v] of Object.entries(obj)) {
           flattenLayer({ key: `${key}.${k}`, obj: v });

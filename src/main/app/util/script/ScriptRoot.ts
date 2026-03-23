@@ -244,9 +244,8 @@ export class ScriptRoot {
     if (!metadata) {
       throw new Err.InvalidStateError("Missing metadata");
     }
-    const potentialKey = metadata.scriptKey;
-    if (potentialKey) {
-      return ScriptKey.from(potentialKey);
+    if (metadata.scriptKey) {
+      return metadata.scriptKey;
     }
     try {
       // this will fail if there is no webdavId.

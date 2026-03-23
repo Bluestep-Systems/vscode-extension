@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import type { Serializable } from "../../../../../types";
 import { PseudoMap } from "./PseudoMap";
 import { Persistable } from "./Persistable";
+import type { Serializable } from "./Serializable";
 
 /**
  * A persistable version of a pseudomap. Extending classes must implement an initializer

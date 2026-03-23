@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { PseudoMap } from "../util/PseudoMaps";
-import { Serializable } from "../../../../types";
+import type { Serializable } from "../util/PseudoMaps/Serializable";
 
 /**
  * An abstract base class for elements of the extension that require a vscode context, and some form of persistance.

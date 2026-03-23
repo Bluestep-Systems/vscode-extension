@@ -7,7 +7,7 @@ import { ContextNode } from '../../main/app/context/ContextNode';
 //@ts-ignore
 import { PseudoMap } from '../../main/app/util/PseudoMaps';
 //@ts-ignore
-import { Serializable } from '../../../types';
+import { JsonValue } from '../../../types';
 //@ts-ignore
 import { FileSystem } from '../../main/app/util/fs/FileSystem';
 //@ts-ignore
@@ -21,7 +21,7 @@ import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //   class TestContextNode extends ContextNode {
 //     public parent: ContextNode | null = null;
 //     public context: vscode.ExtensionContext;
-//     private _map: PseudoMap<string, Serializable> | null = null;
+//     private _map: PseudoMap<string, JsonValue> | null = null;
 //     private _initialized = false;
 
 //     constructor(context?: vscode.ExtensionContext) {
@@ -29,7 +29,7 @@ import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //       this.context = context || mockContext;
 //     }
 
-//     protected map(): PseudoMap<string, Serializable> {
+//     protected map(): PseudoMap<string, JsonValue> {
 //       if (!this._map) {
 //         throw new Error('Map not initialized');
 //       }
@@ -60,18 +60,18 @@ import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //   }
 
 //   // Mock PseudoMap implementation for testing
-//   class MockPseudoMap extends PseudoMap<string, Serializable> {
-//     private storage = new Map<string, Serializable>();
+//   class MockPseudoMap extends PseudoMap<string, JsonValue> {
+//     private storage = new Map<string, JsonValue>();
 
 //     constructor() {
 //       super();
 //     }
 
-//     get(key: string): Serializable {
-//       return this.storage.get(key) as Serializable;
+//     get(key: string): JsonValue {
+//       return this.storage.get(key) as JsonValue;
 //     }
 
-//     set(key: string, value: Serializable): void {
+//     set(key: string, value: JsonValue): void {
 //       this.storage.set(key, value);
 //     }
 
@@ -91,15 +91,15 @@ import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //       return this.storage.keys();
 //     }
 
-//     values(): IterableIterator<Serializable> {
+//     values(): IterableIterator<JsonValue> {
 //       return this.storage.values();
 //     }
 
-//     entries(): IterableIterator<[string, Serializable]> {
+//     entries(): IterableIterator<[string, JsonValue]> {
 //       return this.storage.entries();
 //     }
 
-//     forEach(callback: (value: Serializable, key: string, map: this) => void): void {
+//     forEach(callback: (value: JsonValue, key: string, map: this) => void): void {
 //       this.storage.forEach((value, key) => callback(value, key, this));
 //     }
 
@@ -107,7 +107,7 @@ import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //       return this.storage.size;
 //     }
 
-//     [Symbol.iterator](): IterableIterator<[string, Serializable]> {
+//     [Symbol.iterator](): IterableIterator<[string, JsonValue]> {
 //       return this.storage[Symbol.iterator]();
 //     }
 //   }
@@ -343,8 +343,8 @@ import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //       });
 
 //       // Test forEach iteration
-//       const iteratedEntries: [string, Serializable][] = [];
-//       map.forEach((value: Serializable, key: string) => {
+//       const iteratedEntries: [string, JsonValue][] = [];
+//       map.forEach((value: JsonValue, key: string) => {
 //         iteratedEntries.push([key, value]);
 //       });
 

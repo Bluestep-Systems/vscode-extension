@@ -1,4 +1,4 @@
-import { Serializable } from "../../../../types";
+import { JsonValue } from "../../../../types";
 import { Err } from "../util/Err";
 
 /**
@@ -11,14 +11,14 @@ export abstract class AuthObject {
    * The internal object containing authentication data.
    * @lastreviewed 2025-10-01
    */
-  protected sObj: Serializable;
+  protected sObj: JsonValue;
 
   /**
    * Constructs an auth object containing the given savable object.
    * @param arg The internal object containing authentication data
    * @lastreviewed 2025-10-01
    */
-  constructor(arg: Serializable) {
+  constructor(arg: JsonValue) {
     this.sObj = arg;
   }
 
@@ -28,7 +28,7 @@ export abstract class AuthObject {
    * @returns The object representing this auth object's state
    * @lastreviewed 2025-10-01
    */
-  abstract toSerializableObject(): Serializable;
+  abstract toSerializableObject(): JsonValue;
 
   /**
    * Produces a JSON representation of the internal state.

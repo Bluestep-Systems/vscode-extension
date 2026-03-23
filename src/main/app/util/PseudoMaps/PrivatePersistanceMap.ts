@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
-import type { Serializable } from "../../../../../types";
 import { PersistablePseudoMap } from "./PersistablePseudoMap";
 import { Persistable } from "./Persistable";
 import { PrivateKeys } from "./PersistenceKeys";
+import type { Serializable } from "./Serializable";
+import { revive } from "./Serializable";
 import { Err } from "../Err";
 
 /**
@@ -22,7 +23,7 @@ export class PrivateGenericMap<T extends Serializable> extends PersistablePseudo
   constructor(key: PrivateKeys, context: vscode.ExtensionContext) {
     super(key, context);
     this.context.secrets.get(this.key).then(jsonString => {
-      this.obj = JSON.parse(jsonString || '{}');
+      this.obj = revive(JSON.parse(jsonString || '{}'));
       this.initialized = true;
     });
   }

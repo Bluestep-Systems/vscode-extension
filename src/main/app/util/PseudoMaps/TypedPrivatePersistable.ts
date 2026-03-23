@@ -1,16 +1,17 @@
 import * as vscode from "vscode";
-import type { Serializable } from "../../../../../types";
 import { PrivateKeys } from "./PersistenceKeys";
+import type { Serializable } from "./Serializable";
+import { revive } from "./Serializable";
 import { TypedPersistable } from "./TypedPersistable";
 import { Err } from "../Err";
 
 /**
  * A typed private persistable pseudomap that uses VS Code's secret storage.
- * 
+ *
  * Extends TypedPersistable to provide secure storage for sensitive data
  * such as credentials, tokens, and other private information that should
  * not be stored in workspace state.
- * 
+ *
  * @template T The type of the object being persisted
  * @lastreviewed 2025-10-01
  */
@@ -28,7 +29,7 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
     // Call super with a dummy public key since we'll override the behavior
     super({ key, context, defaultValue });
     this.context.secrets.get(this.key).then(jsonString => {
-      this.obj = JSON.parse(jsonString || '{}');
+      this.obj = revive(JSON.parse(jsonString || '{}'));
       this.isInitialized = true;
     });
   }

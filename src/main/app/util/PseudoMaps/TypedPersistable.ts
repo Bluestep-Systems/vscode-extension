@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
-import type { Serializable } from "../../../../../types";
 import { TypedMap } from "./TypedMap";
 import { Persistable } from "./Persistable";
 import { PrivateKeys, PublicKeys } from "./PersistenceKeys";
+import type { Serializable } from "./Serializable";
+import { revive } from "./Serializable";
 
 /**
  * A persistable version of {@link TypedMap} that automatically handles loading and storing
@@ -17,7 +18,7 @@ export class TypedPersistable<T extends Record<string, Serializable>> extends Ty
     super();
     this.key = key;
     this.context = context;
-    this.obj = this.context.workspaceState.get<T>(this.key, defaultValue);
+    this.obj = revive(this.context.workspaceState.get<T>(this.key, defaultValue));
   }
 
   /**

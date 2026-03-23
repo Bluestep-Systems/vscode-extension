@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
-import type { Serializable } from "../../../../../types";
 import { PersistablePseudoMap } from "./PersistablePseudoMap";
 import { PublicKeys } from "./PersistenceKeys";
+import type { Serializable } from "./Serializable";
+import { revive } from "./Serializable";
 
 /**
  * A persistable map that uses the vscode workspace state to persist data.
@@ -15,7 +16,7 @@ export class PublicPersistanceMap<T extends Serializable> extends PersistablePse
    */
   constructor(key: PublicKeys, context: vscode.ExtensionContext) {
     super(key, context);
-    this.obj = this.context.workspaceState.get<Record<string, T>>(this.key, {});
+    this.obj = revive(this.context.workspaceState.get<Record<string, T>>(this.key, {}));
   }
 
   /**

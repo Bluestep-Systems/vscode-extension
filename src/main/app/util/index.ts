@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from "vscode";
-import { PrimitiveNestedObject, Serializable, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from "../../../../types";
+import { PrimitiveNestedObject, JsonValue, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from "../../../../types";
 import { IdUtility } from "./data/IdUtility";
 import { ScriptKey } from './data/ScriptKey';
 import { Err } from './Err';
@@ -35,7 +35,7 @@ export namespace Util {
    * performs a deep comparison between two savable objects to determine if they are equivalent.
    * @returns 
    */
-  export function isDeepEqual(object1: Serializable, object2: Serializable): boolean {
+  export function isDeepEqual(object1: JsonValue, object2: JsonValue): boolean {
     // Handle primitive values (including null)
     if (object1 === object2) {
       return true;
@@ -84,7 +84,7 @@ export namespace Util {
     return false;
   };
 
-  export function isNonPrimitiveSavable(object: Serializable): object is { [key: string]: Serializable; } {
+  export function isNonPrimitiveSavable(object: JsonValue): object is { [key: string]: JsonValue; } {
     // lack of strict equality check is intentional
     /* eslint-disable eqeqeq */
     return object != null && typeof object === "object" && !Array.isArray(object);

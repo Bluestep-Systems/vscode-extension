@@ -1,3 +1,5 @@
+import type { ScriptKey } from '../src/main/app/util/data/ScriptKey';
+
 /**
  * A map-like interface that only allows read operations.
  */
@@ -8,43 +10,46 @@ declare interface ReadOnlyMap<T> {
 }
 
 /**
- * A primitive value that can be serialized.
+ * A JSON-compatible primitive value.
  */
-export type Primitive = string | number | boolean | null;
+export type JsonPrimitive = string | number | boolean | null;
+
+/**
+ * A JSON-compatible array.
+ */
+export type JsonArray = JsonValue[];
+
+/**
+ * A JSON-compatible object.
+ */
+export type JsonObject = { [key: string]: JsonValue; };
+
+/**
+ * A plain JSON-compatible value: a primitive, an array of JSON values, or an object of JSON values.
+ *
+ * By design, this should be a value such that it can round-trip through JSON without loss:
+ * ```typescript
+ * Util.deepEquals(JSON.parse(JSON.stringify(obj)), obj) === true
+ * ```
+ *
+ * @example
+ * const example1: JsonValue = 42;
+ * const example2: JsonValue = [1, "two", false, null];
+ * const example3: JsonValue = { k1: "v1", k2: 2, k3: [true, 5], k4: { nestedKey: "something" } };
+ */
+export type JsonValue = JsonPrimitive | JsonArray | JsonObject;
 
 /**
  * A nested object where all values are primitives or other nested objects.
- * 
+ *
  * @example
- * // Valid PrimitiveNestedObject examples:
  * const example1: PrimitiveNestedObject = { k1: "value", k2: 42, k3: true };
  * const example2: PrimitiveNestedObject = { nested: { k1: "value" }, k2: 100 };
  * const example3: PrimitiveNestedObject = { k1: null, k2: { k3: false } };
  */
 export type PrimitiveNestedObject = {
-  [key: string]: Primitive | PrimitiveNestedObject;
+  [key: string]: JsonPrimitive | PrimitiveNestedObject;
 };
-
-/**
- * A savable object can be a primitive, an array of primitives.
- *
- * By design, this should be an object such that it can be serialized to JSON and back without loss of information.
- * 
- * I.E. 
- * ```typescript
- * Util.deepEquals(JSON.parse(JSON.stringify(obj)), obj) === true
- * ``` 
- *
- * @example
- * // Valid Serializable examples:
- * const example2: Serializable = 42;
- * const example5: Serializable = [1, "two", false, null];
- * const example6: Serializable = { k1: "v1", k2: 2, k3: [true, 5], k4: { nestedKey: "something" } };
- */
-export type Serializable =
-  Primitive
-  | Serializable[]
-  | { [key: string]: Serializable; };
 
 /**
  * The structure of a WebDAV XML response.
@@ -162,6 +167,7 @@ type SourceOps = { sourceOrigin: string, topId: string; };
 
 /**
  * The metadata for the Script objects used locally.
+ * //TODO: we should eventually
  */
 type ScriptMetaData = {
 
@@ -181,9 +187,12 @@ type ScriptMetaData = {
   U: string;
 
   /**
-   * the script's unique key (seqnum and classid pair)
+   * the script's unique key (seqnum and classid pair).
+   *
+   * Automatically hydrated into a {@link ScriptKey} instance by the persistence layer
+   * via the `__storable` tag; serialized back to plain JSON via {@link ScriptKey.toJSON}.
    */
-  scriptKey: { seqnum: string; classid: string; };
+  scriptKey: ScriptKey;
 
   /**
    * push/pull records for the script.

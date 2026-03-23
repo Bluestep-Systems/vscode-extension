@@ -1,5 +1,5 @@
-import type { Serializable } from "../../../../../types";
 import { PseudoMap } from "./PseudoMap";
+import type { Serializable } from "./Serializable";
 import { Err } from "../Err";
 
 /**

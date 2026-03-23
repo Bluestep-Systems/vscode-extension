@@ -1,6 +1,9 @@
 import { Err } from '../Err';
+import { registerSerializable, type SerializableClass } from '../PseudoMaps/Serializable';
+import type { JsonValue } from '../../../../../types';
 
 const COMPOUND_ID_SEPARATOR = "___";
+const SERIALIZABLE_TAG = "ScriptKey";
 
 /**
  * Registry of known script class IDs and their associated metadata.
@@ -27,7 +30,7 @@ export type ScriptType = ScriptTypeEntry[KnownClassId]["type"];
  * Replaces the previous `{ seqnum: string; classid: string }` plain objects
  * and the `WebDavId` utility class.
  */
-export class ScriptKey {
+export class ScriptKey implements SerializableClass {
   readonly classid: string;
   readonly seqnum: string;
 
@@ -93,9 +96,10 @@ export class ScriptKey {
 
   /**
    * Serialize to a plain object suitable for JSON storage.
+   * Includes the `__storable` tag for automatic hydration by the persistence layer.
    */
-  toJSON(): { classid: string; seqnum: string } {
-    return { classid: this.classid, seqnum: this.seqnum };
+  toJSON(): { __serializable: string; classid: string; seqnum: string;[key: string]: JsonValue; } {
+    return { __serializable: SERIALIZABLE_TAG, classid: this.classid, seqnum: this.seqnum };
   }
 
   private get registryEntry(): ScriptTypeEntry[KnownClassId] | undefined {
@@ -105,3 +109,5 @@ export class ScriptKey {
     return undefined;
   }
 }
+
+registerSerializable(SERIALIZABLE_TAG, (data) => new ScriptKey(data.classid as string, data.seqnum as string));
