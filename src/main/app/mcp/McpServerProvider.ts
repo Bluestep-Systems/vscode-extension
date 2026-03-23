@@ -44,6 +44,7 @@ export const MCP_SERVER_PROVIDER = new class extends ContextNode {
     this._parent = parent;
     this._emitter = new vscode.EventEmitter<void>();
 
+    App.logger.info('MCP: Registering MCP server definition provider...');
     const registration = vscode.lm.registerMcpServerDefinitionProvider(
       'bluestep-mcp',
       {
@@ -63,6 +64,7 @@ export const MCP_SERVER_PROVIDER = new class extends ContextNode {
     );
 
     this.context.subscriptions.push(registration, this._emitter);
+    App.logger.info('MCP: Provider registered successfully');
     return this;
   }
 
@@ -78,6 +80,7 @@ export const MCP_SERVER_PROVIDER = new class extends ContextNode {
    * Builds one {@link vscode.McpHttpServerDefinition} per unique origin in the OrgCache.
    */
   private getDefinitions(): vscode.McpHttpServerDefinition[] {
+    App.logger.info('MCP: provideMcpServerDefinitions called');
     const definitions: vscode.McpHttpServerDefinition[] = [];
     const seenHosts = new Set<string>();
 
@@ -104,6 +107,7 @@ export const MCP_SERVER_PROVIDER = new class extends ContextNode {
       App.logger.info('MCP: OrgCache not ready, returning empty server list');
     }
 
+    App.logger.info(`MCP: Returning ${definitions.length} server definition(s)`);
     return definitions;
   }
 

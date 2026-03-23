@@ -289,6 +289,10 @@ export const SESSION_MANAGER = new class extends ContextNode {
       throw new Err.HttpResponseError(`HTTP Error: ${response.status} ${response.statusText}`);
     }
     await this.processResponse(response);
+    // Populate the OrgCache with this host so MCP server definitions stay current
+    OC.findU(url).catch(e => {
+      this.parent.logger.warn('Failed to cache org during login:', e instanceof Error ? e.message : String(e));
+    });
   }
 
   /**
