@@ -1,5 +1,26 @@
 # BlueStep VS Code/Cursor Extension Setup
 
+## Installation
+
+### Quick Install (Latest Release)
+
+**Linux/Mac:**
+```bash
+curl -sL $(curl -s https://api.github.com/repos/bluestep-systems/vscode-extension/releases/latest | grep "browser_download_url.*vsix" | cut -d '"' -f 4) -o bsjs-extension.vsix && code --install-extension bsjs-extension.vsix && rm bsjs-extension.vsix
+```
+
+**Windows (PowerShell):**
+```powershell
+$release = Invoke-RestMethod -Uri "https://api.github.com/repos/bluestep-systems/vscode-extension/releases/latest"; $asset = $release.assets | Where-Object { $_.name -like "*.vsix" } | Select-Object -First 1; Invoke-WebRequest -Uri $asset.browser_download_url -OutFile "bsjs-extension.vsix"; code --install-extension bsjs-extension.vsix; Remove-Item "bsjs-extension.vsix"
+```
+
+### Manual Installation
+
+1. Download the latest `.vsix` file from [GitHub Releases](https://github.com/bluestep-systems/vscode-extension/releases/latest)
+2. In VS Code, open the Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
+3. Type "Extensions: Install from VSIX..."
+4. Select the downloaded `.vsix` file
+
 Thank you for installing the BlueStep JavaScript Push/Pull extension!
 
 ## Configure File Watcher Exclusions
