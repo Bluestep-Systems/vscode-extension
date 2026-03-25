@@ -2,7 +2,7 @@
   "name": "bsjs-push-pull",
   "displayName": "B6P Push/Pull",
   "description": "Sync JavaScript files with BlueStep systems via WebDAV",
-  "version": "1.1.25",
+  "version": "1.2.0",
   "publisher": "bluestep-systems",
   "repository": {
     "type": "git",
@@ -124,6 +124,23 @@
       {
         "id": "bluestep-mcp",
         "label": "BlueStep MCP"
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "bluestep-systems_bsjs-push-pull_pull-script",
+        "displayName": "Pull BlueStep Script",
+        "modelDescription": "Pulls a BlueStep script into the local VS Code workspace by its WebDAV URL. Use this after calling the BlueStep MCP server's lookup_script_by_name tool — pass the webDavUrl from that response directly to this tool.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "webDavUrl": {
+              "type": "string",
+              "description": "The WebDAV URL of the script to pull (e.g. \"https://org.bluestep.com/files/12345/\")"
+            }
+          },
+          "required": ["webDavUrl"]
+        }
       }
     ],
     "commands": [

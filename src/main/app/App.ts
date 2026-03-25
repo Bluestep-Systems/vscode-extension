@@ -12,6 +12,7 @@ import { Err } from './util/Err';
 import { Alert } from './util/ui/Alert';
 import { ORG_CACHE as OC } from './cache/OrgCache';
 import { SCRIPT_METADATA_STORE as MDS } from './cache/ScriptMetaDataStore';
+import { PULL_SCRIPT_TOOL } from './mcp/PullScriptTool';
 
 
 
@@ -199,6 +200,11 @@ export const App = new class extends ContextNode {
     SM.init(this);
     UM.init(this);
     this.children.push(MDS, SM, UM);
+
+    // Register LM tools
+    this.context.subscriptions.push(
+      vscode.lm.registerTool('bluestep-systems_bsjs-push-pull_pull-script', PULL_SCRIPT_TOOL),
+    );
 
     return this;
   }
