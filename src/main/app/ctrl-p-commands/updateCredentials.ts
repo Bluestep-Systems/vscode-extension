@@ -1,6 +1,5 @@
 
 import { App } from '../App';
-import { Auth } from '../authentication';
 
 /**
  * Updates the user credentials. As of right now this is only tooled for Basic Auth, so we'll
@@ -8,12 +7,10 @@ import { Auth } from '../authentication';
  * @returns A promise that resolves when the update is complete.
  */
 export default async function (): Promise<void> {
-  
+
   try {
-    
-    await Auth
-      .determineManager()
-      .createOrUpdate();
+
+    await App.authManager.createOrUpdate();
       
     return void 0;
 

@@ -22,8 +22,8 @@ export { Err } from '../main/app/util/Err';
 export { ScriptKey } from '../main/app/util/data/ScriptKey';
 
 // Core session + auth
-export { CoreSessionManager } from './session/CoreSessionManager';
+export { SessionManager } from './session/SessionManager';
 export { BasicAuthProvider } from './auth/BasicAuthProvider';
-export { CoreOrgWorker } from './data/CoreOrgWorker';
-export { CoreScriptUrlParser } from './data/CoreScriptUrlParser';
+export { OrgWorker } from './data/OrgWorker';
+export { ScriptUrlParser } from './data/ScriptUrlParser';
 export { executePush } from './push';

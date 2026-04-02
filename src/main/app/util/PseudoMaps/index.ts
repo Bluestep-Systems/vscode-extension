@@ -1,20 +1,19 @@
-// Core classes
-export { PseudoMap } from "./PseudoMap";
-export { TypedMap } from "./TypedMap";
+// Re-export everything from core persistence layer
+export {
+  PseudoMap,
+  TypedMap,
+  Persistable,
+  registerSerializable,
+  revive,
+  PrivateKeys,
+  PublicKeys,
+  PersistablePseudoMap,
+  PublicPersistanceMap,
+  PrivateGenericMap,
+  TypedPersistable,
+  PrivateTypedPersistable,
+} from '../../../../core/persistence';
+export type { SerializableClass, Serializable } from '../../../../core/persistence';
 
-// Interfaces
-export { Persistable } from "./Persistable";
-export type { SerializableClass, Serializable } from "./Serializable";
-export { registerSerializable, revive } from "./Serializable";
-
-// Persistence keys
-export { PrivateKeys, PublicKeys } from "./PersistenceKeys";
-
-// Persistable maps
-export { PersistablePseudoMap } from "./PersistablePseudoMap";
-export { PublicPersistanceMap } from "./PublicPersistanceMap";
-export { PrivateGenericMap } from "./PrivatePersistanceMap";
-export { TypedPersistable } from "./TypedPersistable";
-
-// Settings wrapper
+// SettingsWrapper remains in main/ (VS Code-specific)
 export { SettingsWrapper } from "./SettingsWrapper";

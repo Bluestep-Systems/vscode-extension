@@ -9,13 +9,9 @@ import { App } from '../../main/app/App';
 //@ts-ignore
 import { Auth } from '../../main/app/authentication';
 //@ts-ignore
-import { SESSION_MANAGER } from '../../main/app/b6p_session/SessionManager';
+import { SessionManager } from '../../core/session/SessionManager';
 //@ts-ignore
 import { Err } from '../../main/app/util/Err';
-//@ts-ignore
-import { FileSystem } from '../../main/app/util/fs/FileSystem';
-//@ts-ignore
-import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //@ts-ignore
 import { ResponseCodes } from '../../main/app/util/network/StatusCodes';
 //@ts-ignore

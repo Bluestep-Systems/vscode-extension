@@ -4,14 +4,12 @@ import { PrimitiveNestedObject, JsonValue, SourceOps, type ScriptGQLBadResp, typ
 import { IdUtility } from "./data/IdUtility";
 import { ScriptKey } from './data/ScriptKey';
 import { Err } from './Err';
-import { FileSystem } from "./fs/FileSystem";
 import { ScriptFactory } from './script/ScriptFactory';
 import type { ScriptFolder } from './script/ScriptFolder';
 import { ApiEndpoints, Http, MimeTypes } from '../../resources/constants';
-import { SESSION_MANAGER as SM } from '../b6p_session/SessionManager';
+import { App } from '../App';
 import { Alert } from './ui/Alert';
-
-const fs = FileSystem.getInstance;
+import { B6PUri } from '../../../core/B6PUri';
 /**
  * Utility functions and types.
  * 
@@ -147,7 +145,7 @@ export namespace Util {
     const url = new URL(sourceOrigin);
     let found = false;
     const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
-    const wsDir = await fs().readDirectory(ScriptFactory.createFolder(curWorkspaceFolder.uri));
+    const wsDir = await App.core.fs.readDirectory(B6PUri.fromFsPath(curWorkspaceFolder.uri.fsPath));
 
     const folderUri = wsDir.reduce(
       (curValue, [subFolderName, _fileType]) => {
@@ -236,7 +234,7 @@ export namespace Util {
    * @returns The raw binary content of the file.
    */
   export async function readFileRaw(uri: vscode.Uri) {
-    const fileData = await fs().readFile(uri);
+    const fileData = await App.core.fs.readFile(B6PUri.fromFsPath(uri.fsPath));
     return fileData;
   }
 
@@ -308,14 +306,14 @@ export namespace Util {
     const gqlBody = (topId: string) => `{\"query\":\"query ObjectData($id: String!) {\\n  children(parentId: $id) {\\n    ... on Parent {\\n      children {\\n        items {\\n          id\\n        }\\n      }\\n    }\\n  }\\n}\",\"variables\":{\"id\":\"${topId}\"},\"operationName\":\"ObjectData\"}`;
 
     try {
-      const GQL_RESP = await SM.csrfFetch(originUrl.origin + ApiEndpoints.GQL, {
+      const GQL_RESP = await App.sessionManager.csrfFetch(originUrl.origin + ApiEndpoints.GQL, {
         method: Http.Methods.POST,
         headers: {
           [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
           [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON
         },
         body: gqlBody(topId)
-      }).then((res: Response) => res.json()).catch(e => {
+      }).then((res: Response) => res.json()).catch((e: unknown) => {
         throw new Err.GraphQLFetchError(e);
       }) as ScriptGqlResp;
       if ((GQL_RESP as ScriptGQLBadResp).errors) {

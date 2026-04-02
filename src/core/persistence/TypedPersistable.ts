@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import type { IPersistence } from "../providers";
 import { TypedMap } from "./TypedMap";
 import { Persistable } from "./Persistable";
 import { PrivateKeys, PublicKeys } from "./PersistenceKeys";
@@ -7,18 +7,29 @@ import { revive } from "./Serializable";
 
 /**
  * A persistable version of {@link TypedMap} that automatically handles loading and storing
- * from the VSCode extension context's workspace state.
+ * using the IPersistence interface.
  * @lastreviewed 2025-10-01
  */
 export class TypedPersistable<T extends Record<string, Serializable>> extends TypedMap<T> implements Persistable {
   public readonly key: PublicKeys | PrivateKeys;
-  protected context: vscode.ExtensionContext;
+  protected persistence: IPersistence;
+  protected initialized: boolean = false;
 
-  constructor({key, context, defaultValue}: {key: PublicKeys | PrivateKeys, context: vscode.ExtensionContext, defaultValue: T}) {
+  constructor({key, persistence, defaultValue}: {key: PublicKeys | PrivateKeys, persistence: IPersistence, defaultValue: T}) {
     super();
     this.key = key;
-    this.context = context;
-    this.obj = revive(this.context.workspaceState.get<T>(this.key, defaultValue));
+    this.persistence = persistence;
+    this.persistence.get<T>(this.key).then(data => {
+      this.obj = revive(data || defaultValue);
+      this.initialized = true;
+    });
+  }
+
+  /**
+   * Checks if the map has finished initializing.
+   */
+  isInitialized(): boolean {
+    return this.initialized;
   }
 
   /**
@@ -36,12 +47,12 @@ export class TypedPersistable<T extends Record<string, Serializable>> extends Ty
     update && this.store();
   }
 
-  
+
   override toJSON(): string {
     return JSON.stringify(this.obj);
   }
-  
+
   store(): Thenable<void> {
-    return this.context!.workspaceState.update(this.key, JSON.stringify(this.obj));
+    return this.persistence.set(this.key, JSON.stringify(this.obj));
   }
 }

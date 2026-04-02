@@ -1,10 +1,9 @@
 import * as vscode from 'vscode';
-import type { ORG_CACHE } from '../cache/OrgCache';
-import { BASIC_AUTH_MANAGER } from '../authentication/BasicAuthManager';
+import { BasicAuthManager } from '../authentication/BasicAuthManager';
 import { Http } from '../../resources/constants';
-import { ContextNode } from '../context/ContextNode';
-import { Err } from '../util/Err';
-import { App } from '../App';
+import type { ILogger } from '../../../core/providers';
+import type { Disposable } from '../util/Disposable';
+import type { OrgCache } from '../cache/OrgCache';
 
 /**
  * Provides MCP server definitions to VS Code for each known org in the OrgCache.
@@ -12,39 +11,30 @@ import { App } from '../App';
  * Each cached org origin gets a {@link vscode.McpHttpServerDefinition} pointing
  * at the org's `/sse` endpoint. Authentication headers are injected lazily in
  * {@link resolveMcpServerDefinition} using the extension's existing credentials.
+ * @lastreviewed null
  */
-export const MCP_SERVER_PROVIDER = new class extends ContextNode {
+export class McpServerProvider implements Disposable {
 
-  private _parent: typeof ORG_CACHE | null = null;
-  private _emitter: vscode.EventEmitter<void> | null = null;
-
-  public get parent() {
-    if (!this._parent) {
-      throw new Err.ManagerNotInitializedError('McpServerProvider');
-    }
-    return this._parent;
-  }
-
-  public get context() {
-    return this.parent.context;
-  }
-
-  protected map() {
-    return this.parent.map();
-  }
+  private _emitter: vscode.EventEmitter<void>;
 
   /**
-   * Registers the MCP server definition provider with VS Code.
-   * Call once during OrgCache initialization.
+   * Creates a new McpServerProvider and registers it with VS Code.
+   *
+   * @param orgCache The OrgCache to read server definitions from
+   * @param authManager The BasicAuthManager for credential injection
+   * @param logger The logger for diagnostic output
+   * @param context The VS Code extension context for subscription management
+   * @lastreviewed null
    */
-  init(parent: typeof ORG_CACHE): this {
-    if (this._parent) {
-      throw new Err.DuplicateInitializationError('McpServerProvider');
-    }
-    this._parent = parent;
+  constructor(
+    private readonly orgCache: OrgCache,
+    private readonly authManager: BasicAuthManager,
+    private readonly logger: ILogger,
+    context: vscode.ExtensionContext
+  ) {
     this._emitter = new vscode.EventEmitter<void>();
 
-    App.logger.info('MCP: Registering MCP server definition provider...');
+    logger.info('MCP: Registering MCP server definition provider...');
     const registration = vscode.lm.registerMcpServerDefinitionProvider(
       'bluestep-mcp',
       {
@@ -63,14 +53,12 @@ export const MCP_SERVER_PROVIDER = new class extends ContextNode {
       },
     );
 
-    this.context.subscriptions.push(registration, this._emitter);
-    App.logger.info('MCP: Provider registered successfully');
-    return this;
+    context.subscriptions.push(registration, this._emitter);
+    logger.info('MCP: Provider registered successfully');
   }
 
   /**
    * Signals VS Code that the set of available MCP servers has changed.
-   * Call this when the OrgCache is updated (new org connected, cache cleared, etc.).
    */
   fireChanged(): void {
     this._emitter?.fire();
@@ -80,12 +68,12 @@ export const MCP_SERVER_PROVIDER = new class extends ContextNode {
    * Builds one {@link vscode.McpHttpServerDefinition} per unique origin in the OrgCache.
    */
   private getDefinitions(): vscode.McpHttpServerDefinition[] {
-    App.logger.info('MCP: provideMcpServerDefinitions called');
+    this.logger.info('MCP: provideMcpServerDefinitions called');
     const definitions: vscode.McpHttpServerDefinition[] = [];
     const seenHosts = new Set<string>();
 
     try {
-      for (const [u, elements] of this.parent.map()) {
+      for (const [u, elements] of this.orgCache.map()) {
         for (const element of elements) {
           if (seenHosts.has(element.host)) {
             continue;
@@ -104,34 +92,38 @@ export const MCP_SERVER_PROVIDER = new class extends ContextNode {
       }
     } catch {
       // OrgCache not initialized yet — return empty list
-      App.logger.info('MCP: OrgCache not ready, returning empty server list');
+      this.logger.info('MCP: OrgCache not ready, returning empty server list');
     }
 
-    App.logger.info(`MCP: Returning ${definitions.length} server definition(s)`);
+    this.logger.info(`MCP: Returning ${definitions.length} server definition(s)`);
     return definitions;
   }
 
   /**
-   * Injects the Authorization header from {@link BASIC_AUTH_MANAGER} into the
+   * Injects the Authorization header from the auth manager into the
    * server definition just before VS Code opens the SSE connection.
    */
   private async resolve(
     server: vscode.McpHttpServerDefinition,
   ): Promise<vscode.McpHttpServerDefinition | undefined> {
     try {
-      if (!BASIC_AUTH_MANAGER.hasAuth()) {
-        App.logger.info('MCP: No credentials available, skipping server resolve');
+      if (!this.authManager.hasAuth()) {
+        this.logger.info('MCP: No credentials available, skipping server resolve');
         return undefined;
       }
-      const authValue = await BASIC_AUTH_MANAGER.authHeaderValue();
+      const authValue = await this.authManager.authHeaderValue();
       server.headers = {
         ...server.headers,
         [Http.Headers.AUTHORIZATION]: authValue,
       };
       return server;
     } catch (e) {
-      App.logger.error('MCP: Failed to resolve server credentials', e instanceof Error ? e.message : String(e));
+      this.logger.error('MCP: Failed to resolve server credentials', e instanceof Error ? e.message : String(e));
       return undefined;
     }
   }
-}();
+
+  dispose(): void {
+    this._emitter.dispose();
+  }
+}

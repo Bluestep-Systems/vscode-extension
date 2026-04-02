@@ -1,12 +1,12 @@
-import * as vscode from "vscode";
+import type { IPersistence } from "../providers";
 import { PrivateKeys } from "./PersistenceKeys";
 import type { Serializable } from "./Serializable";
 import { revive } from "./Serializable";
 import { TypedPersistable } from "./TypedPersistable";
-import { Err } from "../Err";
+import { Err } from "../../main/app/util/Err";
 
 /**
- * A typed private persistable pseudomap that uses VS Code's secret storage.
+ * A typed private persistable pseudomap that uses IPersistence secret storage.
  *
  * Extends TypedPersistable to provide secure storage for sensitive data
  * such as credentials, tokens, and other private information that should
@@ -16,35 +16,34 @@ import { Err } from "../Err";
  * @lastreviewed 2025-10-01
  */
 export class PrivateTypedPersistable<T extends Record<string, Serializable>> extends TypedPersistable<T> {
-  private isInitialized: boolean = false;
   /**
    * Constructor for {@link PrivateTypedPersistable}.
-   * 
+   *
    * @param key The private persistence key for secret storage
-   * @param context The VS Code extension context
+   * @param persistence The persistence provider
    * @param defaultValue The default value if no stored data exists
    * @lastreviewed 2025-10-01
    */
-  constructor({ key, context, defaultValue }: { key: PrivateKeys; context: vscode.ExtensionContext; defaultValue: T }) {
-    // Call super with a dummy public key since we'll override the behavior
-    super({ key, context, defaultValue });
-    this.context.secrets.get(this.key).then(jsonString => {
+  constructor({ key, persistence, defaultValue }: { key: PrivateKeys; persistence: IPersistence; defaultValue: T }) {
+    // Call super with persistence
+    super({ key, persistence, defaultValue });
+    this.persistence.getSecret(this.key).then(jsonString => {
       this.obj = revive(JSON.parse(jsonString || '{}'));
-      this.isInitialized = true;
+      this.initialized = true;
     });
   }
-  
+
   /**
    * Type guard that ensures the map is fully initialized.
-   * 
+   *
    * Throws an error if not initialized. While this doesn't provide compile-time
    * type narrowing, it ensures runtime safety for all map operations.
-   * 
+   *
    * @throws an {@link Err.PersistenceNotInitializedError} if the map is not fully initialized
    * @lastreviewed 2025-10-01
    */
-  private checkIsInitialized(): this is PrivateTypedPersistable<T> & { isInitialized: true } {
-    if (!this.isInitialized) {
+  private checkIsInitialized(): this is PrivateTypedPersistable<T> & { initialized: true } {
+    if (!this.isInitialized()) {
       throw new Err.PersistenceNotInitializedError("PrivateTypedPersistable", this.key);
     }
     return true;
@@ -176,12 +175,12 @@ export class PrivateTypedPersistable<T extends Record<string, Serializable>> ext
   }
 
   /**
-   * Stores the current state using VS Code's secret storage.
+   * Stores the current state using the persistence provider's secret storage.
    * Ensures the map is fully initialized before delegating to parent implementation.
    * @lastreviewed 2025-10-01
    */
   override store(): Thenable<void> {
     this.checkIsInitialized();
-    return this.context.secrets.store(this.key, JSON.stringify(this.obj));
+    return this.persistence.setSecret(this.key, JSON.stringify(this.obj));
   }
 }

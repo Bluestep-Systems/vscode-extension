@@ -1,14 +1,12 @@
-import * as vscode from "vscode";
-import { ContextNode } from "../context/ContextNode";
-import type { SESSION_MANAGER } from "../b6p_session/SessionManager";
 import { AuthObject } from "./AuthObject";
+import type { IPersistence } from "../../../core/providers";
 
 /**
  * Abstract base class for managing authentication objects of a specific type.
- * Extends ContextNode to provide VS Code context and persistence capabilities.
- * @lastreviewed 2025-10-01
+ * Uses constructor injection for dependencies instead of ContextNode hierarchy.
+ * @lastreviewed null
  */
-export abstract class AuthManager<T extends AuthObject> extends ContextNode {
+export abstract class AuthManager<T extends AuthObject> {
 
   /**
    * The default flag used when no specific flag is provided.
@@ -16,11 +14,7 @@ export abstract class AuthManager<T extends AuthObject> extends ContextNode {
    */
   readonly DEFAULT_FLAG = "default";
 
-  /**
-   * The VS Code extension context needed for persistence operations.
-   * @lastreviewed 2025-10-01
-   */
-  public abstract context: vscode.ExtensionContext;
+  constructor(protected readonly persistence: IPersistence) {}
 
   /**
    * Determines the flag needed for an arbitrary operation.
@@ -38,7 +32,7 @@ export abstract class AuthManager<T extends AuthObject> extends ContextNode {
    * @param flag The flag to check for existing credentials
    * @lastreviewed 2025-10-01
    */
-  public abstract hasAuth(flag: string): boolean;
+  public abstract hasAuth(flag?: string): boolean;
 
   /**
    * Sets the auth object for the given flag.
@@ -95,11 +89,4 @@ export abstract class AuthManager<T extends AuthObject> extends ContextNode {
    * @lastreviewed 2025-10-01
    */
   public abstract authLoginBodyValue(flag?: string): Promise<string>;
-
-  /**
-   * Initializes the auth manager from the {@link SESSION_MANAGER} context node.
-   * @returns This auth manager instance for method chaining
-   * @lastreviewed 2025-10-01
-   */
-  public abstract init(parent: typeof SESSION_MANAGER): this;
 }

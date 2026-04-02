@@ -3,18 +3,14 @@ import { App } from '../App';
 import { Util } from '../util';
 import { ScriptFactory } from '../util/script/ScriptFactory';
 import { Alert } from '../util/ui/Alert';
-import pushScript from './push';
-import { Err } from '../util/Err';
 import type { ScriptRoot } from '../util/script/ScriptRoot';
 
-
 /**
- * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location.
- * @returns 
+ * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location using B6PCore.
  */
-export default async function (args? : {isSnapshot: boolean, sr: ScriptRoot}): Promise<void> {
-
+export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot }): Promise<void> {
   try {
+    // Determine the script root
     let actual_sr: ScriptRoot;
     if (args?.sr) {
       actual_sr = args.sr;
@@ -25,6 +21,8 @@ export default async function (args? : {isSnapshot: boolean, sr: ScriptRoot}): P
       }
       actual_sr = ScriptFactory.createScriptRoot(activeEditorUri);
     }
+
+    // Check for unsaved changes
     const dirtyDocs = await Util.getDirtyDocs(actual_sr.getRootUri());
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
@@ -36,26 +34,21 @@ export default async function (args? : {isSnapshot: boolean, sr: ScriptRoot}): P
       );
       if (save === SAVE_AND_PUSH) {
         await Promise.all(dirtyDocs.map(doc => doc.save()));
-      } else if (save === CANCEL) {
-        // we may want to save the current state of affairs here in order to implement some kind of "resume from..." functionality,
-        // but for now just exit
-        return;
       } else {
-        return;
+        return; // User cancelled
       }
     }
-    const overrideFormulaUrl = await actual_sr.getBaseWebDavUrlString();
-    await pushScript({ overrideFormulaUrl, isSnapshot: args?.isSnapshot });
-  } catch(e) {
-    if (e instanceof Err.AlreadyAlertedError) {
-      return; // do nothing, already handled
-    }
-    if (e instanceof Error) { 
-      Alert.error(`Error pushing current file: ${e.message}`);
-      App.logger.error(e);
-    } else {
-      Alert.error(`Error pushing current file: ${e}`);
-      App.logger.error('Push current file error: ' + e);
-    }
+
+    // Use B6PCore for pushCurrent
+    await App.core.pushCurrent({
+      filePath: actual_sr.getRootUri().fsPath,
+      snapshot: args?.isSnapshot ?? false,
+    });
+
+    // Success message shown by B6PCore
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    Alert.error(`Error pushing current file: ${message}`);
+    App.logger.error('Push current file error:', e);
   }
 }

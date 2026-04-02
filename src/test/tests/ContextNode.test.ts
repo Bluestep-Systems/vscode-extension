@@ -8,10 +8,6 @@ import { ContextNode } from '../../main/app/context/ContextNode';
 import { PseudoMap } from '../../main/app/util/PseudoMaps';
 //@ts-ignore
 import { JsonValue } from '../../../types';
-//@ts-ignore
-import { FileSystem } from '../../main/app/util/fs/FileSystem';
-//@ts-ignore
-import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 
 // suite('ContextNode Pattern Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

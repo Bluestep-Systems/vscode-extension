@@ -1,87 +1,73 @@
 import * as vscode from 'vscode';
 import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
-import type { App } from '../App';
-import { ContextNode } from '../context/ContextNode';
 import { FileExtensions, GitHubUrls, Http, SettingsKeys } from '../../resources/constants';
-import { FileSystem } from '../util/fs/FileSystem';
-import { PrivateKeys, TypedPersistable } from '../util/PseudoMaps';
-import { PrivateTypedPersistable } from '../util/PseudoMaps/TypedPrivatePersistable';
-import { Err } from '../util/Err';
-const fs = FileSystem.getInstance;
+import { PrivateKeys, PrivateTypedPersistable } from '../../../core/persistence';
+import type { IPersistence, ILogger } from '../../../core/providers';
+import type { SettingsWrapper } from '../util/PseudoMaps/SettingsWrapper';
+import { App } from '../App';
+import { B6PUri } from '../../../core/B6PUri';
+
 /**
- * Singleton update checker for the BlueStep VS Code extension.
+ * Update checker for the BlueStep VS Code extension.
  * Checks for new releases on GitHub and notifies users when updates are available.
- * @lastreviewed 2025-10-15
+ * @lastreviewed null
  */
-export const UPDATE_MANAGER = new class extends ContextNode {
+export class UpdateManager {
   private readonly LAST_CHECKED_KEY = 'lastChecked';
   private readonly UPDATE_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
   private readonly REPO_OWNER: string = 'bluestep-systems';
   private readonly REPO_NAME: string = 'vscode-extension';
 
-  /**
-   * The ancestor context node that is used to instantiate this manager
-   */
-  private _parent: typeof App | null = null;
-
-  private _state: TypedPersistable<ClientInfo> | null = null;
+  private readonly state: PrivateTypedPersistable<ClientInfo>;
 
   /**
-   * Initializes the update checker, and also starts automatic update checking.
-   * @param parent The ancestor context node that is used to instantiate this manager
-   * @lastreviewed 2025-09-18
+   * Creates a new UpdateManager.
+   *
+   * @param persistence The persistence provider for storing update state
+   * @param logger The logger for diagnostic output
+   * @param settings The settings provider for configuration
+   * @param extensionVersion The current extension version
+   * @param extensionUri The extension's installation URI
+   * @param globalStorageUri The global storage URI for temporary files
+   * @param appKey The application settings key prefix
+   * @lastreviewed null
    */
-
-  init(parent: typeof App): this {
-    this._parent = parent;
-    const version = parent.getVersion();
-    // we're going to leave this as a private persistable in case we 
-    // end up needing the githubtoken again later.
-    this._state = new PrivateTypedPersistable<ClientInfo>({
+  constructor(
+    persistence: IPersistence,
+    private readonly logger: ILogger,
+    private readonly settings: SettingsWrapper,
+    private readonly extensionVersion: string,
+    private readonly extensionUri: vscode.Uri,
+    private readonly globalStorageUri: vscode.Uri,
+    private readonly appKey: string
+  ) {
+    this.state = new PrivateTypedPersistable<ClientInfo>({
       key: PrivateKeys.GITHUB_STATE,
-      context: this.context,
-      defaultValue: { version, lastChecked: 0, githubToken: null, setupShown: false }
+      persistence,
+      defaultValue: { version: extensionVersion, lastChecked: 0, githubToken: null, setupShown: false }
     });
 
     setTimeout(async () => {
       try {
-        this.parent.logger.info("B6P: Starting automatic update check...");
-        // Check for version change and show setup guide if needed
-        //this.showSetupGuide();
-        this.getVersionNotes(version);
+        this.logger.info("B6P: Starting automatic update check...");
+        this.getVersionNotes(extensionVersion);
         await this.checkForUpdatesIfNeeded();
       } catch (error) {
-        this.parent.logger.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));
+        this.logger.error("B6P: Update check failed: " + (error instanceof Error ? error.stack : error));
       }
-    }, 10_000); // Delay 10 seconds to allow other startup tasks to complete. 
-    //TODO make this delay configurable? And convert the inits to promises so it can simply be awaited
-    // rather than hoping it resolves on time.
-    return this;
+    }, 10_000); // Delay 10 seconds to allow other startup tasks to complete
   }
 
   /**
-   * //TODO
    * Checks if the extension version has changed (install or update) and shows setup guide
    * @param currentVersion The current version of the extension
    * @lastreviewed null
    */
   private getVersionNotes(currentVersion: string): void {
     const storedVersion = this.state.get('version');
-    this.parent.logger.info(`B6P: Stored version: ${storedVersion}, Current version is ${currentVersion}`);
+    this.logger.info(`B6P: Stored version: ${storedVersion}, Current version is ${currentVersion}`);
     //TODO implement release notes display
-
-    // // Check if this is a fresh install or an update
-    // if (storedVersion !== currentVersion) {
-    //   const isNewInstall = storedVersion === currentVersion; // Default value matches current means first run
-    //   const message = isNewInstall
-    //     ? 'Welcome to BlueStep JavaScript Push/Pull!'
-    //     : `BlueStep extension updated to v${currentVersion}`;
-
-    //   this.parent.logger.info(`B6P: Version change detected (${storedVersion} -> ${currentVersion})`);
-    //   
-    //   this.parent.logger.info(message);
-    // }
   }
 
   /**
@@ -95,9 +81,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       if (this.state.get('setupShown')) {
         return; // Already shown
       }
-      // Get the extension's installation path
-      const extensionPath = this.context.extensionUri;
-      const setupFilePath = vscode.Uri.joinPath(extensionPath, 'SETUP.md');
+      const setupFilePath = vscode.Uri.joinPath(this.extensionUri, 'SETUP.md');
 
       // Open the setup guide
       const document = await vscode.workspace.openTextDocument(setupFilePath);
@@ -113,42 +97,9 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       this.state.set('setupShown', true);
       await this.state.store();
     } catch (error) {
-      this.parent.logger.error(`B6P: Failed to open setup guide: ${error instanceof Error ? error.message : error}`);
+      this.logger.error(`B6P: Failed to open setup guide: ${error instanceof Error ? error.message : error}`);
       // Don't throw - this is a nice-to-have feature
     }
-  }
-
-
-  public get parent(): typeof App {
-    if (!this._parent) {
-      throw new Err.ManagerNotInitializedError("UpdateChecker");
-    }
-    return this._parent;
-  }
-
-
-  public get context(): vscode.ExtensionContext {
-    if (!this._parent) {
-      throw new Err.ManagerNotInitializedError("UpdateChecker");
-    }
-    return this._parent.context;
-  }
-
-  /**
-   * The Github information map for storing update check data
-   */
-  protected map(): TypedPersistable<ClientInfo> {
-    return this.state;
-  }
-
-  /**
-   * Gets the Client Information state, which represents things like version, last update, etc.
-   */
-  private get state(): TypedPersistable<ClientInfo> {
-    if (!this._state) {
-      throw new Err.ManagerNotInitializedError("UpdateChecker");
-    }
-    return this._state;
   }
 
   /**
@@ -171,7 +122,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    */
   public async checkForUpdatesIfNeeded(): Promise<void> {
     try {
-      const updateCheck = this.parent.settings.get('updateCheck');
+      const updateCheck = this.settings.get('updateCheck');
       const updateCheckEnabled = updateCheck.enabled;
 
       if (!updateCheckEnabled) {
@@ -182,7 +133,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       const now = Date.now();
 
       if (now - lastCheck < this.UPDATE_INTERVAL) {
-        this.parent.logger.info("B6P: Skipping update check - not enough time has passed since last check.");
+        this.logger.info("B6P: Skipping update check - not enough time has passed since last check.");
         return; // Not enough time has passed
       }
 
@@ -229,19 +180,17 @@ export const UPDATE_MANAGER = new class extends ContextNode {
   }
 
   /**
-   * Get current extension version from App singleton
+   * Get current extension version
    * @returns Current extension version string
    * @lastreviewed 2025-10-15
    */
   private getCurrentVersion(): string {
-    if (this.parent.isDebugMode()) {
-      const versionOverride = this.parent.settings.get('debugMode').versionOverride;
-      if (versionOverride) {
-        this.parent.logger.info(`B6P: Using debug mode version override: ${versionOverride}`);
-        return versionOverride;
-      }
+    const debugMode = this.settings.get('debugMode');
+    if (debugMode.enabled && debugMode.versionOverride) {
+      this.logger.info(`B6P: Using debug mode version override: ${debugMode.versionOverride}`);
+      return debugMode.versionOverride;
     }
-    return this.parent.getVersion();
+    return this.extensionVersion;
   }
 
   /**
@@ -265,7 +214,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       }
 
       if (!response.ok) {
-        throw new Err.GitHubApiError(response.status);
+        throw new Error(`GitHub API error: ${response.status}`);
       }
 
       const release = await response.json() as GithubRelease;
@@ -279,11 +228,11 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          throw new Err.UpdateCheckTimeoutError();
+          throw new Error('Update check timeout');
         }
-        throw new Err.GraphQLFetchError(error.message);
+        throw new Error(`GraphQL fetch error: ${error.message}`);
       }
-      throw new Err.DataParsingError(`Failed to parse GitHub API response: ${error}`);
+      throw new Error(`Failed to parse GitHub API response: ${error}`);
     }
   }
 
@@ -345,7 +294,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @lastreviewed 2025-10-15
    */
   private async notifyUserAndInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
-    const config = this.parent.settings;
+    const config = this.settings;
     const showNotifications = config.get('updateCheck').showNotifications;
 
     if (!showNotifications) {
@@ -393,7 +342,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
 
         // Check if the download URL is a .vsix file
         if (!updateInfo.downloadUrl.endsWith(FileExtensions.VSIX)) {
-          throw new Err.AutoInstallRequiresDirectLinkError();
+          throw new Error('Auto-install requires direct .vsix download link');
         }
 
         // Download the .vsix file
@@ -448,17 +397,17 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       });
 
       if (!response.ok) {
-        throw new Err.ExtensionDownloadError(response.status);
+        throw new Error(`Extension download error: ${response.status}`);
       }
 
       // Create temporary file path
-      const tempDir = this.context.globalStorageUri.fsPath;
+      const tempDir = this.globalStorageUri.fsPath;
       const tempFileName = `${SettingsKeys.APP_KEY}-${version}${FileExtensions.VSIX}`;
-      const tempFilePath = vscode.Uri.joinPath(this.context.globalStorageUri, tempFileName);
+      const tempFilePath = vscode.Uri.joinPath(this.globalStorageUri, tempFileName);
 
       // Ensure the directory exists
       try {
-        await fs().createDirectory(vscode.Uri.file(tempDir));
+        await App.core.fs.createDirectory(B6PUri.fromFsPath(tempDir));
       } catch {
         // Directory might already exist, ignore error
       }
@@ -466,12 +415,12 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       // Write the file
       const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
-      await fs().writeFile(tempFilePath, uint8Array);
+      await App.core.fs.writeFile(B6PUri.fromFsPath(tempFilePath.fsPath), uint8Array);
 
       return tempFilePath.fsPath;
 
     } catch (error) {
-      throw new Err.ExtensionDownloadError(500); // Generic download error
+      throw new Error('Extension download error: 500'); // Generic download error
     }
   }
 
@@ -484,7 +433,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     try {
       await vscode.commands.executeCommand('workbench.extensions.installExtension', vscode.Uri.file(vsixPath));
     } catch (error) {
-      throw new Err.ExtensionInstallationError(error instanceof Error ? error.message : String(error));
+      throw new Error(`Extension installation error: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -588,15 +537,15 @@ export const UPDATE_MANAGER = new class extends ContextNode {
    * @lastreviewed 2025-10-15
    */
   private async disableUpdateChecking(): Promise<void> {
-    const curUpdateSettings = this.parent.settings.get('updateCheck');
-    this.parent.settings.set('updateCheck', { ...curUpdateSettings, ...{ enabled: false } });
+    const curUpdateSettings = this.settings.get('updateCheck');
+    this.settings.set('updateCheck', { ...curUpdateSettings, ...{ enabled: false } });
 
     vscode.window.showInformationMessage(
       'Automatic update checking has been disabled. You can re-enable it in the extension settings.',
       'Open Settings'
     ).then(selection => {
       if (selection === 'Open Settings') {
-        vscode.commands.executeCommand('workbench.action.openSettings', `${this.parent.appKey}.updateCheck`);
+        vscode.commands.executeCommand('workbench.action.openSettings', `${this.appKey}.updateCheck`);
       }
     });
   }
@@ -615,7 +564,7 @@ export const UPDATE_MANAGER = new class extends ContextNode {
       });
 
       if (!response.ok) {
-        throw new Err.GitHubApiError(response.status);
+        throw new Error(`GitHub API error: ${response.status}`);
       }
 
       const releases = await response.json() as GithubRelease[];
@@ -634,11 +583,18 @@ export const UPDATE_MANAGER = new class extends ContextNode {
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
-          throw new Err.UpdateCheckTimeoutError();
+          throw new Error('Update check timeout');
         }
-        throw new Err.GraphQLFetchError(error.message);
+        throw new Error(`GraphQL fetch error: ${error.message}`);
       }
-      throw new Err.DataParsingError(`Failed to parse GitHub API response: ${error}`);
+      throw new Error(`Failed to parse GitHub API response: ${error}`);
     }
   }
-}();
+
+  /**
+   * Dispose of resources.
+   */
+  dispose(): void {
+    // No cleanup needed currently
+  }
+}

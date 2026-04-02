@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Alert } from '../util/ui/Alert';
-import { UPDATE_MANAGER } from '../services/UpdateManager';
+import { App } from '../App';
 
 export default async function checkForUpdates(): Promise<void> {
   try {
@@ -14,7 +14,7 @@ export default async function checkForUpdates(): Promise<void> {
 
       progress.report({ increment: 50, message: "Contacting GitHub..." });
 
-      const updateInfo = await UPDATE_MANAGER.checkForUpdates();
+      const updateInfo = await App.updateManager.checkForUpdates();
 
       progress.report({ increment: 100 });
 

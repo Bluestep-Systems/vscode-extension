@@ -1,30 +1,45 @@
 import * as vscode from 'vscode';
 import { type ReadOnlyMap } from '../../../types';
-import { Auth } from './authentication';
-import { SESSION_MANAGER as SM } from './b6p_session/SessionManager';
+import { BasicAuthManager } from './authentication/BasicAuthManager';
+import { SessionManager } from '../../core/session/SessionManager';
 import { OutputChannels, SettingsKeys } from '../resources/constants';
-import { ContextNode } from './context/ContextNode';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
-import { UPDATE_MANAGER as UM } from './services/UpdateManager';
+import { UpdateManager } from './services/UpdateManager';
 import { SettingsWrapper } from './util/PseudoMaps';
 import { Err } from './util/Err';
+import { HttpClient } from './util/network/HttpClient';
 import { Alert } from './util/ui/Alert';
-import { ORG_CACHE as OC } from './cache/OrgCache';
-import { SCRIPT_METADATA_STORE as MDS } from './cache/ScriptMetaDataStore';
+import { OrgCache } from './cache/OrgCache';
+import { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
+import { McpServerProvider } from './mcp/McpServerProvider';
 import { PULL_SCRIPT_TOOL } from './mcp/PullScriptTool';
+import { DisposableRegistry } from './util/Disposable';
+import { B6PCore } from '../../core/B6PCore';
+import { VscodeFileSystem, VscodePersistence, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
 
 
-
-export const App = new class extends ContextNode {
+export const App = new class {
   private _context: vscode.ExtensionContext | null = null;
+  private _persistence: VscodePersistence | null = null;
   private _settings: SettingsWrapper | null = null;
   private _outputChannel: vscode.LogOutputChannel | null = null;
+  private _core: B6PCore | null = null;
   public readonly appKey = SettingsKeys.APP_KEY;
-  parent: ContextNode | null = null;
+
+  // Manager instances
+  private _sessionManager: SessionManager | null = null;
+  private _orgCache: OrgCache | null = null;
+  private _authManager: BasicAuthManager | null = null;
+  private _scriptMetadataStore: ScriptMetaDataStore | null = null;
+  private _updateManager: UpdateManager | null = null;
+  private _mcpServerProvider: McpServerProvider | null = null;
+
+  private readonly _disposables = new DisposableRegistry();
 
   /**
-   * a read-only map interceptor for command registrations
+   * a read-only map interceptor for command registrations.
+   * Commands reference App instance properties that are populated during init().
    */
   disposables = new class implements ReadOnlyMap<vscode.Disposable> {
 
@@ -41,13 +56,13 @@ export const App = new class extends ContextNode {
       ['bsjs-push-pull.testTask', vscode.commands.registerCommand('bsjs-push-pull.testTask', ctrlPCommands.testTask)],
       ['bsjs-push-pull.snapshot', vscode.commands.registerCommand('bsjs-push-pull.snapshot', ctrlPCommands.snapshot)],
       ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
-        const entries = MDS.all();
+        const entries = App.scriptMetadataStore.all();
         const summary = entries.length === 0
           ? "No script metadata entries stored."
           : entries.map(e => `${e.U}/${e.scriptName} (webdavId: ${e.webdavId}, records: ${e.pushPullRecords.length}, classid: ${e.scriptKey.classid}, seqnum: ${e.scriptKey.seqnum})`).join("\n");
         App.logger.info("=== Script Metadata Store ===\n" + summary);
 
-        const orgEntries = [...OC.map()];
+        const orgEntries = [...App.orgCache.map()];
         const orgSummary = orgEntries.length === 0
           ? "No org cache entries."
           : orgEntries.map(([u, elements]) => `${u}: ${elements.map(e => `${e.host} (lastAccess: ${new Date(e.lastAccess).toISOString()})`).join(", ")}`).join("\n");
@@ -61,15 +76,13 @@ export const App = new class extends ContextNode {
       })],
       ['bsjs-push-pull.clearSessions', vscode.commands.registerCommand('bsjs-push-pull.clearSessions', async () => {
         Alert.info("Clearing all Sessions");
-        SM.clearMap();
-        OC.clearCache();
+        App.orgCache.clearCache();
       })],
       ['bsjs-push-pull.clearAll', vscode.commands.registerCommand('bsjs-push-pull.clearAll', async () => {
         Alert.info("Clearing Sessions, Auth Managers, and Settings");
         App.clearMap(true);
-        SM.clearMap();
-        OC.clearCache();
-        Auth.clearManagers();
+        App.orgCache.clearCache();
+        App.authManager.clearMap();
       })],
       ['bsjs-push-pull.toggleAdvanced', vscode.commands.registerCommand('bsjs-push-pull.toggleAdvanced', async () => {
         App.toggleAdvancedMode();
@@ -108,12 +121,6 @@ export const App = new class extends ContextNode {
     }
   }();
 
-  /**
-   * //TODO remove if unneccessary
-   * 
-   * Checks if the app is initialized
-   * @returns true if the app is initialized, false otherwise.
-   */
   public isInitialized(): boolean {
     return this._context !== null;
   }
@@ -125,8 +132,11 @@ export const App = new class extends ContextNode {
     return this._context!;
   }
 
-  protected map() {
-    return this.settings;
+  get persistence(): VscodePersistence {
+    if (this._persistence === null) {
+      throw new Err.ContextNotSetError('Persistence');
+    }
+    return this._persistence;
   }
 
   public get settings() {
@@ -136,9 +146,6 @@ export const App = new class extends ContextNode {
     return this._settings!;
   }
 
-  /**
-   * the output channel for logging. logs to a channel named "B6P" in the vscode output pane.
-   */
   public get logger() {
     if (this._outputChannel === null) {
       throw new Err.ContextNotSetError('Output channel');
@@ -146,39 +153,88 @@ export const App = new class extends ContextNode {
     return this._outputChannel;
   }
 
+  public get core() {
+    if (this._core === null) {
+      throw new Err.ContextNotSetError('B6PCore');
+    }
+    return this._core;
+  }
+
+  // Manager accessors
+  public get sessionManager(): SessionManager {
+    if (!this._sessionManager) {
+      throw new Err.ManagerNotInitializedError('SessionManager');
+    }
+    return this._sessionManager;
+  }
+
+  public get orgCache(): OrgCache {
+    if (!this._orgCache) {
+      throw new Err.ManagerNotInitializedError('OrgCache');
+    }
+    return this._orgCache;
+  }
+
+  public get authManager(): BasicAuthManager {
+    if (!this._authManager) {
+      throw new Err.ManagerNotInitializedError('BasicAuthManager');
+    }
+    return this._authManager;
+  }
+
+  public get scriptMetadataStore(): ScriptMetaDataStore {
+    if (!this._scriptMetadataStore) {
+      throw new Err.ManagerNotInitializedError('ScriptMetaDataStore');
+    }
+    return this._scriptMetadataStore;
+  }
+
+  public get updateManager(): UpdateManager {
+    if (!this._updateManager) {
+      throw new Err.ManagerNotInitializedError('UpdateManager');
+    }
+    return this._updateManager;
+  }
+
   public init(context: vscode.ExtensionContext) {
     if (this._context !== null) {
       throw new Err.ContextAlreadySetError('Extension context');
     }
     this._context = context;
-    // for some reason we can't perform the truncated version of this. I.Err.
-    // `.forEach(context.subscriptions.push)`
+    this._persistence = new VscodePersistence(this._context);
+
     this.disposables.forEach(disposable => this.context.subscriptions.push(disposable));
     this._outputChannel = vscode.window.createOutputChannel(OutputChannels.B6P, {
       log: true,
     });
     this.context.subscriptions.push(this._outputChannel);
     this._settings = new SettingsWrapper();
+
+    // Initialize B6PCore with VSCode providers (shares the same persistence instance)
+    this._core = new B6PCore({
+      fs: new VscodeFileSystem(),
+      persistence: this._persistence,
+      prompt: new VscodePrompt(),
+      logger: new VscodeLogger(this._outputChannel),
+      progress: new VscodeProgress(),
+    });
+
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor) {
         readOnlyCheck();
-      } else {
-        //TODO figure out why this is triggering multiple times
-        // console.log('No active editor.');
       }
     }, this, this.context.subscriptions);
-    // Register the settings change listener
+
     vscode.workspace.onDidChangeConfiguration(event => {
       if (event.affectsConfiguration(App.appKey)) {
         this.isDebugMode() && console.log("Configuration changed, updating settings map");
         this.settings.sync();
       }
-
     });
     this.settings.sync();
-    readOnlyCheck(); // run it once on startup
+    readOnlyCheck();
 
-    // Register URI handler for vscode://bluestep-systems.bsjs-push-pull/<path>?url=<formulaUrl>
+    // Register URI handler
     this.context.subscriptions.push(vscode.window.registerUriHandler({
       handleUri(uri: vscode.Uri) {
         if (uri.path === '/pull') {
@@ -195,11 +251,68 @@ export const App = new class extends ContextNode {
       }
     }));
 
-    // Initialize dependancies
-    MDS.init(this);
-    SM.init(this);
-    UM.init(this);
-    this.children.push(MDS, SM, UM);
+    // ---- Instantiate managers with dependency injection ----
+
+    const vscodeLogger: VscodeLogger = new VscodeLogger(this._outputChannel);
+
+    // 1. Auth manager (leaf dependency)
+    this._authManager = new BasicAuthManager(this._persistence);
+
+    // 2. Session manager (depends on auth)
+    this._sessionManager = new SessionManager(
+      this._persistence,
+      vscodeLogger,
+      this._authManager,
+      () => this.isDebugMode(),
+      this._core.prompt,
+      (url, options) => HttpClient.getInstance().fetch(url, options)
+    );
+    this._disposables.add(this._sessionManager);
+
+    // 3. Org cache (depends on persistence, logger, settings)
+    this._orgCache = new OrgCache(
+      this._persistence,
+      vscodeLogger,
+      this._settings,
+      () => this.isDebugMode()
+    );
+    this._disposables.add(this._orgCache);
+
+    // 4. MCP server provider (depends on orgCache, auth, logger, context)
+    this._mcpServerProvider = new McpServerProvider(
+      this._orgCache,
+      this._authManager,
+      vscodeLogger,
+      context
+    );
+    this._disposables.add(this._mcpServerProvider);
+
+    // 5. Wire up cross-cutting events
+    //    - SessionManager notifies OrgCache on login
+    this._sessionManager.onLogin = (url: URL) => {
+      this._orgCache!.findU(url).catch((e: unknown) => {
+        this.logger.warn('Failed to cache org during login:', e instanceof Error ? e.message : String(e));
+      });
+    };
+    //    - OrgCache notifies McpServerProvider on changes
+    this._orgCache.onChanged = () => {
+      this._mcpServerProvider!.fireChanged();
+    };
+
+    // 6. Script metadata store
+    this._scriptMetadataStore = new ScriptMetaDataStore(this._persistence);
+
+    // 7. Update manager
+    this._updateManager = new UpdateManager(
+      this._persistence,
+      vscodeLogger,
+      this._settings,
+      this.getVersion(),
+      context.extensionUri,
+      context.globalStorageUri,
+      this.appKey
+    );
+    this._disposables.add(this._updateManager);
 
     // Register LM tools
     this.context.subscriptions.push(
@@ -233,33 +346,34 @@ export const App = new class extends ContextNode {
 
   public toggleDebugMode() {
     console.log("Toggling debug mode");
-    this.settings.set('debugMode', { 
-      enabled: !this.settings.get('debugMode').enabled, 
+    this.settings.set('debugMode', {
+      enabled: !this.settings.get('debugMode').enabled,
       anyDomainOverrideUrl: this.settings.get('debugMode').anyDomainOverrideUrl,
-      versionOverride: this.settings.get('debugMode').versionOverride 
+      versionOverride: this.settings.get('debugMode').versionOverride
     });
     Alert.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`);
   }
 
-  /**
-   * Gets the current extension version from VS Code extension API
-   * @lastreviewed 2025-10-01
-   */
   public getVersion(): string {
     try {
-      // Get the extension from VS Code's extension API
       const extension = vscode.extensions.getExtension('bluestep-systems.bsjs-push-pull');
       if (extension && extension.packageJSON && extension.packageJSON.version) {
         return extension.packageJSON.version;
       }
       throw new Err.PackageJsonNotFoundError();
     } catch (error) {
-      //TODO determine if we want to rethrow or not
       throw error;
     }
   }
 
   public runConverts() {
     Alert.info("Not implemented yet");
+  }
+
+  /**
+   * Dispose all managed resources.
+   */
+  public dispose() {
+    this._disposables.dispose();
   }
 }();

@@ -1,16 +1,14 @@
 import * as path from 'path';
 import { CryptoAlgorithms, FileExtensions, FolderNames, Http, MimeTypes } from '../../../resources/constants';
 import { App } from "../../App";
-import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
-import { ScriptUrlParser } from "../data/ScriptUrlParser";
+import { ScriptUrlParser } from "../../../../core/data/ScriptUrlParser";
 import { Err } from "../Err";
-import { FileSystem } from "../fs/FileSystem";
 import { ResponseCodes } from "../network/StatusCodes";
 import { Alert } from '../ui/Alert';
 import { ScriptNode } from "./ScriptNode";
 import { TsConfig } from './TsConfig';
 import { Uri } from 'vscode';
-const fs = FileSystem.getInstance;
+import { B6PUri } from '../../../../core/B6PUri';
 
 /**
  * Represents a script file within the system. This is very similar to the webapps "RemoteObject" concept
@@ -57,7 +55,7 @@ export class ScriptFile extends ScriptNode {
    */
   public async getHash(): Promise<string | null> {
     await this.requireExists();
-    const bufferSource = await fs().readFile(this.uri());
+    const bufferSource = await App.core.fs.readFile(B6PUri.fromFsPath(this.uri().fsPath));
     const localHashBuffer = await crypto.subtle.digest(CryptoAlgorithms.SHA_512, bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
     if (hexArray.length !== 64) {
@@ -77,7 +75,7 @@ export class ScriptFile extends ScriptNode {
    * @lastreviewed 2025-09-15
    */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL; }): Promise<string | null> {
-    const response = await SM.fetch(ops?.upstairsOverride || await this.upstairsUrl(), {
+    const response = await App.sessionManager.fetch(ops?.upstairsOverride || await this.upstairsUrl(), {
       method: Http.Methods.HEAD
     });
     const etagHeader = response.headers.get(Http.Headers.ETAG);
@@ -174,7 +172,7 @@ export class ScriptFile extends ScriptNode {
     }
     const lookupUri = await this.upstairsUrl(parser);
     App.logger.info("downloading from:" + lookupUri);
-    const response = await SM.fetch(lookupUri, {
+    const response = await App.sessionManager.fetch(lookupUri, {
       method: Http.Methods.GET,
       headers: {
         [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
@@ -364,7 +362,7 @@ export class ScriptFile extends ScriptNode {
     App.logger.info("Destination:", upstairsOverride.toString());
 
     //TODO investigate if this can be done via streaming
-    const fileContents = await fs().readFile(this.uri());
+    const fileContents = await App.core.fs.readFile(B6PUri.fromFsPath(this.uri().fsPath));
     const requestOptions = {
       method: Http.Methods.PUT,
       headers: {
@@ -372,7 +370,7 @@ export class ScriptFile extends ScriptNode {
       },
       body: fileContents
     };
-    let resp = await SM.fetch(upstairsOverride, requestOptions);
+    let resp = await App.sessionManager.fetch(upstairsOverride, requestOptions);
     if (!resp.ok) {
       const details = await getDetails(resp);
       throw new Err.FileSendError(details);
@@ -385,7 +383,7 @@ export class ScriptFile extends ScriptNode {
       const snapshotOverride = new URL(upstairsOverride);
       snapshotOverride.pathname = snapshotOverride.pathname.replace(new RegExp(FolderNames.DRAFT), FolderNames.SNAPSHOT);
 
-      resp = await SM.fetch(snapshotOverride, requestOptions);
+      resp = await App.sessionManager.fetch(snapshotOverride, requestOptions);
     }
     await this.touch();
     App.logger.info("File sent successfully:", this.uri().fsPath);
@@ -426,7 +424,7 @@ export class ScriptFile extends ScriptNode {
     await this.requireExists();
     const downstairsUri = this.uri();
     try {
-      const fileData = await fs().readFile(downstairsUri);
+      const fileData = await App.core.fs.readFile(B6PUri.fromFsPath(downstairsUri.fsPath));
       return Buffer.from(fileData).toString('utf8');
     } catch (e) {
       if (e instanceof Error || typeof e === 'string') {

@@ -2,13 +2,13 @@ import * as vscode from "vscode";
 import * as path from 'path';
 import { Util } from "../";
 import { Err } from "../Err";
-import { FileSystem } from "../fs/FileSystem";
 import { ScriptPathElement } from "./PathElement";
 import { ScriptFactory } from "./ScriptFactory";
 import type { ScriptFile } from "./ScriptFile";
 import type { ScriptFolder } from "./ScriptFolder";
 import type { ScriptRoot } from "./ScriptRoot";
-const fs = FileSystem.getInstance;
+import { App } from '../../App';
+import { B6PUri } from '../../../../core/B6PUri';
 
 /**
  * A specialized {@link ScriptPathElement} representing a tsconfig.json file.
@@ -85,7 +85,7 @@ export class TsConfig implements ScriptPathElement {
     if (!exists) {
       return false;
     }
-    const fileContents = await fs().readFile(this.uri());
+    const fileContents = await App.core.fs.readFile(B6PUri.fromFsPath(this.uri().fsPath));
     const fileString = Buffer.from(fileContents).toString('utf-8');
     try {
       const parsed = JSON.parse(fileString);

@@ -1,108 +1,98 @@
 import { BlueHqAnyUrlResp, OrgCacheElement } from "../../../../types";
 import { BlueHQ } from "../../resources/constants";
 import { Http, Numerical } from "../../resources/constants";
-import { App } from "../App";
-import type { SESSION_MANAGER } from "../b6p_session/SessionManager";
-import { ContextNode } from "../context/ContextNode";
-import { MCP_SERVER_PROVIDER } from "../mcp/McpServerProvider";
-import { OrgWorker } from "../util/data/OrgWorker";
-import { Err } from "../util/Err";
+import { OrgWorker } from "../../../core/data/OrgWorker";
 import { HttpClient } from "../util/network/HttpClient";
+import { Err } from "../util/Err";
 import { PublicKeys, PublicPersistanceMap } from "../util/PseudoMaps";
 import { Alert } from "../util/ui/Alert";
-
+import type { IPersistence, ILogger } from "../../../core/providers";
+import type { Disposable } from "../util/Disposable";
+import type { SettingsWrapper } from "../util/PseudoMaps/SettingsWrapper";
 
 /**
  * A cache of org URLs associated with U values.
- * 
- * This is a singleton;
+ * @lastreviewed null
  */
-export const ORG_CACHE = new class extends ContextNode {
-  _parent: typeof SESSION_MANAGER | null = null;
-  private _orgCache: PublicPersistanceMap<OrgCacheElement[]> | null = null;
+export class OrgCache implements Disposable {
+  private readonly orgCacheMap: PublicPersistanceMap<OrgCacheElement[]>;
   private _cleanupTimer: ReturnType<typeof setTimeout> | null = null;
-  init(parent: typeof SESSION_MANAGER): this {
-    this._parent = parent;
-    this._orgCache = new PublicPersistanceMap(PublicKeys.U_CACHE, this.context);
+
+  /**
+   * Optional callback invoked when the cache changes (e.g. for MCP server updates).
+   */
+  public onChanged: (() => void) | null = null;
+
+  /**
+   * Creates a new OrgCache.
+   *
+   * @param persistence The persistence provider
+   * @param logger The logger for diagnostic output
+   * @param settings The settings wrapper for configuration
+   * @param isDebugMode Function to check if debug mode is active
+   * @lastreviewed null
+   */
+  constructor(
+    persistence: IPersistence,
+    private readonly logger: ILogger,
+    private readonly settings: SettingsWrapper,
+    private readonly isDebugMode: () => boolean
+  ) {
+    this.orgCacheMap = new PublicPersistanceMap(PublicKeys.U_CACHE, persistence);
     this.cleanupOldEntries();
-    MCP_SERVER_PROVIDER.init(this);
-    this.children.push(MCP_SERVER_PROVIDER);
-    return this;
-  }
-
-  public map(): PublicPersistanceMap<OrgCacheElement[]> {
-    if (!this._orgCache) {
-      throw new Error("OrgCache not initialized; call init() first.");
-    }
-    return this._orgCache;
-  }
-
-  public async delete(u: string): Promise<void> {
-    this.map().delete(u);
-    await this.map().store();
-    MCP_SERVER_PROVIDER.fireChanged();
   }
 
   /**
-   * The parent SESSION_MANAGER instance.
+   * Gets the underlying persistence map.
    */
-  public get parent(): typeof SESSION_MANAGER {
-    if (!this._parent) {
-      throw new Error("OrgCache not initialized; call init() first.");
-    }
-    return this._parent;
+  public map(): PublicPersistanceMap<OrgCacheElement[]> {
+    return this.orgCacheMap;
   }
 
-  public get context() {
-    return this.parent.context;
+  public async delete(u: string): Promise<void> {
+    this.orgCacheMap.delete(u);
+    await this.orgCacheMap.store();
+    this.onChanged?.();
   }
 
   /**
    * Cleans up entries that have not been accessed in the last 3 days.
-   * If the cache is not initialized, throws an error.
-   * We call this on initialization, but it can be called manually as well.
    */
   private cleanupOldEntries() {
-    if (!this._orgCache) {
-      throw new Error("OrgCache not initialized; call init() first.");
-    }
     const now = Date.now();
-    const cutoff = now - Numerical.millisecondsInXDays(3); // 3 days ago
-    for (const [u, elementArray] of this._orgCache) {
+    const cutoff = now - Numerical.millisecondsInXDays(3);
+    for (const [u, elementArray] of this.orgCacheMap) {
       const filteredArray = elementArray.filter(element => element.lastAccess >= cutoff);
       if (filteredArray.length === 0) {
-        this._orgCache.delete(u);
+        this.orgCacheMap.delete(u);
       } else if (filteredArray.length < elementArray.length) {
-        this._orgCache.set(u, filteredArray);
+        this.orgCacheMap.set(u, filteredArray);
       }
     }
-    this.map().store();
-    // we schedule the next cleanup in 24 hours; this should really never happen unless the extension is left running for a long time
-    this._cleanupTimer = setTimeout(() => this.cleanupOldEntries(), Numerical.millisecondsInXDays(1)); // schedule next cleanup in 24 hours
+    this.orgCacheMap.store();
+    this._cleanupTimer = setTimeout(() => this.cleanupOldEntries(), Numerical.millisecondsInXDays(1));
   }
 
   /**
    * Validates the cache to ensure no duplicate hosts exist.
-   * If throwIfDuplicateExists is true, will throw an error if duplicates are found.
-   * otherwise it will clear all entries with duplicate hosts.
    */
   private cleanDuplicates(throwIfDuplicateExists = false) {
     const uniqueHosts = new Set<string>();
-    for (const [u, elementArray] of this.map()) {
+    for (const [u, elementArray] of this.orgCacheMap) {
       for (const element of elementArray) {
         if (uniqueHosts.has(element.host)) {
           if (throwIfDuplicateExists) {
-            App.isDebugMode() && console.error(`OrgCache contains duplicate host ${element.host}`, this.map().toJSON());
+            this.isDebugMode() && console.error(`OrgCache contains duplicate host ${element.host}`, this.orgCacheMap.toJSON());
             Alert.popup(`OrgCache is invalid!`);
             throw new Err.AlreadyAlertedError(`OrgCache contains duplicate host ${element.host}`);
           } else {
-            this.map().delete(u);
+            this.orgCacheMap.delete(u);
             let foundU: string | null = null;
             while (foundU = this.findUCacheOnly(new URL(Http.Schemes.HTTPS + element.host))) {
-              App.logger.info(`OrgCache contained duplicate host ${element.host}. Cleared U ${foundU}`);
-              this.map().delete(foundU);
+              this.logger.info(`OrgCache contained duplicate host ${element.host}. Cleared U ${foundU}`);
+              this.orgCacheMap.delete(foundU);
             }
-            this.map().store();
+            this.orgCacheMap.store();
             console.warn(`OrgCache contained duplicate host ${element.host}. Cleared all Us`);
           }
         }
@@ -116,65 +106,56 @@ export const ORG_CACHE = new class extends ContextNode {
    */
   public async hardValidateAll(): Promise<void> {
     this.cleanDuplicates(true);
-    for (const u of this.map().keys()) {
+    for (const u of this.orgCacheMap.keys()) {
       await this.hardValidateU(u);
     }
   }
 
   /**
    * Hard-validates an individual U by ensuring each known host connects to the same U.
-   * 
-   * Will simply clean up unvalidated hosts.
    */
   public async hardValidateU(u: string): Promise<void> {
-    const elementArr = this.map().get(u);
+    const elementArr = this.orgCacheMap.get(u);
     if (!elementArr) {
-      return; // it is vacuously in a good state
+      return;
     }
     const removalSet = new Set<string>();
     for (const element of elementArr) {
-      const orgWorker = OrgWorker.fromHost(element.host);
+      const orgWorker = OrgWorker.fromHost(element.host, HttpClient.getInstance().fetch.bind(HttpClient.getInstance()));
       if (!await orgWorker.verifyU(u)) {
-        App.isDebugMode() && console.error(`OrgCache entry for U ${u} with host ${element.host} is invalid`, this.map().toJSON());
+        this.isDebugMode() && console.error(`OrgCache entry for U ${u} with host ${element.host} is invalid`, this.orgCacheMap.toJSON());
         removalSet.add(element.host);
       }
     }
     if (removalSet.size > 0) {
       const newElementArr = elementArr.filter(element => !removalSet.has(element.host));
       if (newElementArr.length === 0) {
-        this.map().delete(u);
+        this.orgCacheMap.delete(u);
       } else {
-        this.map().set(u, newElementArr);
+        this.orgCacheMap.set(u, newElementArr);
       }
-      await this.map().store();
+      await this.orgCacheMap.store();
     }
   }
 
   /**
    * Gets the first available URL associated with the given U from the cache.
-   * If none exists, will call the BlueHQ helper to get any domain associated with the U,
-   * adding it to the cache before returning it.
+   * If none exists, will call the BlueHQ helper to get any domain associated with the U.
    */
   public async getAnyBaseUrl(u: string): Promise<URL> {
-    // step zero is to validate the U format
     if (!/^U\d{6}$/.test(u)) {
       throw new Err.OrgCacheError("Invalid U format: " + u);
     }
-    // next we clean duplicates to ensure the cache is in a good state
-    // we may want to later allow for this to throw an error if the cache is invalid
     this.cleanDuplicates();
     // check cache first
-    if (this.map().has(u)) {
-      const cacheElement = this.map().get(u);
+    if (this.orgCacheMap.has(u)) {
+      const cacheElement = this.orgCacheMap.get(u);
       if (cacheElement && cacheElement.length > 0) {
-        //TODO optimize this such that we check session manager for a valid session for one of the hosts
-        //TODO update last access time
         return new URL(Http.Schemes.HTTPS + cacheElement[0].host);
       }
     }
     // check for overrides
-    const settings = this.parent.parent.settings;
-    const overrideUrl = settings.getParsedAnyDomainOverrideUrl(u);
+    const overrideUrl = this.settings.getParsedAnyDomainOverrideUrl(u);
     if (overrideUrl) {
       return overrideUrl;
     }
@@ -185,65 +166,47 @@ export const ORG_CACHE = new class extends ContextNode {
     }
     const json = await resp.json() as BlueHqAnyUrlResp;
     const retUrl = new URL(json.orgUrl);
-    this.map().set(u, [{ host: retUrl.host, lastAccess: Date.now() }]);
-    MCP_SERVER_PROVIDER.fireChanged();
+    this.orgCacheMap.set(u, [{ host: retUrl.host, lastAccess: Date.now() }]);
+    this.onChanged?.();
     return retUrl;
   }
 
   /**
-   *
-   * Associates a host with a U value in the cache, and updates the last access time if the host is already present.
-   * 
-   * @param u The U value to associate the host with
-   * @param url the {@link URL} whose host to associate with the U
+   * Associates a host with a U value in the cache.
    */
   public async addHost(u: string, url: URL): Promise<void> {
     this.cleanDuplicates(false);
     const host = url.hostname;
-    if (this.map().has(u)) {
-      const elementArray = this.map().get(u);
+    if (this.orgCacheMap.has(u)) {
+      const elementArray = this.orgCacheMap.get(u);
       if (elementArray) {
         const existingElement = elementArray.find(element => element.host === host);
         if (!existingElement) {
           elementArray.push({ host, lastAccess: Date.now() });
-          await this.map().set(u, elementArray);
-          MCP_SERVER_PROVIDER.fireChanged();
+          await this.orgCacheMap.set(u, elementArray);
+          this.onChanged?.();
         } else {
           existingElement.lastAccess = Date.now();
-          await this.map().set(u, elementArray);
+          await this.orgCacheMap.set(u, elementArray);
         }
         return;
       }
     }
-    await this.map().set(u, [{ host, lastAccess: Date.now() }]);
-    MCP_SERVER_PROVIDER.fireChanged();
+    await this.orgCacheMap.set(u, [{ host, lastAccess: Date.now() }]);
+    this.onChanged?.();
   }
 
   /**
    * Clears the entire cache.
    */
   public async clearCache(): Promise<void> {
-    await this.map().clear();
-    MCP_SERVER_PROVIDER.fireChanged();
-  }
-
-  protected override disposeSelf() {
-    if (this._cleanupTimer) {
-      clearTimeout(this._cleanupTimer);
-      this._cleanupTimer = null;
-    }
+    await this.orgCacheMap.clear();
+    this.onChanged?.();
   }
 
   /**
-   * Finds the U associated with the provided argument if it exists in the cache. 
-   * 
-   * If not, it will attempt call the org to get the U,
-   * then adding the result to the cache before returning it.
-   * @param url The URL or string to find the U for.
-   * @param cacheOnly If true, will only look in the cache and not attempt to call the org.
-   * @throws an {@link TypeError} if the URL is invalid
-   * @throws an {@link Err.OrgWorkerError} if no cached U is found and cacheOnly is true.
-   * @throws an {@link Err.BlueHqHelperEndpointError} if the lookup attempt fails.
+   * Finds the U associated with the provided URL.
+   * If not cached, will attempt to call the org to get the U.
    */
   public async findU(url: string | URL, cacheOnly = false): Promise<string> {
     url = new URL(url);
@@ -253,29 +216,34 @@ export const ORG_CACHE = new class extends ContextNode {
     } else if (cacheOnly) {
       throw new Err.OrgWorkerError(`No cached U found for URL: ${url.toString()}`);
     }
-    const orgWorker = new OrgWorker(url);
+    const orgWorker = new OrgWorker(url, HttpClient.getInstance().fetch.bind(HttpClient.getInstance()));
     const U = await orgWorker.getU();
     await this.addHost(U, url);
     return U;
   }
 
   /**
-   * Finds the U associated with the provided argument if it exists in the cache. 
-   * @throws an {@link TypeError} if the URL is invalid
-   * @returns 
+   * Finds the U associated with the provided URL from cache only.
    */
   public findUCacheOnly(url: URL): string | null {
     url = new URL(url);
     const newHostName = url.hostname;
-    for (const [u, elementArray] of this.map()) {
+    for (const [u, elementArray] of this.orgCacheMap) {
       for (const element of elementArray) {
         if (newHostName === element.host) {
           element.lastAccess = Date.now();
-          this.map().set(u, elementArray);
+          this.orgCacheMap.set(u, elementArray);
           return u;
         }
       }
     }
     return null;
   }
-};
+
+  dispose() {
+    if (this._cleanupTimer) {
+      clearTimeout(this._cleanupTimer);
+      this._cleanupTimer = null;
+    }
+  }
+}

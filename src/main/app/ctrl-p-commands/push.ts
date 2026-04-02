@@ -1,33 +1,30 @@
-import * as path from 'path';
-import * as vscode from 'vscode';
 import type { SourceOps } from '../../../../types';
 import { App } from '../App';
-import { SESSION_MANAGER as SM } from '../b6p_session/SessionManager';
 import { Util } from '../util';
-import { DownstairsUriParser } from '../util/data/DownstairsUrIParser';
-import { ScriptUrlParser } from '../util/data/ScriptUrlParser';
-import { Err } from '../util/Err';
-import { ScriptFactory } from '../util/script/ScriptFactory';
 import { Alert } from '../util/ui/Alert';
-import { ProgressHelper } from '../util/ui/ProgressHelper';
 import { ScriptRoot } from '../util/script/ScriptRoot';
 
 /**
- * Pushes a script to a WebDAV location.
- * @param overrideFormulaUri The URI to override the default formula URI.
- * @param sourceOps The options for oveerriding the source location
- * @returns A promise that resolves when the push is complete.
+ * Pushes a script to a WebDAV location using the platform-agnostic B6PCore.
+ *
+ * @param overrideFormulaUrl The URI to override the default formula URI.
+ * @param sourceOps The options for overriding the source location
+ * @param skipMessage Whether to skip the completion message
+ * @param isSnapshot Whether this is a snapshot push
+ * @param scriptRoot Optional pre-resolved ScriptRoot instance
  */
-export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot, scriptRoot }: { overrideFormulaUrl?: string, sourceOps?: SourceOps, skipMessage?: boolean, isSnapshot?: boolean, scriptRoot?: ScriptRoot; }): Promise<void> {
+export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot, scriptRoot }: {
+  overrideFormulaUrl?: string;
+  sourceOps?: SourceOps;
+  skipMessage?: boolean;
+  isSnapshot?: boolean;
+  scriptRoot?: ScriptRoot;
+}): Promise<void> {
   try {
-    let sr: ScriptRoot;
-    const targetFormulaOverride = overrideFormulaUrl || await vscode.window.showInputBox({ prompt: 'Paste in the target formula URI' });
-    if (targetFormulaOverride === undefined) {
-      Alert.error('No target formula URI provided');
-      return;
-    }
+    // Get the source file path
+    let rootPath: string;
     if (scriptRoot) {
-      sr = scriptRoot;
+      rootPath = scriptRoot.getRootUri().fsPath;
     } else {
       const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
       if (sourceEditorUri === undefined) {
@@ -35,119 +32,23 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
         return;
       }
       App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
-      sr = ScriptFactory.createScriptRoot(sourceEditorUri);
+      rootPath = sourceEditorUri.fsPath;
     }
 
-    const detectedIssues = await sr.preflightCheck();
-    if (detectedIssues) {
-      Alert.popup(detectedIssues);
-      return;
-    }
-    const snList = await sr.getPushableNodes(isSnapshot);
-
-    // Create tasks for progress helper
-    const pushTasks = snList.map(sn => ({
-      execute: () => sn.upload({ upstairsUrlOverrideString: targetFormulaOverride, isSnapshot }),
-      description: `scripts`
-    }));
-
-    await ProgressHelper.withProgress(pushTasks, {
-      title: "Pushing Script...",
-      cleanupMessage: "Cleaning up the upstairs draft folder..."
+    // Use B6PCore for the push operation (handles all business logic)
+    await App.core.push({
+      targetUrl: overrideFormulaUrl, // Will prompt if undefined
+      rootPath,
+      snapshot: isSnapshot ?? false,
     });
 
-    await cleanupUnusedUpstairsPaths(sr.getRootUri(), targetFormulaOverride, isSnapshot);
-
-    if (!skipMessage) {
-      !(App.settings.get("squelch").pushComplete) && Alert.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
+    // Show completion message (unless squelched)
+    if (!skipMessage && !(App.settings.get("squelch").pushComplete)) {
+      Alert.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
     }
   } catch (e) {
-    if (!(e instanceof Err.AlreadyAlertedError)) {
-      Alert.error(`Error pushing files: ${e}`);
-    }
+    Alert.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);
     throw e;
-  }
-}
-
-/**
- * the objective of this function is to remove upstairs paths that no longer have a downstairs counterpart
- * @param downstairsRootFolderUri 
- * @param upstairsRootUrlString 
- */
-async function cleanupUnusedUpstairsPaths(downstairsRootFolderUri?: vscode.Uri, upstairsRootUrlString?: string, isSnapshot: boolean = false): Promise<void> {
-  if (!downstairsRootFolderUri || !upstairsRootUrlString) {
-    throw new Err.CleanupParametersError();
-  }
-  const upstairsObj = new ScriptUrlParser(upstairsRootUrlString);
-  /**
-   * this will give us a list of that are currently present upstairs
-   */
-  const getScriptRet = await upstairsObj.getScript();
-  if (!getScriptRet) {
-    throw new Err.CleanupScriptError();
-  }
-  const rawFilePaths = getScriptRet;
-  const directory = ScriptFactory.createFolder(downstairsRootFolderUri);
-  const flattenedDownstairs = await Util.flattenDirectory(directory);
-  // here's where the clever part comes in. We've just fetched the upstairs paths AFTER we pushed the new stuff.
-  // which gives us the definitive list of what is upstairs and also where they should be located downstairs.
-  // So we simply use what is downstairs as a "source of truth" and then send a webdav DELETE request for
-  // any unmatched brothers.
-
-  const pathsToDelete = new Set<string>();
-  for (const rawFilePath of rawFilePaths) {
-    // note that the only thing with an undefined trailing should be the root itself
-    const curPath = vscode.Uri.joinPath(downstairsRootFolderUri, rawFilePath.trailing || path.sep);
-    const downstairsPath = flattenedDownstairs.find(dp => dp.fsPath === curPath.fsPath);
-    if (!downstairsPath) {
-      // we don't want to delete stuff that is in gitignore
-      const parser = new DownstairsUriParser(downstairsRootFolderUri);
-      const sf = ScriptFactory.createFile(vscode.Uri.joinPath(parser.prependingPathUri(), rawFilePath.downstairsPath), directory.getScriptRoot());
-      if (await sf.isInGitIgnore()) {
-        App.logger.info(`File is in .gitignore; skipping deletion: ${rawFilePath.upstairsPath}`);
-        continue;
-      } else if (!isSnapshot) {
-        const inBuildFolder = await sf.isInItsRespectiveBuildFolder();
-        if (inBuildFolder) {
-          App.logger.info(`File is in build folder; skipping deletion: ${rawFilePath.upstairsPath}`);
-          continue;
-        }
-      } else if (isSnapshot) {
-        //TODO check for snapshot versions to cleanup
-      }
-      
-      // If there's no matching downstairs path, we need to delete the upstairs path
-      App.logger.info(`No matching downstairs path found for upstairs path: ${rawFilePath.upstairsPath}. Deleting upstairs path.`);
-      pathsToDelete.add(rawFilePath.upstairsPath);
-    }
-  }
-
-  if (pathsToDelete.size === 0) {
-    App.logger.info("No unused upstairs paths to delete.");
-    return;
-  }
-
-  const YES_OPTION = "Yes";
-  const NO_OPTION = "No";
-  const prompt = await Alert.prompt(
-    `The following upstairs paths are unused and will be deleted:
-    
-    ${Array.from(pathsToDelete).join('\n')}
-    
-    Do you wish to proceed?`,
-    [YES_OPTION, NO_OPTION]
-  );
-
-  if (prompt !== YES_OPTION) {
-    Alert.info("User chose not to delete unused upstairs paths. Consider cleaning up manually.");
-    return;
-  }
-
-  for (const upstairsPath of pathsToDelete) {
-    App.logger.info("Deleting unused upstairs path:" + upstairsPath);
-    SM.fetch(upstairsPath, {
-      method: "DELETE"
-    });
   }
 }
 

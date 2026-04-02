@@ -1,5 +1,5 @@
 import { Err } from '../Err';
-import { registerSerializable, type SerializableClass } from '../PseudoMaps/Serializable';
+import { registerSerializable, type SerializableClass } from '../../../../core/persistence';
 import type { JsonValue } from '../../../../../types';
 
 const COMPOUND_ID_SEPARATOR = "___";

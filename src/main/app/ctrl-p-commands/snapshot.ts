@@ -2,10 +2,7 @@ import { SourceOps } from "../../../../types";
 import { App } from "../App";
 import { Util } from "../util";
 import { ScriptFactory } from "../util/script/ScriptFactory";
-//import { FileSystem } from "../util/fs/FileSystemFactory";
 import { Alert } from "../util/ui/Alert";
-
-//const fs = FileSystem.getInstance;
 export default async function snapshot({ overrideFormulaUri, sourceOps }: { overrideFormulaUri?: string, sourceOps?: SourceOps } = {}) {
   
   try {

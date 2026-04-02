@@ -2,20 +2,20 @@ import * as assert from 'assert';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { App } from '../../main/app/App';
-import { FileSystem } from '../../main/app/util/fs/FileSystem';
-import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
+import { MockFileSystem } from '../../core/testing/MockFileSystem';
+import { B6PUri } from '../../core/B6PUri';
 import { ScriptFactory } from '../../main/app/util/script/ScriptFactory';
 import { ScriptNode } from '../../main/app/util/script/ScriptNode';
 import { ScriptRoot } from '../../main/app/util/script/ScriptRoot';
 
 suite('ScriptNode Tests', () => {
-  let mockFileSystemProvider: MockFileSystem;
+  let mockFs: MockFileSystem;
   let scriptNode: ScriptNode;
-  let originalLogger: any;
+  let originalLogger: PropertyDescriptor | undefined;
+  let originalCore: PropertyDescriptor | undefined;
 
   suiteSetup(() => {
-    // Enable test mode with mock file system
-    mockFileSystemProvider = FileSystem.enableTestMode();
+    mockFs = new MockFileSystem();
 
     // Mock the App logger by overriding the getter
     const mockLogger = {
@@ -32,19 +32,27 @@ suite('ScriptNode Tests', () => {
       get: () => mockLogger,
       configurable: true
     });
+
+    // Override the core getter to provide our mock fs
+    originalCore = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(App), 'core');
+    Object.defineProperty(App, 'core', {
+      get: () => ({ fs: mockFs }),
+      configurable: true
+    });
   });
 
   suiteTeardown(() => {
-    // Restore production mode and original logger
-    FileSystem.enableProductionMode();
     if (originalLogger) {
       Object.defineProperty(App, 'logger', originalLogger);
+    }
+    if (originalCore) {
+      Object.defineProperty(App, 'core', originalCore);
     }
   });
 
   setup(() => {
     // Clear any previous mock data
-    mockFileSystemProvider.clearMocks();
+    mockFs.clearMocks();
 
     // Create a mock file URI for the RemoteScriptRoot constructor
     // This must match the expected structure: /path/U######/scriptName/(draft|declarations|.b6p_metadata.json)/filename
@@ -55,10 +63,9 @@ suite('ScriptNode Tests', () => {
 
     // Set up some default mock files
     const testContent = Buffer.from('console.log("test");');
-    mockFileSystemProvider.setMockFile(mockChildUri, testContent);
-    mockFileSystemProvider.setMockStat(mockChildUri, {
-      type: vscode.FileType.File,
-      ctime: Date.now(),
+    mockFs.setMockFile(B6PUri.fromFsPath(mockChildUri.fsPath), testContent);
+    mockFs.setMockStat(B6PUri.fromFsPath(mockChildUri.fsPath), {
+      type: 'file',
       mtime: Date.now(),
       size: testContent.length
     });
@@ -101,15 +108,14 @@ suite('ScriptNode Tests', () => {
   suite('File Existence Checks', () => {
     test('should return true when file exists', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
-      const mockStat: vscode.FileStat = {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      const mockStat = {
+        type: 'file' as const,
         mtime: Date.now(),
         size: 100
       };
 
       // Set up mock file stat
-      mockFileSystemProvider.setMockStat(testUri, mockStat);
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), mockStat);
 
       const exists = await scriptNode.exists();
       assert.strictEqual(exists, true);
@@ -117,15 +123,14 @@ suite('ScriptNode Tests', () => {
 
     test('should return true for directory when checking exists', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
-      const mockStat: vscode.FileStat = {
-        type: vscode.FileType.Directory,
-        ctime: Date.now(),
+      const mockStat = {
+        type: 'directory' as const,
         mtime: Date.now(),
         size: 0
       };
 
       // Set up mock directory stat
-      mockFileSystemProvider.setMockStat(testUri, mockStat);
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), mockStat);
 
       const exists = await scriptNode.exists();
       assert.strictEqual(exists, true);
@@ -135,7 +140,7 @@ suite('ScriptNode Tests', () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
 
       // Set up mock to throw error for non-existent file
-      mockFileSystemProvider.setMockError(testUri, new Error('File not found'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('File not found'));
 
       const exists = await scriptNode.exists();
       assert.strictEqual(exists, false);
@@ -234,7 +239,7 @@ suite('ScriptNode Tests', () => {
       const gitIgnoreContent = 'draft/test.js\n*.log\nnode_modules/';
 
       // Set up gitignore file
-      mockFileSystemProvider.setMockFile(gitIgnoreUri, gitIgnoreContent);
+      mockFs.setMockFile(B6PUri.fromFsPath(gitIgnoreUri.fsPath), gitIgnoreContent);
 
       const isInGitIgnore = await scriptNode.isInGitIgnore();
 
@@ -246,7 +251,7 @@ suite('ScriptNode Tests', () => {
       const gitIgnoreContent = 'other.js\n*.log\nnode_modules/';
 
       // Set up gitignore file
-      mockFileSystemProvider.setMockFile(gitIgnoreUri, gitIgnoreContent);
+      mockFs.setMockFile(B6PUri.fromFsPath(gitIgnoreUri.fsPath), gitIgnoreContent);
 
       const isInGitIgnore = await scriptNode.isInGitIgnore();
 
@@ -276,9 +281,8 @@ suite('ScriptNode Tests', () => {
   suite('Copacetic Status', () => {
     test('should return true when file exists', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: 100
       });
@@ -290,7 +294,7 @@ suite('ScriptNode Tests', () => {
 
     test('should return false when file does not exist', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
-      mockFileSystemProvider.setMockError(testUri, new Error('File not found'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('File not found'));
 
       const isCopacetic = await scriptNode.isCopacetic();
 
@@ -329,15 +333,14 @@ suite('ScriptNode Tests', () => {
     test('should get last modified time from file stat', async () => {
       const testTime = Date.now();
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
-      const mockStat: vscode.FileStat = {
-        type: vscode.FileType.File,
-        ctime: testTime - 1000,
+      const mockStat = {
+        type: 'file' as const,
         mtime: testTime,
         size: 100
       };
 
       // Set up mock file stat
-      mockFileSystemProvider.setMockStat(testUri, mockStat);
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), mockStat);
 
       const lastModified = await scriptNode.lastModifiedTime();
       assert.strictEqual(lastModified.getTime(), testTime);
@@ -347,7 +350,7 @@ suite('ScriptNode Tests', () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
 
       // Set up mock to throw error for non-existent file
-      mockFileSystemProvider.setMockError(testUri, new Error('Node not found'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('Node not found'));
 
       await assert.rejects(
         async () => scriptNode.lastModifiedTime(),
@@ -362,10 +365,9 @@ suite('ScriptNode Tests', () => {
     test('should handle concurrent hash calculations', async () => {
       const testContent = 'concurrent test content';
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/concurrent.js');
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(testContent));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(testContent));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: testContent.length
       });
@@ -389,9 +391,8 @@ suite('ScriptNode Tests', () => {
 
     test('should handle concurrent file existence checks', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/existence.js');
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: 100
       });
@@ -419,10 +420,9 @@ suite('ScriptNode Tests', () => {
 
       // Create a large buffer (1MB)
       const largeContent = Buffer.alloc(1024 * 1024, 'a');
-      mockFileSystemProvider.setMockFile(testUri, largeContent);
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), largeContent);
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: largeContent.length
       });
@@ -441,10 +441,9 @@ suite('ScriptNode Tests', () => {
 
       // Create binary content
       const binaryContent = Buffer.from([0x00, 0x01, 0x02, 0xFF, 0xFE, 0xFD]);
-      mockFileSystemProvider.setMockFile(testUri, binaryContent);
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), binaryContent);
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: binaryContent.length
       });
@@ -463,10 +462,9 @@ suite('ScriptNode Tests', () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/empty.js');
       const emptyContent = Buffer.alloc(0);
 
-      mockFileSystemProvider.setMockFile(testUri, emptyContent);
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), emptyContent);
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: 0
       });
@@ -482,10 +480,9 @@ suite('ScriptNode Tests', () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/unicode.js');
       const unicodeContent = 'console.log("Hello 世界 🌍 αβγ");';
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(unicodeContent, 'utf8'));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(unicodeContent, 'utf8'));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: Buffer.from(unicodeContent, 'utf8').length
       });
@@ -501,10 +498,9 @@ suite('ScriptNode Tests', () => {
       const longPath = '/test/workspace/U100001/1466960/draft/' + 'a'.repeat(200) + '.js';
       const testUri = vscode.Uri.parse('file://' + longPath);
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from('test'));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from('test'));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: 4
       });
@@ -522,10 +518,9 @@ suite('ScriptNode Tests', () => {
         encodeURIComponent(specialFileName)
       );
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from('test'));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from('test'));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: 4
       });
@@ -541,10 +536,9 @@ suite('ScriptNode Tests', () => {
   suite('Performance and Stress Testing', () => {
     test('should handle rapid successive operations', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/rapid.js');
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from('rapid test'));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from('rapid test'));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: 10
       });
@@ -574,10 +568,9 @@ suite('ScriptNode Tests', () => {
 
     test('should handle multiple ScriptNode instances for same file', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/shared.js');
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from('shared content'));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from('shared content'));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: 14
       });
@@ -613,10 +606,9 @@ suite('ScriptNode Tests', () => {
       // Create and destroy many ScriptNode instances
       for (let cycle = 0; cycle < 20; cycle++) {
         const testUri = vscode.Uri.parse(`file:///test/workspace/U100001/1466960/draft/cycle${cycle}.js`);
-        mockFileSystemProvider.setMockFile(testUri, Buffer.from(`cycle ${cycle}`));
-        mockFileSystemProvider.setMockStat(testUri, {
-          type: vscode.FileType.File,
-          ctime: Date.now(),
+        mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(`cycle ${cycle}`));
+        mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+          type: 'file',
           mtime: Date.now(),
           size: 10
         });
@@ -640,10 +632,9 @@ suite('ScriptNode Tests', () => {
         data: new Array(1000).fill(0).map((_, i) => ({ id: i, value: `item${i}` }))
       });
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(largeContent));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(largeContent));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: largeContent.length
       });
@@ -664,10 +655,9 @@ suite('ScriptNode Tests', () => {
       const testContent = 'console.log("hash test");';
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/hash-test.js');
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(testContent));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(testContent));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: testContent.length
       });
@@ -683,7 +673,7 @@ suite('ScriptNode Tests', () => {
 
     test('should throw error when calculating hash for non-existent file', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/nonexistent.js');
-      mockFileSystemProvider.setMockError(testUri, new Error('File not found'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('File not found'));
 
       const scriptFile = ScriptFactory.createFile(testUri);
 
@@ -699,17 +689,15 @@ suite('ScriptNode Tests', () => {
       const testUri1 = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/identical1.js');
       const testUri2 = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/identical2.js');
 
-      mockFileSystemProvider.setMockFile(testUri1, Buffer.from(testContent));
-      mockFileSystemProvider.setMockFile(testUri2, Buffer.from(testContent));
-      mockFileSystemProvider.setMockStat(testUri1, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri1.fsPath), Buffer.from(testContent));
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri2.fsPath), Buffer.from(testContent));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri1.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: testContent.length
       });
-      mockFileSystemProvider.setMockStat(testUri2, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri2.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: testContent.length
       });
@@ -729,17 +717,15 @@ suite('ScriptNode Tests', () => {
       const testUri1 = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/different1.js');
       const testUri2 = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/different2.js');
 
-      mockFileSystemProvider.setMockFile(testUri1, Buffer.from(testContent1));
-      mockFileSystemProvider.setMockFile(testUri2, Buffer.from(testContent2));
-      mockFileSystemProvider.setMockStat(testUri1, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri1.fsPath), Buffer.from(testContent1));
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri2.fsPath), Buffer.from(testContent2));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri1.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: testContent1.length
       });
-      mockFileSystemProvider.setMockStat(testUri2, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri2.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: testContent2.length
       });
@@ -996,10 +982,9 @@ suite('ScriptNode Tests', () => {
       const fileUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
       const fileContent = Buffer.from('test content');
 
-      mockFileSystemProvider.setMockFile(fileUri, fileContent);
-      mockFileSystemProvider.setMockStat(fileUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(fileUri.fsPath), fileContent);
+      mockFs.setMockStat(B6PUri.fromFsPath(fileUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: fileContent.length
       });
@@ -1016,11 +1001,12 @@ suite('ScriptNode Tests', () => {
     test('should detect folder type correctly', async () => {
       const folderUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/scripts');
 
-      // Set up directory with proper error for readFile
-      mockFileSystemProvider.setMockDirectory(folderUri);
-      const dirError = new vscode.FileSystemError('File is a directory');
-      (dirError as any).code = 'FileIsADirectory';
-      mockFileSystemProvider.setMockError(folderUri, dirError);
+      // Set up directory stat
+      mockFs.setMockStat(B6PUri.fromFsPath(folderUri.fsPath), {
+        type: 'directory',
+        mtime: Date.now(),
+        size: 0,
+      });
 
       const scriptNode = ScriptFactory.createNode(folderUri);
 
@@ -1037,20 +1023,19 @@ suite('ScriptNode Tests', () => {
     test('should return stat for existing file', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
       const testTime = Date.now();
-      const mockStat: vscode.FileStat = {
-        type: vscode.FileType.File,
-        ctime: testTime - 1000,
+      const mockStat = {
+        type: 'file' as const,
         mtime: testTime,
         size: 100
       };
 
-      mockFileSystemProvider.setMockStat(testUri, mockStat);
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), mockStat);
 
       const scriptNode = ScriptFactory.createNode(testUri);
       const stat = await scriptNode.stat();
 
       assert.ok(stat, 'Stat should not be null');
-      assert.strictEqual(stat?.type, vscode.FileType.File, 'Type should be File');
+      assert.strictEqual(stat?.type, 'file', 'Type should be File');
       assert.strictEqual(stat?.size, 100, 'Size should match');
       assert.strictEqual(stat?.mtime, testTime, 'Modified time should match');
     });
@@ -1058,7 +1043,7 @@ suite('ScriptNode Tests', () => {
     test('should return null stat for non-existent file', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/nonexistent.js');
 
-      mockFileSystemProvider.setMockError(testUri, new Error('File not found'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('File not found'));
 
       const scriptNode = ScriptFactory.createNode(testUri);
       const stat = await scriptNode.stat();
@@ -1070,7 +1055,7 @@ suite('ScriptNode Tests', () => {
       const testContent = 'test file content';
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(testContent));
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(testContent));
 
       const scriptNode = ScriptFactory.createNode(testUri);
       const contents = await scriptNode.readContents();
@@ -1084,10 +1069,9 @@ suite('ScriptNode Tests', () => {
       const testContent = 'const x = "hello world";';
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(testContent));
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(testContent));
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: testContent.length
       });
@@ -1101,7 +1085,7 @@ suite('ScriptNode Tests', () => {
     test('should throw error when reading non-existent file content', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/nonexistent.js');
 
-      mockFileSystemProvider.setMockError(testUri, new Error('File not found'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('File not found'));
 
       const scriptFile = ScriptFactory.createFile(testUri);
 
@@ -1207,7 +1191,7 @@ suite('ScriptNode Tests', () => {
   suite('ScriptNode Error Handling for Missing Files', () => {
     test('should handle stat error gracefully', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/error.js');
-      mockFileSystemProvider.setMockError(testUri, new Error('Permission denied'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('Permission denied'));
 
       const scriptNode = ScriptFactory.createNode(testUri);
       const stat = await scriptNode.stat();
@@ -1217,7 +1201,7 @@ suite('ScriptNode Tests', () => {
 
     test('should throw NodeNotFoundError for lastModifiedTime of non-existent file', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/missing.js');
-      mockFileSystemProvider.setMockError(testUri, new Error('File not found'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('File not found'));
 
       const scriptNode = ScriptFactory.createNode(testUri);
 
@@ -1230,14 +1214,14 @@ suite('ScriptNode Tests', () => {
 
     test('should handle file system errors during isFolder check', async () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/test.js');
-      mockFileSystemProvider.setMockError(testUri, new Error('Unknown error'));
+      mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error('Unknown error'));
 
       const scriptNode = ScriptFactory.createNode(testUri);
 
       await assert.rejects(
         async () => await scriptNode.isFolder(),
-        /FileSystemError/,
-        'Should throw FileSystemError for unknown errors'
+        /Unknown error/,
+        'Should propagate stat error from isFolder'
       );
     });
   });
@@ -1252,11 +1236,10 @@ suite('ScriptNode Tests', () => {
       // Use exact path pattern like the existing tests do
       const gitIgnoreContent = 'draft/ignored.log\n*.log\nnode_modules/';
 
-      mockFileSystemProvider.setMockFile(gitIgnoreUri, gitIgnoreContent);
-      mockFileSystemProvider.setMockFile(testUri, 'log content');
-      mockFileSystemProvider.setMockStat(testUri, {
-        type: vscode.FileType.File,
-        ctime: Date.now(),
+      mockFs.setMockFile(B6PUri.fromFsPath(gitIgnoreUri.fsPath), gitIgnoreContent);
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), 'log content');
+      mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), {
+        type: 'file',
         mtime: Date.now(),
         size: 11
       });
@@ -1274,7 +1257,7 @@ suite('ScriptNode Tests', () => {
       const testContent = 'const x = 42;';
       const buffer = Buffer.from(testContent).buffer;
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(buffer));
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(buffer));
 
       const scriptNode = ScriptFactory.createNode(testUri);
       await scriptNode.writeContent(buffer);
@@ -1287,7 +1270,7 @@ suite('ScriptNode Tests', () => {
       const testUri = vscode.Uri.parse('file:///test/workspace/U100001/1466960/draft/empty.js');
       const emptyBuffer = new ArrayBuffer(0);
 
-      mockFileSystemProvider.setMockFile(testUri, Buffer.from(emptyBuffer));
+      mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(emptyBuffer));
 
       const scriptNode = ScriptFactory.createNode(testUri);
       await scriptNode.writeContent(emptyBuffer);

@@ -1,28 +1,28 @@
-import * as vscode from "vscode";
+import type { IPersistence } from "../providers";
 import { PersistablePseudoMap } from "./PersistablePseudoMap";
 import { Persistable } from "./Persistable";
 import { PrivateKeys } from "./PersistenceKeys";
 import type { Serializable } from "./Serializable";
 import { revive } from "./Serializable";
-import { Err } from "../Err";
+import { Err } from '../../main/app/util/Err';
 
 /**
- * A persistable map that uses the vscode secret storage to persist data.
+ * A persistable map that uses the IPersistence interface for secret storage.
  * Data loaded is not immediately available upon construction, so any crucial data
  * you'll need to wait until `isInitialized()` returns true.
  */
 export class PrivateGenericMap<T extends Serializable> extends PersistablePseudoMap<T> implements Persistable {
 
   protected initialized: boolean = false;
-  
+
   /**
-   * Creates an instance of PrivatePersistanceMap. 
+   * Creates an instance of PrivatePersistanceMap.
    * @param key The key used for persisting the map.
-   * @param context The context in which to persist the map.
+   * @param persistence The persistence provider.
    */
-  constructor(key: PrivateKeys, context: vscode.ExtensionContext) {
-    super(key, context);
-    this.context.secrets.get(this.key).then(jsonString => {
+  constructor(key: PrivateKeys, persistence: IPersistence) {
+    super(key, persistence);
+    this.persistence.getSecret(this.key).then(jsonString => {
       this.obj = revive(JSON.parse(jsonString || '{}'));
       this.initialized = true;
     });
@@ -37,48 +37,48 @@ export class PrivateGenericMap<T extends Serializable> extends PersistablePseudo
     }
   }
 
-  
+
   override get(key: string): T | undefined {
     this.requiresInit();
     return super.get(key);
   }
 
-  
+
   override has(key: string): boolean {
     this.requiresInit();
     return super.has(key);
   }
 
-  
+
   override async set(key: string, value: T) {
     this.requiresInit();
     super.set(key, value);
     return await this.store();
   }
 
-  
+
   override forEach(callback: (value: T, key: string, map: this) => void): void {
     this.requiresInit();
     super.forEach(callback);
   }
 
-  
+
   override delete(key: string) {
     this.requiresInit();
     super.delete(key);
     return this.store();
   }
 
-  
+
   override async clear() {
     this.requiresInit();
     super.clear();
     return await this.store();
   }
 
-  
+
   override store(): Thenable<void> {
     this.requiresInit();
-    return this.context.secrets.store(this.key, JSON.stringify(this.obj));
+    return this.persistence.setSecret(this.key, JSON.stringify(this.obj));
   }
 }

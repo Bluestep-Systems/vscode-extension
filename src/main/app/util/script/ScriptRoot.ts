@@ -4,23 +4,20 @@ import { Util } from '..';
 import { ScriptMetaData } from '../../../../../types';
 import { FileExtensions, FolderNames, SpecialFiles } from '../../../resources/constants';
 import { App } from '../../App';
-import { ORG_CACHE as OC } from '../../cache/OrgCache';
-import { SCRIPT_METADATA_STORE as MDS } from '../../cache/ScriptMetaDataStore';
 import pushCurrent from '../../ctrl-p-commands/pushCurrent';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
-import { OrgWorker } from '../data/OrgWorker';
+import { OrgWorker } from '../../../../core/data/OrgWorker';
 import { ScriptKey } from '../data/ScriptKey';
-import { ScriptUrlParser } from '../data/ScriptUrlParser';
+import { ScriptUrlParser } from '../../../../core/data/ScriptUrlParser';
 import { Err } from '../Err';
-import { FileSystem } from '../fs/FileSystem';
 import { ScriptFactory } from './ScriptFactory';
+import { B6PUri } from '../../../../core/B6PUri';
 import { ScriptFile } from './ScriptFile';
 import type { ScriptFolder } from './ScriptFolder';
 import { ScriptNode } from './ScriptNode';
 import { SnapshotHistoryRecorder } from './SnapshotHistoryRecorder';
 import { ScriptTranspiler } from './ScriptTranspiler';
 import { TsConfig } from './TsConfig';
-const fs = FileSystem.getInstance;
 
 /**
  * Object representing the root of an individual script on the filesystem.
@@ -96,7 +93,7 @@ export class ScriptRoot {
     const pathU = this.getUFromPath();
     const pathScriptName = this.getScriptNameFromPath();
 
-    let entry = MDS.findByScriptName(pathU, pathScriptName);
+    let entry = App.scriptMetadataStore.findByScriptName(pathU, pathScriptName);
 
     if (!entry) {
       if (this.scriptParser !== null) {
@@ -117,7 +114,7 @@ export class ScriptRoot {
       callBack(entry);
     }
 
-    await MDS.upsert(entry);
+    await App.scriptMetadataStore.upsert(entry);
     return entry;
   }
 
@@ -131,7 +128,7 @@ export class ScriptRoot {
   public async getMetaData(): Promise<ScriptMetaData | null> {
     const pathU = this.getUFromPath();
     const pathScriptName = this.getScriptNameFromPath();
-    return MDS.findByScriptName(pathU, pathScriptName) || null;
+    return App.scriptMetadataStore.findByScriptName(pathU, pathScriptName) || null;
   }
 
   /**
@@ -146,13 +143,14 @@ export class ScriptRoot {
     const gitIgnoreUri = this.getGitIgnoreFileUri();
     let currentContents: string[] = [];
     let modified = false;
+    const b6pGitIgnoreUri = B6PUri.fromFsPath(gitIgnoreUri.fsPath);
     try {
       try {
-        await fs().stat(gitIgnoreUri);
+        await App.core.fs.stat(b6pGitIgnoreUri);
       } catch (e) {
         throw new Err.FileNotFoundError("Gitignore file does not exist at: `" + gitIgnoreUri.fsPath + "`");
       }
-      const fileContents = await fs().readFile(gitIgnoreUri);
+      const fileContents = await App.core.fs.readFile(b6pGitIgnoreUri);
       const fileString = Buffer.from(fileContents).toString('utf-8');
       currentContents = fileString.split(/\r?\n/).map(line => line.trim()).filter(line => line.length > 0);
     } catch (e) {
@@ -173,7 +171,7 @@ export class ScriptRoot {
       Util.isDeepEqual(preModified, currentContents) || (modified = true);
     }
     if (modified) {
-      await fs().writeFile(this.getGitIgnoreFileUri(), Buffer.from(currentContents.join("\n") + "\n"));
+      await App.core.fs.writeFile(B6PUri.fromFsPath(this.getGitIgnoreFileUri().fsPath), Buffer.from(currentContents.join("\n") + "\n"));
     }
     return currentContents;
   }
@@ -250,7 +248,7 @@ export class ScriptRoot {
     }
     try {
       // this will fail if there is no webdavId.
-      this.scriptParser = new ScriptUrlParser((await this.getBaseWebDavUrl()).toString());
+      this.scriptParser = new ScriptUrlParser((await this.getBaseWebDavUrl()).toString(), App.sessionManager, App.core.logger, App.core.prompt);
       const key = await this.scriptParser.getScriptBaseKey();
       await this.modifyMetaData(meta => {
         meta.scriptKey = key;
@@ -280,7 +278,7 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-15
    */
   public async anyOrigin() {
-    return await OC.getAnyBaseUrl(await this.getU());
+    return await App.orgCache.getAnyBaseUrl(await this.getU());
   }
 
   public getAsFolder(): ScriptFolder {
@@ -362,17 +360,13 @@ export class ScriptRoot {
    * @lastreviewed 2025-10-01
    */
   public async deleteBuildFolder() {
-    try {
-      return await fs().delete(await this.getDraftBuildFolder(), { recursive: true });
-    } catch (error) {
-      // Ignore FileNotFound errors - the folder doesn't exist, which is fine
-      if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') {
-        console.log("Build folder doesn't exist (this is fine)");
-        return;
-      }
-      // Re-throw other unknown errors (like permission issues)
-      throw error;
+    const buildFolder = await this.getDraftBuildFolder();
+    const buildUri = B6PUri.fromFsPath(buildFolder.uri().fsPath);
+    if (!(await App.core.fs.exists(buildUri))) {
+      console.log("Build folder doesn't exist (this is fine)");
+      return;
     }
+    await App.core.fs.delete(buildUri, { recursive: true });
   }
 
   /**

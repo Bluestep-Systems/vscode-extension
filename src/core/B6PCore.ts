@@ -2,9 +2,9 @@ import * as crypto from 'crypto';
 import * as path from 'path';
 import { BasicAuthProvider } from './auth/BasicAuthProvider';
 import { B6PUri } from './B6PUri';
-import { CoreScriptUrlParser } from './data/CoreScriptUrlParser';
+import { ScriptUrlParser } from './data/ScriptUrlParser';
 import { DownstairsPathParser } from './data/DownstairsPathParser';
-import { CoreSessionManager } from './session/CoreSessionManager';
+import { SessionManager } from './session/SessionManager';
 import type { B6PProviders, IFileSystem, ILogger, IPersistence, IProgress, IPrompt } from './providers';
 import { executePush } from './push';
 
@@ -42,7 +42,7 @@ export class B6PCore {
   readonly progress: IProgress;
 
   readonly auth: BasicAuthProvider;
-  readonly session: CoreSessionManager;
+  readonly session: SessionManager;
 
   constructor(providers: B6PProviders) {
     this.fs = providers.fs;
@@ -52,14 +52,14 @@ export class B6PCore {
     this.progress = providers.progress;
 
     this.auth = new BasicAuthProvider(this.persistence, this.prompt, this.logger);
-    this.session = new CoreSessionManager(this.persistence, this.auth, this.logger, this.prompt);
+    this.session = new SessionManager(this.persistence, this.logger, this.auth, () => false, this.prompt);
   }
 
   /**
-   * Create a CoreScriptUrlParser wired to this core's session and logger.
+   * Create a ScriptUrlParser wired to this core's session and logger.
    */
-  private createParser(url: string): CoreScriptUrlParser {
-    return new CoreScriptUrlParser(url, this.session, this.logger, this.prompt);
+  private createParser(url: string): ScriptUrlParser {
+    return new ScriptUrlParser(url, this.session, this.logger, this.prompt);
   }
 
   /**

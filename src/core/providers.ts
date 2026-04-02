@@ -19,6 +19,18 @@ export interface IFileSystem {
   copy(source: B6PUri, target: B6PUri, options?: { overwrite?: boolean }): Promise<void>;
   rename(source: B6PUri, target: B6PUri, options?: { overwrite?: boolean }): Promise<void>;
   findFiles(base: B6PUri, include: string, exclude?: string): Promise<B6PUri[]>;
+
+  /**
+   * Walk up from `startUri` looking for a sibling file named `fileName`.
+   * Returns the URI of the first match, or `null` if none found within `maxDepth` levels.
+   */
+  closest(startUri: B6PUri, fileName: string, maxDepth?: number): Promise<B6PUri | null>;
+
+  /**
+   * Check whether a URI scheme supports write operations.
+   * Returns `true` if writable, `false` if read-only, `undefined` if unknown.
+   */
+  isWritableFileSystem(scheme: string): boolean | undefined;
 }
 
 // ── Persistence ─────────────────────────────────────────────────────
@@ -64,6 +76,13 @@ export interface IPrompt {
   warn(message: string): void;
   /** Error message (non-blocking). */
   error(message: string): void;
+}
+
+// ── Authentication ─────────────────────────────────────────────────
+
+export interface IAuth {
+  /** Returns the value for the HTTP Authorization header. */
+  authHeaderValue(): Promise<string>;
 }
 
 // ── Logging ─────────────────────────────────────────────────────────

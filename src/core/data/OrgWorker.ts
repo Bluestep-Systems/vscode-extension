@@ -2,12 +2,11 @@ import { ApiEndpoints, Http } from '../../main/resources/constants';
 import { Err } from '../../main/app/util/Err';
 
 /**
- * Core-layer helper for fetching organization info from a URL.
+ * Helper class for getting info from the org associated with a given URL.
  *
- * Replaces the original `OrgWorker` which used the `HttpClient` singleton.
- * This version takes a `fetch` function parameter instead.
+ * Takes a `fetch` function parameter for environment-agnostic HTTP access.
  */
-export class CoreOrgWorker {
+export class OrgWorker {
 
   private _U: string | null = null;
 
@@ -43,12 +42,12 @@ export class CoreOrgWorker {
   static fromHost(
     host: string,
     fetchFn: (url: string | URL, init?: RequestInit) => Promise<Response>,
-  ): CoreOrgWorker {
+  ): OrgWorker {
     const VALID_HOST_REGEX = /^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)?$/;
     if (!VALID_HOST_REGEX.test(host)) {
       throw new Err.OrgWorkerError(`Invalid host: ${host}`);
     }
     const url = new URL(`${Http.Schemes.HTTPS}${host}`);
-    return new CoreOrgWorker(url, fetchFn);
+    return new OrgWorker(url, fetchFn);
   }
 }

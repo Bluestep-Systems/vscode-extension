@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import { ScriptMetaData } from "../../../../types";
-import { ContextNode } from "../context/ContextNode";
+import type { ScriptMetaData } from "../../../../types";
 import { PublicKeys, PublicPersistanceMap } from "../util/PseudoMaps";
 import { ScriptKey } from "../util/data/ScriptKey";
+import type { IPersistence } from "../../../core/providers";
 
 const STORE_KEY = "all";
 const LEGACY_METADATA_FILENAME = ".b6p_metadata.json";
@@ -10,24 +10,29 @@ const LEGACY_METADATA_FILENAME = ".b6p_metadata.json";
 /**
  * Persistent store for script metadata, replacing the old `.b6p_metadata.json` files.
  *
- * Stores an array of {@link ScriptMetaData} objects in VS Code workspace state.
+ * Stores an array of {@link ScriptMetaData} objects in workspace state via persistence provider.
  * Lookup is done by U + webdavId or U + scriptName depending on what is available.
+ * @lastreviewed null
  */
-export const SCRIPT_METADATA_STORE = new class extends ContextNode {
-  private _parent: ContextNode | null = null;
-  private _map: PublicPersistanceMap<ScriptMetaData[]> | null = null;
+export class ScriptMetaDataStore {
+  private readonly metadataMap: PublicPersistanceMap<ScriptMetaData[]>;
 
-  init(parent: ContextNode): this {
-    this._parent = parent;
-    this._map = new PublicPersistanceMap(PublicKeys.SCRIPT_METADATA, this.context);
+  /**
+   * Creates a new ScriptMetaDataStore.
+   *
+   * @param persistence The persistence provider for storing metadata
+   * @lastreviewed null
+   */
+  constructor(persistence: IPersistence) {
+    this.metadataMap = new PublicPersistanceMap(PublicKeys.SCRIPT_METADATA, persistence);
     this.migrateLegacyFiles();
-    return this;
   }
 
   /**
    * Searches the workspace for any legacy `.b6p_metadata.json` files,
    * migrates their contents into the persistent store, and deletes them.
    * Runs asynchronously on startup; failures are logged but do not block initialization.
+   * @lastreviewed null
    */
   private async migrateLegacyFiles(): Promise<void> {
     try {
@@ -76,29 +81,11 @@ export const SCRIPT_METADATA_STORE = new class extends ContextNode {
     }
   }
 
-  public get parent(): ContextNode {
-    if (!this._parent) {
-      throw new Error("ScriptMetaDataStore not initialized; call init() first.");
-    }
-    return this._parent;
-  }
-
-  public get context() {
-    return this.parent.context;
-  }
-
-  protected map(): PublicPersistanceMap<ScriptMetaData[]> {
-    if (!this._map) {
-      throw new Error("ScriptMetaDataStore not initialized; call init() first.");
-    }
-    return this._map;
-  }
-
   /**
    * Gets all stored metadata entries.
    */
   public all(): ScriptMetaData[] {
-    return this.map().get(STORE_KEY) || [];
+    return this.metadataMap.get(STORE_KEY) || [];
   }
 
   /**
@@ -139,7 +126,7 @@ export const SCRIPT_METADATA_STORE = new class extends ContextNode {
     } else {
       entries.push(metadata);
     }
-    await this.map().set(STORE_KEY, entries);
+    await this.metadataMap.set(STORE_KEY, entries);
   }
 
   /**
@@ -174,6 +161,6 @@ export const SCRIPT_METADATA_STORE = new class extends ContextNode {
    */
   public async remove(U: string, webdavId: string): Promise<void> {
     const entries = this.all().filter(m => !(m.U === U && m.webdavId === webdavId));
-    await this.map().set(STORE_KEY, entries);
+    await this.metadataMap.set(STORE_KEY, entries);
   }
-}();
+}

@@ -1,6 +1,6 @@
 import { PseudoMap } from "./PseudoMap";
 import type { Serializable } from "./Serializable";
-import { Err } from "../Err";
+import { Err } from "../../main/app/util/Err";
 
 /**
  * A typed map that ensures type safety for object property access with string keys.

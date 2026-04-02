@@ -2,13 +2,9 @@ import * as path from 'path';
 import { Http } from '../../../resources/constants';
 import { MimeTypes } from '../../../resources/constants/MimeTypes';
 import { App } from '../../App';
-import { BASIC_AUTH_MANAGER } from '../../authentication/BasicAuthManager';
-import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { Err } from '../Err';
-import { FileSystem } from '../fs/FileSystem';
+import { B6PUri } from '../../../../core/B6PUri';
 import type { ScriptRoot } from './ScriptRoot';
-
-const fs = FileSystem.getInstance;
 
 /**
  * Text file extensions that should have their content included in history snapshots.
@@ -65,7 +61,7 @@ export class SnapshotHistoryRecorder {
 
     App.logger.info(`Recording snapshot history for ${scriptKey.toCompoundId()}`);
 
-    const response = await SM.csrfFetch(gqlUrl, {
+    const response = await App.sessionManager.csrfFetch(gqlUrl, {
       method: Http.Methods.POST,
       headers: {
         [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
@@ -91,7 +87,7 @@ export class SnapshotHistoryRecorder {
    */
   private static async getAuthor(): Promise<string> {
     try {
-      const auth = await BASIC_AUTH_MANAGER.getAuthObject(undefined, false);
+      const auth = await App.authManager.getAuthObject(undefined, false);
       return auth.sObj.username;
     } catch {
       return 'unknown';
@@ -122,7 +118,7 @@ export class SnapshotHistoryRecorder {
         const ext = path.extname(node.path()).toLowerCase();
         if (TEXT_EXTENSIONS.has(ext)) {
           try {
-            const bytes = await fs().readFile(node.uri());
+            const bytes = await App.core.fs.readFile(B6PUri.fromFsPath(node.uri().fsPath));
             const content = Buffer.from(bytes).toString('utf-8');
             settings[relativePath] = { content };
           } catch (e) {

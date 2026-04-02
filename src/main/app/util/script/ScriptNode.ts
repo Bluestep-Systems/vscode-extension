@@ -1,11 +1,9 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { FolderNames, Http } from '../../../resources/constants';
-import { SESSION_MANAGER as SM } from '../../b6p_session/SessionManager';
 import { DownstairsUriParser } from '../data/DownstairsUrIParser';
 import { GlobMatcher } from '../data/GlobMatcher';
 import { Err } from '../Err';
-import { FileSystem } from '../fs/FileSystem';
 import { ResponseCodes } from '../network/StatusCodes';
 import { ScriptPathElement } from './PathElement';
 import { ScriptFactory } from './ScriptFactory';
@@ -13,8 +11,9 @@ import { ScriptFolder } from './ScriptFolder';
 import { ScriptRoot } from './ScriptRoot';
 import { TsConfig } from './TsConfig';
 import { App } from '../../App';
-import { ScriptUrlParser } from '../data/ScriptUrlParser';
-const fs = FileSystem.getInstance;
+import { ScriptUrlParser } from '../../../../core/data/ScriptUrlParser';
+import { B6PUri } from '../../../../core/B6PUri';
+import type { FileStat } from '../../../../core/providers';
 
 /**
  * A class representing a file or folder element of a script.
@@ -84,7 +83,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async getUpstairsLastModified(): Promise<Date> {
 
-    const response = await SM.fetch(await this.upstairsUrl(), {
+    const response = await App.sessionManager.fetch(await this.upstairsUrl(), {
       method: Http.Methods.HEAD
     });
     const lastModifiedHeaderValue = response.headers.get("Last-Modified");
@@ -101,7 +100,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @lastreviewed 2025-09-15
    */
   public async getUpstairsContent(): Promise<string> {
-    const response = await SM.fetch(await this.upstairsUrl(), {
+    const response = await App.sessionManager.fetch(await this.upstairsUrl(), {
       method: Http.Methods.GET,
       headers: {
         [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
@@ -118,8 +117,12 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @param buffer The binary content to write to the file
    * @lastreviewed 2025-09-29
    */
+  private b6pUri(): B6PUri {
+    return B6PUri.fromFsPath(this.uri().fsPath);
+  }
+
   public async writeContent(buffer: ArrayBuffer) {
-    await fs().writeFile(this.uri(), Buffer.from(buffer));
+    await App.core.fs.writeFile(this.b6pUri(), Buffer.from(buffer));
   }
 
   /**
@@ -131,7 +134,7 @@ export abstract class ScriptNode implements ScriptPathElement {
       return this._exists;
     }
     try {
-      await fs().stat(this.uri());
+      await App.core.fs.stat(this.b6pUri());
       this._exists = true;
       return true;
     } catch (e) {
@@ -141,12 +144,12 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   /**
-   * Produces the {@link vscode.FileStat} of the underlaying file, or `null` if it doesn't exist.
+   * Produces the {@link FileStat} of the underlying file, or `null` if it doesn't exist.
    * @lastreviewed 2025-09-29
    */
-  public async stat(): Promise<vscode.FileStat | null> {
+  public async stat(): Promise<FileStat | null> {
     try {
-      return await fs().stat(this.uri());
+      return await App.core.fs.stat(this.b6pUri());
     } catch (e) {
       return null;
     }
@@ -304,14 +307,16 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @returns The {@link vscode.Uri} of the closest tsconfig.json file
    */
   private async getClosestTsConfigUri() {
-    return await fs().closest(this.uri(), TsConfig.NAME);
+    const result = await App.core.fs.closest(this.b6pUri(), TsConfig.NAME);
+    return result ? vscode.Uri.file(result.fsPath) : null;
   }
 
   /**
    * Gets the closest uri with the given name in the current folder or any parent folder.
    */
-  public closest(name: string) {
-    return fs().closest(this.uri(), name);
+  public async closest(name: string) {
+    const result = await App.core.fs.closest(this.b6pUri(), name);
+    return result ? vscode.Uri.file(result.fsPath) : null;
   }
 
   /**
@@ -376,16 +381,8 @@ export abstract class ScriptNode implements ScriptPathElement {
    * @returns Whether the current node is a folder
    */
   public async isFolder() {
-    try {
-      await fs().readFile(this.uri());
-      return false;
-    } catch (e) {
-      if (e instanceof vscode.FileSystemError && e.code === 'FileIsADirectory') {
-        return true;
-      } else {
-        throw new Err.FileSystemError(`Error determining if path is folder: ${e}`);
-      }
-    }
+    const stat = await App.core.fs.stat(this.b6pUri());
+    return stat.type === 'directory';
   }
 
   /**
@@ -423,7 +420,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    * Gets the contents of the current node as a byte array.
    */
   public async readContents(): Promise<Uint8Array<ArrayBufferLike>> {
-    return await fs().readFile(this.uri());
+    return await App.core.fs.readFile(this.b6pUri());
   }
 
   /**
@@ -436,7 +433,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     if (!(await this.isCopacetic())) {
       throw new Err.ScriptNotCopaceticError();
     }
-    await fs().copy(this.uri(), uri, { overwrite: true });
+    await App.core.fs.copy(this.b6pUri(), B6PUri.fromFsPath(uri.fsPath), { overwrite: true });
   }
 
   /**
@@ -446,7 +443,7 @@ export abstract class ScriptNode implements ScriptPathElement {
    */
   public async delete(): Promise<void> {
     if (await this.isCopacetic()) {
-      await fs().delete(this, { recursive: true });
+      await App.core.fs.delete(this.b6pUri(), { recursive: true });
     } else {
       throw new Err.ScriptNotCopaceticError();
     }
@@ -473,7 +470,7 @@ export abstract class ScriptNode implements ScriptPathElement {
     }
     const parent = vscode.Uri.joinPath(this.uri(), "..");
     const newUri = vscode.Uri.joinPath(parent, newName);
-    await fs().rename(this.uri(), newUri);
+    await App.core.fs.rename(B6PUri.fromFsPath(this.uri().fsPath), B6PUri.fromFsPath(newUri.fsPath));
   }
 }
 

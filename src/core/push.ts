@@ -4,7 +4,7 @@ import { FolderNames, Http, MimeTypes, SpecialFiles } from '../main/resources/co
 import { Err } from '../main/app/util/Err';
 import { B6PUri } from './B6PUri';
 import { GlobMatcher } from './data/GlobMatcher';
-import type { CoreSessionManager } from './session/CoreSessionManager';
+import type { SessionManager } from './session/SessionManager';
 import type { IFileSystem, ILogger, IProgress, IPrompt, ProgressTask } from './providers';
 
 interface PushableFile {
@@ -123,7 +123,7 @@ export async function executePush(opts: {
   targetUrl: string;
   rootPath: string;
   snapshot: boolean;
-  session: CoreSessionManager;
+  session: SessionManager;
   fs: IFileSystem;
   prompt: IPrompt;
   logger: ILogger;
@@ -250,7 +250,7 @@ async function cleanupUnusedUpstairsPaths(opts: {
   rootPath: string;
   draftPath: string;
   snapshot: boolean;
-  session: CoreSessionManager;
+  session: SessionManager;
   fs: IFileSystem;
   prompt: IPrompt;
   logger: ILogger;

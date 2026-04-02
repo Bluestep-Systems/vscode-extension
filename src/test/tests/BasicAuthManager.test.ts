@@ -5,13 +5,9 @@ import * as vscode from 'vscode';
 //@ts-ignore
 import { BASIC_AUTH_MANAGER } from '../../main/app/authentication/BasicAuthManager';
 //@ts-ignore
-import { SESSION_MANAGER } from '../../main/app/b6p_session/SessionManager';
+import { SessionManager } from '../../core/session/SessionManager';
 //@ts-ignore
 import { BasicAuth } from '../../main/app/authentication/classes';
-//@ts-ignore
-import { FileSystem } from '../../main/app/util/fs/FileSystem';
-//@ts-ignore
-import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 //@ts-ignore
 import { Err } from '../../main/app/util/Err';
 //@ts-ignore

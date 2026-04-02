@@ -87,4 +87,36 @@ export class NodeFileSystem implements IFileSystem {
     }
     return name === pattern;
   }
+
+  async closest(startUri: B6PUri, fileName: string, maxDepth: number = 10): Promise<B6PUri | null> {
+    let currentPath = startUri.fsPath;
+    let depth = 0;
+
+    while (depth < maxDepth) {
+      const targetPath = path.join(currentPath, fileName);
+      try {
+        await fs.access(targetPath);
+        return B6PUri.fromFsPath(targetPath);
+      } catch {
+        // File doesn't exist in this directory, continue searching
+      }
+
+      const parentPath = path.dirname(currentPath);
+      if (parentPath === currentPath) {
+        break;
+      }
+
+      currentPath = parentPath;
+      depth++;
+    }
+
+    return null;
+  }
+
+  isWritableFileSystem(scheme: string): boolean | undefined {
+    if (scheme === 'file') {
+      return true;
+    }
+    return undefined;
+  }
 }

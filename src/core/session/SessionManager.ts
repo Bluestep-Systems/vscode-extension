@@ -2,23 +2,23 @@ import type { SessionData } from '../../../types';
 import { ApiEndpoints, Http } from '../../main/resources/constants';
 import { Err } from '../../main/app/util/Err';
 import { ResponseCodes } from '../../main/app/util/network/StatusCodes';
-import type { BasicAuthProvider } from '../auth/BasicAuthProvider';
-import type { ILogger, IPersistence, IPrompt } from '../providers';
+import type { IAuth, ILogger, IPersistence, IPrompt } from '../providers';
 
 const SESSION_PERSISTENCE_KEY = 'sessions';
 
 /**
- * Core-layer session manager.
- *
- * Replaces the VS Code singleton `SESSION_MANAGER` with a plain class that
- * uses provider interfaces for persistence, logging, and user interaction.
- *
- * Session data is stored as a JSON map keyed by origin, persisted via `IPersistence.setSecret`.
+ * Fetch-compatible function signature used for HTTP requests.
  */
-export class CoreSessionManager {
+type FetchFn = (url: string | URL, options?: RequestInit) => Promise<Response>;
+
+/**
+ * The session manager is responsible for managing individual sessions with BlueStep servers.
+ * @lastreviewed null
+ */
+export class SessionManager {
 
   private readonly MILLIS_IN_A_MINUTE = 1_000 * 60;
-  private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 30;
+  private readonly MAX_SESSION_DURATION = this.MILLIS_IN_A_MINUTE * 30; // 30 minutes
   private readonly MAX_RETRY_ATTEMPTS = 3;
 
   /** In-memory session cache, lazily hydrated from persistence. */
@@ -26,11 +26,18 @@ export class CoreSessionManager {
   private loaded = false;
   private cleanupTimer: ReturnType<typeof setTimeout> | null = null;
 
+  /**
+   * Optional callback invoked after login to notify external systems (e.g. OrgCache).
+   */
+  public onLogin: ((url: URL) => void) | null = null;
+
   constructor(
     private readonly persistence: IPersistence,
-    private readonly auth: BasicAuthProvider,
     private readonly logger: ILogger,
+    private readonly auth: IAuth,
+    private readonly isDebugMode: () => boolean,
     private readonly prompt: IPrompt,
+    private readonly fetchFn: FetchFn = globalThis.fetch.bind(globalThis),
   ) {
     this.triggerNextCleanup(5_000);
   }
@@ -38,7 +45,7 @@ export class CoreSessionManager {
   // ── Session persistence ───────────────────────────────────────────
 
   private async load(): Promise<void> {
-    if (this.loaded) {return;}
+    if (this.loaded) { return; }
     const raw = await this.persistence.getSecret(SESSION_PERSISTENCE_KEY);
     if (raw) {
       this.sessions = JSON.parse(raw) as Record<string, SessionData>;
@@ -70,9 +77,10 @@ export class CoreSessionManager {
   // ── Public API ────────────────────────────────────────────────────
 
   /**
-   * Managed fetch with CSRF token handling and automatic retry.
+   * Performs the normal managed fetch, however, wraps it with additional CSRF management,
+   * complete with retries.
    */
-  async csrfFetch(url: string | URL, options?: RequestInit, retries = this.MAX_RETRY_ATTEMPTS): Promise<Response> {
+  public async csrfFetch(url: string | URL, options?: RequestInit, retries = this.MAX_RETRY_ATTEMPTS): Promise<Response> {
     url = new URL(url);
     const origin = url.origin;
 
@@ -87,20 +95,17 @@ export class CoreSessionManager {
     }
 
     try {
-      // Always fetch a fresh CSRF token
       const tokenValue = await this.fetch(`${origin}${ApiEndpoints.CSRF_TOKEN}`).then(r => r.text());
       currentSession.lastCsrfToken = tokenValue;
       await this.setSession(origin, currentSession);
 
       options = options || {};
       options.headers = options.headers || {};
+
       (options.headers as Record<string, string>)[Http.Headers.B6P_CSRF_TOKEN] =
         currentSession.lastCsrfToken
         || (() => { throw new Err.CsrfTokenNotFoundError(); })();
-
       const response = await this.fetch(url, options);
-
-      // Update CSRF token from response
       let newToken = response.headers.get(Http.Headers.B6P_CSRF_TOKEN);
       for (const [key, value] of Object.entries(response.headers)) {
         if (key === Http.Headers.B6P_CSRF_TOKEN) {
@@ -122,65 +127,71 @@ export class CoreSessionManager {
         }
         if (e instanceof Err.UnauthorizedError) {
           await this.deleteSession(origin);
-          this.prompt.info('Session expired, attempting to re-authenticate...');
+          this.prompt.info("Session expired/etc, attempting to re-authenticate...");
           await sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000);
-          return this.csrfFetch(url, options, retries - 1);
+          return await this.csrfFetch(url, options, retries - 1);
         }
         currentSession.lastCsrfToken = null;
         this.prompt.info(`Request didn't work, retrying... (${retries} attempts left)`);
         await this.deleteSession(origin);
         await sleep((this.MAX_RETRY_ATTEMPTS + 1 - retries) * 1_000);
-        return this.csrfFetch(url, options, retries - 1);
+        return await this.csrfFetch(url, options, retries - 1);
       }
       throw e;
     }
   }
 
   /**
-   * Managed fetch that appends session cookies.
+   * Performs a managed fetch, appending and managing session cookies.
+   * Does not automatically retry.
    */
-  async fetch(url: string | URL, options?: RequestInit): Promise<Response> {
+  public async fetch(url: string | URL, options?: RequestInit): Promise<Response> {
     url = new URL(url);
     const sessionData = await this.getSession(url.origin);
-
     if (sessionData?.JSESSIONID && sessionData.lastTouched > (Date.now() - this.MAX_SESSION_DURATION)) {
-      this.logger.debug('Using existing session for:', url.href);
+      this.isDebugMode() && this.logger.info("using existing session for fetch to:" + url.href + "\n " + JSON.stringify(sessionData));
       options = {
         ...options,
         headers: {
           ...options?.headers,
-          [Http.Headers.COOKIE]: `${Http.Cookies.JSESSIONID}=${sessionData.JSESSIONID}`
-            + (sessionData.INGRESSCOOKIE ? `; ${Http.Cookies.INGRESSCOOKIE}=${sessionData.INGRESSCOOKIE}` : ''),
-        },
+          [Http.Headers.COOKIE]: `${Http.Cookies.JSESSIONID}=${sessionData.JSESSIONID}` + (sessionData.INGRESSCOOKIE ? `; ${Http.Cookies.INGRESSCOOKIE}=${sessionData.INGRESSCOOKIE}` : ''),
+        }
       };
-      const response = await globalThis.fetch(url, options);
-      return this.processResponse(response);
+      const response = await this.fetchFn(url, options);
+      return await this.processResponse(response);
+    } else {
+      await this.login(url);
+      return await this.fetch(url, options);
     }
+  }
 
-    await this.login(url instanceof URL ? url : new URL(url));
-    return this.fetch(url, options);
+  /**
+   * Clears the session data for a specific origin.
+   */
+  public async clearSession({ origin }: { origin: string | URL }): Promise<void> {
+    await this.deleteSession(new URL(origin).origin);
   }
 
   /**
    * Clear all sessions.
    */
-  async clearAll(): Promise<void> {
+  public async clearAll(): Promise<void> {
     this.sessions = {};
     await this.save();
   }
 
   /**
-   * Check if there is a valid session for the given origin.
+   * Checks if there is a valid session for a specific origin.
    */
-  async hasValidSession(origin: string | URL): Promise<boolean> {
+  public async hasValidSession({ origin }: { origin: string | URL }): Promise<boolean> {
     const session = await this.getSession(new URL(origin).origin);
-    return !!session && session.lastTouched > (Date.now() - this.MAX_SESSION_DURATION);
+    return !!session && (session.lastTouched > (Date.now() - this.MAX_SESSION_DURATION));
   }
 
   /**
    * Stop cleanup timer. Call when disposing.
    */
-  dispose(): void {
+  dispose() {
     if (this.cleanupTimer) {
       clearTimeout(this.cleanupTimer);
       this.cleanupTimer = null;
@@ -189,42 +200,51 @@ export class CoreSessionManager {
 
   // ── Internal ──────────────────────────────────────────────────────
 
-  private async login(url: URL): Promise<void> {
-    this.logger.info('Performing login to:', url.origin);
-    const response = await globalThis.fetch(url.origin + ApiEndpoints.LOOKUP_TEST, {
+  private async login(url: URL) {
+    this.logger.info("performing login to:" + url.origin);
+    const response = await this.fetchFn(url.origin + ApiEndpoints.LOOKUP_TEST, {
       method: Http.Methods.POST,
       headers: {
-        [Http.Headers.AUTHORIZATION]: await this.auth.authHeaderValue(),
-      },
+        [Http.Headers.AUTHORIZATION]: `${await this.auth.authHeaderValue()}`,
+      }
     });
-    this.logger.info('Login status:', response.status);
+    this.logger.info("login status:" + response.status);
     if (response.status >= ResponseCodes.BAD_REQUEST) {
       throw new Err.HttpResponseError(`HTTP Error: ${response.status} ${response.statusText}`);
     }
     await this.processResponse(response);
+    if (this.onLogin) {
+      try {
+        this.onLogin(url);
+      } catch (e) {
+        this.logger.warn('onLogin callback failed:', e instanceof Error ? e.message : String(e));
+      }
+    }
   }
 
+  /**
+   * Common code for processing and storing session data from a fetch response.
+   */
   private async processResponse(response: Response): Promise<Response> {
     if (response.status === ResponseCodes.FORBIDDEN) {
       throw new Err.UnauthorizedError(`HTTP Error: ${response.status} ${response.statusText}`);
     }
     const cookies = response.headers.get(Http.Headers.SET_COOKIE);
     const responderUrl = new URL(response.url);
-
     if (cookies) {
       const cookieMap = this.parseCookies(response.headers);
       const existing = await this.getSession(responderUrl.origin);
       const sessionData: SessionData = {
         lastTouched: Date.now(),
-        JSESSIONID: cookieMap.get(Http.Cookies.JSESSIONID)
+        [Http.Cookies.JSESSIONID]: cookieMap.get(Http.Cookies.JSESSIONID)
           || existing?.JSESSIONID
           || (() => { throw new Err.SessionIdMissingError(); })(),
-        INGRESSCOOKIE: cookieMap.get(Http.Cookies.INGRESSCOOKIE)
+        [Http.Cookies.INGRESSCOOKIE]: cookieMap.get(Http.Cookies.INGRESSCOOKIE)
           || existing?.INGRESSCOOKIE
           || null,
         lastCsrfToken: response.headers.get(Http.Headers.B6P_CSRF_TOKEN)
           || existing?.lastCsrfToken
-          || null,
+          || null
       };
       await this.setSession(responderUrl.origin, sessionData);
     } else {
@@ -240,17 +260,25 @@ export class CoreSessionManager {
     return response;
   }
 
+  /**
+   * NOTE: this is not a proper cookie parser since we
+   * do not care about attributes like `Secure` and `HttpOnly`
+   * in this extension (yet).
+   */
   private parseCookies(headers: Headers): Map<string, string> {
     const cookieMap = new Map<string, string>();
     const setCookies = headers.getSetCookie();
     for (const cookieString of setCookies) {
-      const parts = cookieString.split(';').map(part => part.trim());
+      const parts = cookieString.split(";").map(part => part.trim());
+
       if (parts.length > 0) {
         const cookiePart = parts[0];
-        const equalIndex = cookiePart.indexOf('=');
+        const equalIndex = cookiePart.indexOf("=");
+
         if (equalIndex > 0) {
           const name = cookiePart.substring(0, equalIndex).trim();
           const value = cookiePart.substring(equalIndex + 1).trim();
+
           if (name && value) {
             cookieMap.set(name, value);
           }
@@ -260,7 +288,7 @@ export class CoreSessionManager {
     return cookieMap;
   }
 
-  private triggerNextCleanup(delay: number = this.MAX_SESSION_DURATION): void {
+  private triggerNextCleanup(delay: number = this.MAX_SESSION_DURATION) {
     this.cleanupTimer = setTimeout(async () => {
       const now = Date.now();
       let changed = false;

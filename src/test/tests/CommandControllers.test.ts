@@ -12,10 +12,6 @@ import pullCurrent from '../../main/app/ctrl-p-commands/pullCurrent';
 import push from '../../main/app/ctrl-p-commands/push';
 //@ts-ignore
 import pushCurrent from '../../main/app/ctrl-p-commands/pushCurrent';
-//@ts-ignore
-import { FileSystem } from '../../main/app/util/fs/FileSystem';
-//@ts-ignore
-import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
 
 // suite('Command Controllers Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

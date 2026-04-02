@@ -9,10 +9,6 @@ import { ScriptMetaData } from '../../../types';
 //@ts-ignore
 import { App } from '../../main/app/App';
 //@ts-ignore
-import { FileSystem } from '../../main/app/util/fs/FileSystem';
-//@ts-ignore
-import { MockFileSystem } from '../../main/app/util/fs/FileSystemProvider';
-//@ts-ignore
 import { ScriptFactory } from '../../main/app/util/script/ScriptFactory';
 //@ts-ignore
 import { ScriptRoot } from '../../main/app/util/script/ScriptRoot';

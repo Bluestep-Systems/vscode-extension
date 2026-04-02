@@ -3,36 +3,35 @@ import type { GqlParentNameResp, XMLResponse } from '../../../types';
 import { ApiEndpoints, FolderNames, Http, MimeTypes, WebDAVElements } from '../../main/resources/constants';
 import { Err } from '../../main/app/util/Err';
 import { ScriptKey } from '../../main/app/util/data/ScriptKey';
-import type { CoreSessionManager } from '../session/CoreSessionManager';
+import type { SessionManager } from '../session/SessionManager';
 import type { ILogger, IPrompt } from '../providers';
-import { CoreOrgWorker } from './CoreOrgWorker';
+import { OrgWorker } from './OrgWorker';
 
 type RawFile = { upstairsPath: string; downstairsPath: string; trailing?: string };
 type GetScriptRet = RawFile[] | null;
 
 /**
- * Core-layer ScriptUrlParser.
+ * Parses and interacts with BlueStep WebDAV script URLs.
  *
- * Replaces the original which used the `SESSION_MANAGER` singleton.
- * This version takes a `CoreSessionManager`, `ILogger`, and `IPrompt` instead.
+ * Takes a {@link SessionManager}, `ILogger`, and `IPrompt` via constructor injection.
  */
-export class CoreScriptUrlParser {
+export class ScriptUrlParser {
 
   static readonly URL_TYPES = ['files', 'public'] as const;
 
   url: URL;
-  filesOrPublic: typeof CoreScriptUrlParser.URL_TYPES[number];
+  filesOrPublic: typeof ScriptUrlParser.URL_TYPES[number];
   webDavId: string;
   trailing?: string;
   trailingFolder?: string;
 
   private _scriptName: string | null = null;
-  private _orgWorker: CoreOrgWorker | null = null;
+  private _orgWorker: OrgWorker | null = null;
   private _scriptKey: ScriptKey | null = null;
 
   constructor(
     public readonly rawUrlString: string,
-    private readonly session: CoreSessionManager,
+    private readonly session: SessionManager,
     private readonly logger: ILogger,
     private readonly prompt: IPrompt,
   ) {
@@ -57,17 +56,17 @@ export class CoreScriptUrlParser {
       throw new Err.UrlParsingError('the parsed WebDAV ID is probably too large to be legitimate');
     }
     if (!this.isValidType(type)) {
-      throw new Err.UrlParsingError(`Invalid path type: ${type}. Expected: ${CoreScriptUrlParser.URL_TYPES.join(', ')}`);
+      throw new Err.UrlParsingError(`Invalid path type: ${type}. Expected: ${ScriptUrlParser.URL_TYPES.join(', ')}`);
     }
 
-    this.filesOrPublic = type as typeof CoreScriptUrlParser.URL_TYPES[number];
+    this.filesOrPublic = type as typeof ScriptUrlParser.URL_TYPES[number];
     this.webDavId = webDavId;
     this.trailing = trailing;
     this.trailingFolder = trailing?.includes('/') ? trailing.split('/')[0] : undefined;
   }
 
-  private isValidType(type: string): type is typeof CoreScriptUrlParser.URL_TYPES[number] {
-    return CoreScriptUrlParser.URL_TYPES.includes(type as typeof CoreScriptUrlParser.URL_TYPES[number]);
+  private isValidType(type: string): type is typeof ScriptUrlParser.URL_TYPES[number] {
+    return ScriptUrlParser.URL_TYPES.includes(type as typeof ScriptUrlParser.URL_TYPES[number]);
   }
 
   async getU(): Promise<string> {
@@ -187,10 +186,10 @@ export class CoreScriptUrlParser {
     return new URL(this.url);
   }
 
-  orgWorker(): CoreOrgWorker {
+  orgWorker(): OrgWorker {
     if (this._orgWorker === null) {
       // Use raw globalThis.fetch for OrgWorker (no auth needed)
-      this._orgWorker = new CoreOrgWorker(this.url, globalThis.fetch.bind(globalThis));
+      this._orgWorker = new OrgWorker(this.url, globalThis.fetch.bind(globalThis));
     }
     return this._orgWorker;
   }

@@ -1,32 +1,31 @@
+import * as vscode from 'vscode';
 import { App } from '../App';
 import { Alert } from '../util/ui/Alert';
-import audit from './audit';
-import pullScript from './pull';
 
 /**
- * Audits the current script for differences against the server, then prompts the user to pull if changes are detected.
+ * Audits the current script for differences against the server using B6PCore,
+ * then prompts the user to pull if changes are detected.
  */
 export default async function (): Promise<void> {
-  const result = await audit();
-  if (!result) {
-    return;
+  try {
+    const workspaceUri = vscode.workspace.workspaceFolders?.[0]?.uri;
+    const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
+
+    if (!workspaceUri || !activeEditorUri) {
+      Alert.error('No workspace or active file');
+      return;
+    }
+
+    // Use B6PCore for auditPull (includes confirmation prompt)
+    await App.core.auditPull({
+      filePath: activeEditorUri.fsPath,
+      workspacePath: workspaceUri.fsPath,
+    });
+
+    // Success message shown by B6PCore
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    Alert.error(`Error during audit-pull: ${message}`);
+    App.logger.error('Audit-pull error:', e);
   }
-
-  if (result.changedFiles.length === 0) {
-    return;
-  }
-
-  const YES_OPTION = "Sync";
-  const NO_OPTION = "Cancel";
-  const response = await Alert.prompt(
-    `Detected ${result.changedFiles.length} file(s) with differences:\n\n${result.changedFiles.join("\n")}\n\nSync local copy with the server?`,
-    [YES_OPTION, NO_OPTION]
-  );
-
-  if (response !== YES_OPTION) {
-    App.logger.info("User declined audit-pull sync");
-    return;
-  }
-
-  await pullScript(result.baseUrl);
 }
