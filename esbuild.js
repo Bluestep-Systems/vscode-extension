@@ -24,7 +24,8 @@ const esbuildProblemMatcherPlugin = {
 };
 
 async function main() {
-	const ctx = await esbuild.context({
+	// Build the VS Code extension
+	const extensionCtx = await esbuild.context({
 		entryPoints: [
 			'src/extension.ts'
 		],
@@ -38,15 +39,40 @@ async function main() {
 		external: ['vscode'],
 		logLevel: 'silent',
 		plugins: [
-			/* add to the end of plugins array */
 			esbuildProblemMatcherPlugin,
 		],
 	});
+
+	// Build the CLI
+	const cliCtx = await esbuild.context({
+		entryPoints: [
+			'src/cli/index.ts'
+		],
+		bundle: true,
+		format: 'cjs',
+		minify: production,
+		sourcemap: !production,
+		sourcesContent: false,
+		platform: 'node',
+		outfile: 'dist/cli.js',
+		external: ['path', 'fs', 'fs/promises', 'crypto', 'readline/promises', 'url'],
+		logLevel: 'silent',
+		banner: {
+			js: '#!/usr/bin/env node',
+		},
+		plugins: [
+			esbuildProblemMatcherPlugin,
+		],
+	});
+
 	if (watch) {
-		await ctx.watch();
+		await extensionCtx.watch();
+		await cliCtx.watch();
 	} else {
-		await ctx.rebuild();
-		await ctx.dispose();
+		await extensionCtx.rebuild();
+		await cliCtx.rebuild();
+		await extensionCtx.dispose();
+		await cliCtx.dispose();
 	}
 }
 
