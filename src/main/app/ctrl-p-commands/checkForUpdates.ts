@@ -1,27 +1,8 @@
-import * as vscode from 'vscode';
 import { App } from '../App';
 
 export default async function checkForUpdates(): Promise<void> {
   try {
-    // Show progress indicator
-    await vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: "Checking for B6P updates...",
-      cancellable: false
-    }, async (progress) => {
-      progress.report({ increment: 0 });
-
-      progress.report({ increment: 50, message: "Contacting GitHub..." });
-
-      const updateInfo = await App.updateManager.checkForUpdates();
-
-      progress.report({ increment: 100 });
-
-      if (!updateInfo) {
-        App.core.prompt.popup('You are running the latest version of B6P Extension!');
-      }
-    });
-
+    await App.updateUI.checkForUpdatesManually();
   } catch (error) {
     console.error('Error checking for updates:', error);
     App.core.prompt.error(

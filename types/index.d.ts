@@ -365,6 +365,7 @@ type ConfigJsonContent = {
 
 /**
  * Information about a release of the B6P platform.
+ * @deprecated Use UpdateInfo from '../src/core/update/types' instead
  */
 export type UpdateInfo = {
   version: string;
@@ -372,6 +373,9 @@ export type UpdateInfo = {
   releaseNotes: string;
   publishedAt: string;
 };
+/**
+ * @deprecated Use ClientInfo from '../src/core/update/types' instead
+ */
 export type ClientInfo = {
   version: string;
   lastChecked: number;

@@ -5,7 +5,7 @@ import { SessionManager } from '../../core/session/SessionManager';
 import { OutputChannels, SettingsKeys } from '../../core/constants';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
-import { UpdateManager } from './services/UpdateManager';
+import { UpdateUI } from './services/UpdateUI';
 import { SettingsWrapper } from './settings/SettingsWrapper';
 import { Err } from '../../core/Err';
 import { HttpClient } from '../../core/network/HttpClient';
@@ -27,7 +27,7 @@ export const App = new class {
   public readonly appKey = SettingsKeys.APP_KEY;
 
   // Manager instances (those still owned by App; the rest live on B6PCore)
-  private _updateManager: UpdateManager | null = null;
+  private _updateUI: UpdateUI | null = null;
   private _mcpServerProvider: McpServerProvider | null = null;
 
   private readonly _disposables: vscode.Disposable[] = [];
@@ -172,11 +172,11 @@ export const App = new class {
     return this.core.scriptMetadataStore;
   }
 
-  public get updateManager(): UpdateManager {
-    if (!this._updateManager) {
-      throw new Err.ManagerNotInitializedError('UpdateManager');
+  public get updateUI(): UpdateUI {
+    if (!this._updateUI) {
+      throw new Err.ManagerNotInitializedError('UpdateUI');
     }
-    return this._updateManager;
+    return this._updateUI;
   }
 
   public init(context: vscode.ExtensionContext) {
@@ -203,6 +203,13 @@ export const App = new class {
       isDebugMode: () => this.isDebugMode(),
       orgCacheSettings: this._settings,
       fetchFn: (url, options) => HttpClient.getInstance().fetch(url, options),
+      updateServiceConfig: {
+        currentVersion: this.getVersion(),
+        repoOwner: 'bluestep-systems',
+        repoName: 'vscode-extension',
+        enabled: this._settings.get('updateCheck').enabled,
+        versionOverride: this._settings.get('debugMode').versionOverride
+      }
     });
 
     // Wire the script factory's default context to B6PCore so that the
@@ -267,17 +274,18 @@ export const App = new class {
       this._mcpServerProvider!.fireChanged();
     };
 
-    // Update manager
-    this._updateManager = new UpdateManager(
-      this._persistence,
-      vscodeLogger,
-      this._settings,
-      this.getVersion(),
-      context.extensionUri,
-      context.globalStorageUri,
-      this.appKey
-    );
-    this._disposables.push(this._updateManager);
+    // Update UI wrapper (uses UpdateService from B6PCore)
+    if (this._core.updateService) {
+      this._updateUI = new UpdateUI(
+        this._core.updateService,
+        this._core.fs,
+        vscodeLogger,
+        context.extensionUri,
+        context.globalStorageUri,
+        this.appKey
+      );
+      this._disposables.push(this._updateUI);
+    }
 
     // Register LM tools
     this.context.subscriptions.push(

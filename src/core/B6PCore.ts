@@ -10,6 +10,7 @@ import { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
 import { OrgCache, type IOrgCacheSettings } from './cache/OrgCache';
 import type { ScriptContext } from './script/ScriptContext';
 import { ScriptFactory } from './script/ScriptFactory';
+import { UpdateService } from './update/UpdateService';
 
 const NOOP_ORG_CACHE_SETTINGS: IOrgCacheSettings = {
   getParsedAnyDomainOverrideUrl: () => null,
@@ -52,6 +53,7 @@ export class B6PCore implements ScriptContext {
   readonly sessionManager: SessionManager;
   readonly scriptMetadataStore: ScriptMetaDataStore;
   readonly orgCache: OrgCache;
+  readonly updateService: UpdateService | null = null;
 
   private readonly _isDebugMode: () => boolean;
 
@@ -80,6 +82,16 @@ export class B6PCore implements ScriptContext {
       this._isDebugMode,
       this.prompt,
     );
+
+    // Initialize update service if configuration is provided
+    if (providers.updateServiceConfig) {
+      this.updateService = new UpdateService(
+        this.persistence,
+        this.logger,
+        providers.updateServiceConfig,
+        providers.fetchFn
+      );
+    }
   }
 
   isDebugMode(): boolean {
@@ -420,58 +432,29 @@ export class B6PCore implements ScriptContext {
   // ── Updates ───────────────────────────────────────────────────────
 
   async checkForUpdates(): Promise<void> {
+    if (!this.updateService) {
+      this.prompt.error('Update service is not configured');
+      return;
+    }
+
     this.logger.info('Checking for updates...');
 
-    const REPO_OWNER = 'bluestep-systems';
-    const REPO_NAME = 'vscode-extension';
-    const CURRENT_VERSION = '1.2.1'; // Would ideally come from package.json
-
     try {
-      const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest`;
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': 'B6P-CLI',
-          'Accept': 'application/vnd.github+json',
-        },
-      });
+      const updateInfo = await this.updateService.checkForUpdates();
 
-      if (!response.ok) {
-        this.prompt.error(`Failed to check for updates: HTTP ${response.status}`);
-        return;
-      }
-
-      const release = await response.json() as { tag_name: string; html_url: string; body: string };
-      const latestVersion = release.tag_name.replace(/^v/, '');
-
-      if (this.isNewerVersion(latestVersion, CURRENT_VERSION)) {
+      if (updateInfo) {
         this.prompt.info(
           `A new version is available!\n` +
-          `Current: v${CURRENT_VERSION}\n` +
-          `Latest:  v${latestVersion}\n\n` +
-          `Download from: ${release.html_url}`
+          `Current: v${this.updateService.getCurrentVersion()}\n` +
+          `Latest:  v${updateInfo.version}\n\n` +
+          `Download from: ${updateInfo.downloadUrl}`
         );
       } else {
-        this.prompt.info(`You are running the latest version (v${CURRENT_VERSION})`);
+        this.prompt.info(`You are running the latest version (v${this.updateService.getCurrentVersion()})`);
       }
     } catch (error) {
       this.prompt.error(`Error checking for updates: ${error instanceof Error ? error.message : error}`);
     }
-  }
-
-  private isNewerVersion(newVersion: string, currentVersion: string): boolean {
-    const parseVersion = (version: string) => version.split('.').map(num => parseInt(num, 10));
-    const newParts = parseVersion(newVersion);
-    const currentParts = parseVersion(currentVersion);
-
-    const maxLength = Math.max(newParts.length, currentParts.length);
-    while (newParts.length < maxLength) {newParts.push(0);}
-    while (currentParts.length < maxLength) {currentParts.push(0);}
-
-    for (let i = 0; i < maxLength; i++) {
-      if (newParts[i] > currentParts[i]) {return true;}
-      else if (newParts[i] < currentParts[i]) {return false;}
-    }
-    return false;
   }
 
   // ── Config Toggles ────────────────────────────────────────────────

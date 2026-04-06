@@ -138,4 +138,14 @@ export interface B6PProviders {
    * fetch that adds proxy/cookie handling.
    */
   fetchFn?: (url: string | URL, init?: RequestInit) => Promise<Response>;
+  /**
+   * Optional update service configuration. If not provided, update checking is disabled.
+   */
+  updateServiceConfig?: {
+    currentVersion: string;
+    repoOwner: string;
+    repoName: string;
+    enabled: boolean;
+    versionOverride?: string;
+  };
 }
