@@ -111,14 +111,8 @@ export class B6PCore implements ScriptContext {
    */
   private async deriveBaseUrl(filePath: string, _workspacePath: string): Promise<string | null> {
     try {
-      const parser = new DownstairsPathParser(filePath);
-      const metadataKey = `scriptMeta.${parser.scriptName}`;
-      const meta = await this.persistence.get<{ webdavUrl: string }>(metadataKey);
-      if (meta?.webdavUrl) {
-        return meta.webdavUrl;
-      }
-      this.logger.warn(`No stored metadata for script "${parser.scriptName}". User must provide URL.`);
-      return null;
+      const sf = ScriptFactory.createFile(B6PUri.fromFsPath(filePath));
+      return sf.getScriptRoot().getBaseWebDavUrlString();
     } catch {
       this.logger.warn(`Could not parse downstairs path: ${filePath}`);
       return null;

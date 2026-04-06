@@ -12,6 +12,7 @@ import { FolderNames, SpecialFiles } from '../constants';
 export class DownstairsPathParser {
 
   public readonly type: "draft" | "declarations" | "metadata" | "root" | "snapshot";
+  public readonly U: string;
   public readonly rest: string;
   public readonly prependingPath: string;
   public readonly scriptName: string;
@@ -33,6 +34,7 @@ export class DownstairsPathParser {
         break;
       }
     }
+    this.U = segments[orgIdIndex];
 
     if (orgIdIndex === -1) {
       throw new Err.InvalidUriStructureError(
