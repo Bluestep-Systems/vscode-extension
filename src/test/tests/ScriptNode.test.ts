@@ -34,10 +34,12 @@ suite('ScriptNode Tests', () => {
 
     // Override the core getter to provide our mock fs
     originalCore = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(App), 'core');
+    const mockCtx = { fs: mockFs, logger: mockLogger } as unknown as Parameters<typeof ScriptFactory.setDefaultContext>[0];
     Object.defineProperty(App, 'core', {
-      get: () => ({ fs: mockFs }),
+      get: () => mockCtx,
       configurable: true
     });
+    ScriptFactory.setDefaultContext(mockCtx);
   });
 
   suiteTeardown(() => {
