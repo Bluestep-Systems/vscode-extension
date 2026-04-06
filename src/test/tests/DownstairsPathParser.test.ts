@@ -112,7 +112,7 @@ suite('DownstairsPathParser Tests', () => {
 
       assert.throws(() => {
         new DownstairsPathParser(testPath);
-      }, /Path must contain a segment matching U###### pattern/);
+      }, /The provided URI does not conform to expected structure/);
     });
 
     test('should throw error for unrecognized type folder', () => {
