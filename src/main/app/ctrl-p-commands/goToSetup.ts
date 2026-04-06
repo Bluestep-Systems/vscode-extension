@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
+import { App } from '../App';
 import { ScriptFactory } from '../../../core/script/ScriptFactory';
 import { B6PUri } from '../../../core/B6PUri';
-import { Alert } from '../util/ui/Alert';
 import { Util } from '../util';
 
 export default async function (): Promise<void> {
@@ -13,6 +13,6 @@ export default async function (): Promise<void> {
     const setupUrl = scriptKey.buildSetupUrl(origin);
     await vscode.env.openExternal(vscode.Uri.parse(setupUrl));
   } catch (e) {
-    Alert.error("Error opening setup: " + (e instanceof Error ? e.message : e));
+    App.core.prompt.error("Error opening setup: " + (e instanceof Error ? e.message : e));
   }
 }

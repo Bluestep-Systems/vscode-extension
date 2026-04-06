@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { Alert } from '../util/ui/Alert';
 import { App } from '../App';
 
 export default async function checkForUpdates(): Promise<void> {
@@ -19,13 +18,13 @@ export default async function checkForUpdates(): Promise<void> {
       progress.report({ increment: 100 });
 
       if (!updateInfo) {
-        Alert.popup('You are running the latest version of B6P Extension!');
+        App.core.prompt.popup('You are running the latest version of B6P Extension!');
       }
     });
 
   } catch (error) {
     console.error('Error checking for updates:', error);
-    Alert.error(
+    App.core.prompt.error(
       `Failed to check for updates: ${error instanceof Error ? error.message : 'Unknown error'}`
     );
   }

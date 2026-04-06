@@ -1,5 +1,5 @@
-import { Alert } from "../util/ui/Alert";
+import { App } from "../App";
 
 export default function() {
-  Alert.popup("This feature is coming soon!");
+  App.core.prompt.popup("This feature is coming soon!");
 }

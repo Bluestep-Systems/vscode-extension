@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Alert } from '../ui/Alert';
+import { App } from '../../App';
 import { MetaDataDotJsonContent } from '../../../../../types';
 import { Util } from '../';
 import { Err } from '../../../../core/Err';
@@ -89,7 +89,7 @@ export class IdUtility {
             }
           }
         } catch (error) {
-          Alert.warning(`Error reading directory ${nestedFolderUri.fsPath}: ${error}`);
+          App.core.prompt.warn(`Error reading directory ${nestedFolderUri.fsPath}: ${error}`);
         }
       }
     }

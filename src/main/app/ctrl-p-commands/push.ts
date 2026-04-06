@@ -1,7 +1,6 @@
 import type { SourceOps } from '../../../../types';
 import { App } from '../App';
 import { Util } from '../util';
-import { Alert } from '../util/ui/Alert';
 import { ScriptRoot } from '../../../core/script/ScriptRoot';
 
 /**
@@ -28,7 +27,7 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
     } else {
       const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
       if (sourceEditorUri === undefined) {
-        Alert.error('No source path provided');
+        App.core.prompt.error('No source path provided');
         return;
       }
       App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
@@ -44,10 +43,10 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
 
     // Show completion message (unless squelched)
     if (!skipMessage && !(App.settings.get("squelch").pushComplete)) {
-      Alert.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
+      App.core.prompt.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
     }
   } catch (e) {
-    Alert.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);
+    App.core.prompt.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);
     throw e;
   }
 }

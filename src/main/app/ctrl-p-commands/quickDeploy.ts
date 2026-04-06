@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { ApiEndpoints } from "../../../core/constants";
-import { Alert } from "../util/ui/Alert";
 import { ProgressHelper } from "../util/ui/ProgressHelper";
 import { App } from '../App';
 import { Util } from '../util';
@@ -13,7 +12,7 @@ import push from "./push";
 export default async function (): Promise<void> {
   const activeTextEditor = vscode.window.activeTextEditor;
   if (activeTextEditor === undefined) {
-    Alert.error("No active text editor found");
+    App.core.prompt.error("No active text editor found");
     return;
   }
   const curText = activeTextEditor.document.getText();
@@ -21,7 +20,7 @@ export default async function (): Promise<void> {
   const getArgs = eval(curText) as (() => { recipientOrgs: string[], topIds: string[], sourceOrigin: string; });
 
   if (typeof getArgs !== 'function') {
-    Alert.error("getArgs is not a function!");
+    App.core.prompt.error("getArgs is not a function!");
     return;
   }
   const { recipientOrgs, topIds, sourceOrigin } = getArgs();
@@ -43,7 +42,7 @@ export default async function (): Promise<void> {
             });
             return { origin, topId, webDavId };
           } else {
-            await Alert.error(`Could not find script at ${origin} with topId ${topId}`);
+            App.core.prompt.error(`Could not find script at ${origin} with topId ${topId}`);
             throw new Err.ScriptNotFoundError(origin, topId);
           }
         },
@@ -58,5 +57,5 @@ export default async function (): Promise<void> {
   });
 
 
-  Alert.popup("Quick Deploy complete!");
+  App.core.prompt.popup("Quick Deploy complete!");
 }

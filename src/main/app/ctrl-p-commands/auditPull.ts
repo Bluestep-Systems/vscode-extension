@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { App } from '../App';
-import { Alert } from '../util/ui/Alert';
 
 /**
  * Audits the current script for differences against the server using B6PCore,
@@ -12,7 +11,7 @@ export default async function (): Promise<void> {
     const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
 
     if (!workspaceUri || !activeEditorUri) {
-      Alert.error('No workspace or active file');
+      App.core.prompt.error('No workspace or active file');
       return;
     }
 
@@ -25,7 +24,7 @@ export default async function (): Promise<void> {
     // Success message shown by B6PCore
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    Alert.error(`Error during audit-pull: ${message}`);
+    App.core.prompt.error(`Error during audit-pull: ${message}`);
     App.logger.error('Audit-pull error:', e);
   }
 }

@@ -3,7 +3,6 @@ import { App } from "../App";
 import { Util } from "../util";
 import { ScriptFactory } from "../../../core/script/ScriptFactory";
 import { B6PUri } from "../../../core/B6PUri";
-import { Alert } from "../util/ui/Alert";
 import pushCurrent from "./pushCurrent";
 export default async function snapshot({ overrideFormulaUri, sourceOps }: { overrideFormulaUri?: string, sourceOps?: SourceOps } = {}) {
   
@@ -24,7 +23,7 @@ export default async function snapshot({ overrideFormulaUri, sourceOps }: { over
     // await fs().delete(sf.getScriptRoot().getDraftBuildFolderUri()).catch(e => {console.error(e);});
     // console.log("Deleted draft build folder");
   } catch (e) {
-    Alert.error("Error during snapshot: " + (e instanceof Error ? e.message : e));
+    App.core.prompt.error("Error during snapshot: " + (e instanceof Error ? e.message : e));
   }
   
 }

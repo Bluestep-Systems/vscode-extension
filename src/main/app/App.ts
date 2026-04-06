@@ -9,7 +9,6 @@ import { UpdateManager } from './services/UpdateManager';
 import { SettingsWrapper } from './util/PseudoMaps';
 import { Err } from '../../core/Err';
 import { HttpClient } from '../../core/network/HttpClient';
-import { Alert } from './util/ui/Alert';
 import { OrgCache } from './cache/OrgCache';
 import { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
 import { McpServerProvider } from './mcp/McpServerProvider';
@@ -66,18 +65,18 @@ export const App = new class {
           : orgEntries.map(([u, elements]) => `${u}: ${elements.map(e => `${e.host} (lastAccess: ${new Date(e.lastAccess).toISOString()})`).join(", ")}`).join("\n");
         App.logger.info("=== Org Cache ===\n" + orgSummary);
 
-        Alert.info(`${entries.length} metadata ${entries.length === 1 ? "entry" : "entries"}, ${orgEntries.length} org cache ${orgEntries.length === 1 ? "entry" : "entries"} stored. See output channel for details.`);
+        App.core.prompt.info(`${entries.length} metadata ${entries.length === 1 ? "entry" : "entries"}, ${orgEntries.length} org cache ${orgEntries.length === 1 ? "entry" : "entries"} stored. See output channel for details.`);
       })],
       ['bsjs-push-pull.clearSettings', vscode.commands.registerCommand('bsjs-push-pull.clearSettings', async () => {
-        Alert.info("Reverting to default settings");
+        App.core.prompt.info("Reverting to default settings");
         App.clearMap();
       })],
       ['bsjs-push-pull.clearSessions', vscode.commands.registerCommand('bsjs-push-pull.clearSessions', async () => {
-        Alert.info("Clearing all Sessions");
+        App.core.prompt.info("Clearing all Sessions");
         App.orgCache.clearCache();
       })],
       ['bsjs-push-pull.clearAll', vscode.commands.registerCommand('bsjs-push-pull.clearAll', async () => {
-        Alert.info("Clearing Sessions, Auth Managers, and Settings");
+        App.core.prompt.info("Clearing Sessions, Auth Managers, and Settings");
         App.clearMap(true);
         App.orgCache.clearCache();
         App.authManager.clear();
@@ -103,7 +102,7 @@ export const App = new class {
         });
         if (result && result[0]) {
           await vscode.workspace.getConfiguration('bsjs-push-pull').update('scriptRoot.path', result[0].fsPath, vscode.ConfigurationTarget.Global);
-          Alert.info(`Script root set to: ${result[0].fsPath}`);
+          App.core.prompt.info(`Script root set to: ${result[0].fsPath}`);
         }
       })]
     ]);
@@ -236,7 +235,7 @@ export const App = new class {
           if (formulaUrl) {
             ctrlPCommands.pullScript(formulaUrl);
           } else {
-            Alert.error('Missing "url" parameter in URI');
+            App.core.prompt.error('Missing "url" parameter in URI');
           }
         } else if (uri.path === '/audit-pull') {
           ctrlPCommands.auditPull();
@@ -295,7 +294,7 @@ export const App = new class {
 
   public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
-    !alreadyAlerted && Alert.info("Cleared all Settings");
+    !alreadyAlerted && this.core.prompt.info("Cleared all Settings");
     this.settings.set('debugMode', SettingsWrapper.DEFAULT.debugMode);
     this.settings.set('advancedMode', SettingsWrapper.DEFAULT.advancedMode);
   }
@@ -312,7 +311,7 @@ export const App = new class {
     this.settings.set('advancedMode', {
       enabled: !this.settings.get('advancedMode').enabled
     });
-    Alert.info(`Advanced mode ${this.settings.get('advancedMode').enabled ? "enabled" : "disabled"}`);
+    this.core.prompt.info(`Advanced mode ${this.settings.get('advancedMode').enabled ? "enabled" : "disabled"}`);
   }
 
   public toggleDebugMode() {
@@ -322,7 +321,7 @@ export const App = new class {
       anyDomainOverrideUrl: this.settings.get('debugMode').anyDomainOverrideUrl,
       versionOverride: this.settings.get('debugMode').versionOverride
     });
-    Alert.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`);
+    this.core.prompt.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`);
   }
 
   public getVersion(): string {
@@ -338,7 +337,7 @@ export const App = new class {
   }
 
   public runConverts() {
-    Alert.info("Not implemented yet");
+    this.core.prompt.info("Not implemented yet");
   }
 
   /**

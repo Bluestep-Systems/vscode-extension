@@ -3,7 +3,6 @@ import { App } from '../App';
 import { Util } from '../util';
 import { ScriptFactory } from '../../../core/script/ScriptFactory';
 import { B6PUri } from '../../../core/B6PUri';
-import { Alert } from '../util/ui/Alert';
 import type { ScriptRoot } from '../../../core/script/ScriptRoot';
 
 /**
@@ -49,7 +48,7 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot }): 
     // Success message shown by B6PCore
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    Alert.error(`Error pushing current file: ${message}`);
+    App.core.prompt.error(`Error pushing current file: ${message}`);
     App.logger.error('Push current file error:', e);
   }
 }

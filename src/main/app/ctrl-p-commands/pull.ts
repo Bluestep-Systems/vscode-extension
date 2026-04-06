@@ -1,6 +1,5 @@
 import { App } from '../App';
 import { Util } from '../util/';
-import { Alert } from '../util/ui/Alert';
 
 let activePull: Promise<void> | null = null;
 
@@ -11,7 +10,7 @@ let activePull: Promise<void> | null = null;
  */
 export default async function (overrideFormulaUri?: string): Promise<void> {
   if (activePull !== null) {
-    Alert.warning("A pull operation is already in progress");
+    App.core.prompt.warn("A pull operation is already in progress");
     return;
   }
   activePull = pullImpl(overrideFormulaUri);
@@ -34,10 +33,10 @@ async function pullImpl(overrideFormulaUri?: string): Promise<void> {
 
     // Show completion message (unless squelched)
     if (!(App.settings.get("squelch").pullComplete)) {
-      Alert.popup('Pull complete!');
+      App.core.prompt.popup('Pull complete!');
     }
   } catch (e) {
-    Alert.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);
+    App.core.prompt.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);
     throw e;
   }
 }

@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import type { Settings, JsonValue } from "../../../../../types";
 import { App } from "../../App";
-import { Alert } from "../ui/Alert";
 import { Util } from "..";
 import { TypedMap, Persistable } from "../../../../core/persistence";
 
@@ -81,7 +80,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
         try {
           config.update(key, value, vscode.ConfigurationTarget.Global);
         } catch (e) {
-          Alert.error(`Error updating settings key ${key}: ${e}`);
+          App.core.prompt.error(`Error updating settings key ${key}: ${e}`);
           throw e;
         }
       }
@@ -138,7 +137,7 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
               return new URL(parts[1]);
             } catch (e) {
               App.logger.error("Invalid anyDomainOverrideUrl in debugMode settings:", parts[1]);
-              Alert.popup("Invalid anyDomainOverrideUrl in debugMode settings. Please fix it.");
+              App.core.prompt.popup("Invalid anyDomainOverrideUrl in debugMode settings. Please fix it.");
             }
           }
         }

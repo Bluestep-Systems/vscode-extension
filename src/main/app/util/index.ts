@@ -8,7 +8,6 @@ import { ScriptFactory } from '../../../core/script/ScriptFactory';
 import type { ScriptFolder } from '../../../core/script/ScriptFolder';
 import { ApiEndpoints, Http, MimeTypes } from '../../../core/constants';
 import { App } from '../App';
-import { Alert } from './ui/Alert';
 import { B6PUri } from '../../../core/B6PUri';
 /**
  * Utility functions and types.
@@ -318,12 +317,12 @@ export namespace Util {
         throw new Err.GraphQLFetchError(e);
       }) as ScriptGqlResp;
       if ((GQL_RESP as ScriptGQLBadResp).errors) {
-        Alert.error("GraphQL errors found");
+        App.core.prompt.error("GraphQL errors found");
         throw new Err.GraphQLError((GQL_RESP as ScriptGQLBadResp).errors);
       }
       const targetScriptRootFolderId = (GQL_RESP as ScriptGQLGoodResp).data.children[0]?.children.items[0]?.id;
       if (!targetScriptRootFolderId) {
-        Alert.error(`No script root folder found for topId: ${topId}`);
+        App.core.prompt.error(`No script root folder found for topId: ${topId}`);
         throw new Err.ScriptRootFolderNotFoundError(topId);
       }
       try {
@@ -336,9 +335,9 @@ export namespace Util {
       if (e instanceof Err.ScriptKeyParsingError) {
         return null;
       } else if (e instanceof Error) {
-        Alert.error(e.stack || e.message || String(e));
+        App.core.prompt.error(e.stack || e.message || String(e));
       } else {
-        Alert.error(String(e));
+        App.core.prompt.error(String(e));
       }
       throw new Err.WebdavIdFetchError(origin, topId);
     }

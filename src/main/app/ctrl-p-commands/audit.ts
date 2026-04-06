@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { App } from '../App';
-import { Alert } from '../util/ui/Alert';
 
 export interface AuditResult {
   changedFiles: string[];
@@ -17,11 +16,11 @@ export default async function (): Promise<AuditResult | null> {
     const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
 
     if (!workspaceUri) {
-      Alert.error('No workspace folder open');
+      App.core.prompt.error('No workspace folder open');
       return null;
     }
     if (!activeEditorUri) {
-      Alert.error('No active editor');
+      App.core.prompt.error('No active editor');
       return null;
     }
 
@@ -35,7 +34,7 @@ export default async function (): Promise<AuditResult | null> {
     return result;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    Alert.error(`Error during audit: ${message}`);
+    App.core.prompt.error(`Error during audit: ${message}`);
     App.logger.error('Audit error:', e);
     throw e;
   }

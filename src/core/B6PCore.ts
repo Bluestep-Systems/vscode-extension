@@ -127,14 +127,11 @@ export class B6PCore implements ScriptContext {
     }
     this.logger.info(`Pushing script from ${opts.rootPath} to ${targetUrl}${opts.snapshot ? ' (snapshot)' : ''}`);
     await executePush({
+      ctx: this,
+      progress: this.progress,
       targetUrl,
       rootPath: opts.rootPath,
       snapshot: opts.snapshot ?? false,
-      session: this.sessionManager,
-      fs: this.fs,
-      prompt: this.prompt,
-      logger: this.logger,
-      progress: this.progress,
     });
   }
 

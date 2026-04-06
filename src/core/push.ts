@@ -1,20 +1,13 @@
-import * as crypto from 'crypto';
 import * as path from 'path';
-import { FolderNames, Http, MimeTypes, SpecialFiles } from './constants';
-import { Err } from './Err';
+import { XMLParser } from 'fast-xml-parser';
+import { FolderNames, Http, SpecialFiles } from './constants';
 import { B6PUri } from './B6PUri';
 import { GlobMatcher } from './data/GlobMatcher';
-import type { SessionManager } from './session/SessionManager';
-import type { IFileSystem, ILogger, IProgress, IPrompt, ProgressTask } from './providers';
-
-interface PushableFile {
-  /** Absolute local path */
-  localPath: string;
-  /** Upstairs URL to PUT to */
-  upstairsUrl: string;
-  /** Local file content */
-  content: Uint8Array;
-}
+import { ScriptUrlParser } from './data/ScriptUrlParser';
+import { ScriptFactory } from './script/ScriptFactory';
+import type { ScriptContext } from './script/ScriptContext';
+import type { IFileSystem, IProgress, ProgressTask } from './providers';
+import { Err } from './Err';
 
 /**
  * Recursively collect all files under a directory.
@@ -35,7 +28,9 @@ async function flattenDirectory(dirPath: string, fs: IFileSystem): Promise<strin
 }
 
 /**
- * Read .gitignore patterns from the script root.
+ * Read .gitignore patterns from the script root. Used only for the cleanup
+ * pass; per-file gitignore filtering during upload is handled inside
+ * ScriptFile.upload() / getReasonToNotPush().
  */
 async function readGitIgnorePatterns(rootPath: string, fs: IFileSystem): Promise<string[]> {
   const gitignorePath = path.join(rootPath, SpecialFiles.GITIGNORE);
@@ -50,192 +45,82 @@ async function readGitIgnorePatterns(rootPath: string, fs: IFileSystem): Promise
 }
 
 /**
- * Compute the SHA-512 hash of a buffer.
- */
-function sha512(data: Uint8Array): string {
-  return crypto.createHash('sha512').update(data).digest('hex').toLowerCase();
-}
-
-/**
- * Determine whether a file should be excluded from push.
- */
-function shouldExclude(
-  filePath: string,
-  rootPath: string,
-  _draftPath: string,
-  gitignoreMatcher: GlobMatcher,
-  isSnapshot: boolean,
-): string | null {
-  const relative = path.relative(rootPath, filePath);
-  const segments = relative.split(path.sep);
-
-  // Not in draft folder
-  if (segments[0] !== FolderNames.DRAFT) {
-    return 'Not in draft folder';
-  }
-
-  // In declarations folder (declarations are never pushed)
-  if (segments[1] === FolderNames.DECLARATIONS) {
-    return 'In declarations folder';
-  }
-
-  // In .git folder
-  if (segments.includes('.git')) {
-    return 'In .git folder';
-  }
-
-  // Check gitignore
-  if (gitignoreMatcher.matches(filePath)) {
-    return 'Matched .gitignore pattern';
-  }
-
-  // Skip build folder contents unless snapshot
-  if (!isSnapshot && segments.includes(FolderNames.DOT_BUILD)) {
-    return 'In build folder (non-snapshot)';
-  }
-
-  return null;
-}
-
-/**
- * Build the upstairs URL for a draft file.
- */
-function buildUpstairsUrl(filePath: string, draftPath: string, baseUrl: string, isSnapshot: boolean): string {
-  let relative = path.relative(draftPath, filePath);
-  // Normalize to forward slashes for URL
-  relative = relative.split(path.sep).join('/');
-
-  const base = new URL(baseUrl);
-
-  if (isSnapshot) {
-    base.pathname = base.pathname + FolderNames.SNAPSHOT + '/' + relative;
-  } else {
-    base.pathname = base.pathname + FolderNames.DRAFT + '/' + relative;
-  }
-
-  return base.href;
-}
-
-/**
  * Core push implementation.
+ *
+ * Delegates the per-file work to {@link ScriptFile.upload}, which handles:
+ *  - exclusion logic (declarations / .git / .gitignore / integrity match)
+ *  - collision detection against last-verified hash with user prompt
+ *  - snapshot dual-write (draft + snapshot)
+ *  - metadata `lastVerifiedHash` updates via touch()
+ *  - rich error wrapping
  */
 export async function executePush(opts: {
+  ctx: ScriptContext;
+  progress: IProgress;
   targetUrl: string;
   rootPath: string;
   snapshot: boolean;
-  session: SessionManager;
-  fs: IFileSystem;
-  prompt: IPrompt;
-  logger: ILogger;
-  progress: IProgress;
 }): Promise<void> {
-  const { targetUrl, rootPath, snapshot, session, fs, prompt, logger, progress } = opts;
+  const { ctx, progress, targetUrl, rootPath, snapshot } = opts;
+  const { fs, prompt, logger, sessionManager } = ctx;
   const draftPath = path.join(rootPath, FolderNames.DRAFT);
 
-  // Check draft folder exists
   const draftUri = B6PUri.fromFsPath(draftPath);
   if (!(await fs.exists(draftUri))) {
     prompt.error(`Draft folder not found: ${draftPath}`);
     return;
   }
 
-  // Read gitignore
-  const gitignorePatterns = await readGitIgnorePatterns(rootPath, fs);
-  const gitignoreMatcher = new GlobMatcher(rootPath, gitignorePatterns);
+  // Build a parser from the target URL so the ScriptRoot can resolve
+  // upstairs URLs (mirrors what executePull does on the pull side).
+  const parser = new ScriptUrlParser(targetUrl, sessionManager, logger, prompt);
+  const factory = new ScriptFactory(ctx);
 
-  // Flatten draft directory
+  // One ScriptRoot for the whole push; all files in this draft tree are
+  // siblings under the same root.
+  const rootUri = B6PUri.fromFsPath(path.join(rootPath, '/'));
+  const scriptRoot = factory.createScriptRoot(rootUri);
+  scriptRoot.withParser(parser);
+
   const allFiles = await flattenDirectory(draftPath, fs);
   logger.info(`Found ${allFiles.length} files in draft folder`);
 
-  // Filter to pushable files
-  const pushable: PushableFile[] = [];
-  for (const filePath of allFiles) {
-    const reason = shouldExclude(filePath, rootPath, draftPath, gitignoreMatcher, snapshot);
-    if (reason) {
-      logger.info(`Excluding: ${filePath} (${reason})`);
-      continue;
-    }
-
-    const content = await fs.readFile(B6PUri.fromFsPath(filePath));
-    const localHash = sha512(content);
-
-    // Check if file has changed on server since last push (integrity check)
-    const upstairsUrl = buildUpstairsUrl(filePath, draftPath, targetUrl, false);
-    if (!snapshot) {
-      try {
-        const headResp = await session.fetch(upstairsUrl, { method: Http.Methods.HEAD });
-        const etag = headResp.headers.get(Http.Headers.ETAG);
-        if (etag) {
-          const serverHash = etag.replace(/^W\//, '').replace(/"/g, '').toLowerCase();
-          // If local matches server, skip
-          if (localHash === serverHash) {
-            logger.info(`File integrity matches, skipping: ${filePath}`);
-            continue;
-          }
-        }
-      } catch {
-        // File may not exist upstairs yet — that's fine, push it
-      }
-    }
-
-    const finalUrl = buildUpstairsUrl(filePath, draftPath, targetUrl, snapshot);
-    pushable.push({ localPath: filePath, upstairsUrl: finalUrl, content });
-  }
-
-  if (pushable.length === 0) {
-    prompt.info('No files to push — everything is in sync.');
+  if (allFiles.length === 0) {
+    prompt.info('No files to push — draft folder is empty.');
     return;
   }
 
-  logger.info(`Pushing ${pushable.length} file(s)`);
-
-  // Execute push tasks
-  const pushTasks: ProgressTask<Response>[] = pushable.map(file => ({
+  const uploadTasks: ProgressTask<void>[] = allFiles.map(filePath => ({
     execute: async () => {
-      const resp = await session.csrfFetch(file.upstairsUrl, {
-        method: Http.Methods.PUT,
-        headers: { [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON },
-        body: file.content,
-      });
-      if (!resp.ok) {
-        const text = await resp.text();
-        throw new Err.FileSendError(`\nStatus: ${resp.status}\n${text}`);
-      }
-
-      // If snapshot, also push to snapshot folder
-      if (snapshot) {
-        const draftUrl = buildUpstairsUrl(file.localPath, draftPath, targetUrl, false);
-        const draftResp = await session.csrfFetch(draftUrl, {
-          method: Http.Methods.PUT,
-          headers: { [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON },
-          body: file.content,
-        });
-        if (!draftResp.ok) {
-          logger.warn(`Snapshot draft-copy failed for ${file.localPath}: ${draftResp.status}`);
+      const fileUri = B6PUri.fromFsPath(filePath);
+      const file = factory.createFile(fileUri, scriptRoot);
+      try {
+        await file.upload({ isSnapshot: snapshot });
+      } catch (e) {
+        if (e instanceof Err.UserCancelledError) {
+          // Surface cancellation to the progress runner so it can stop the batch.
+          throw e;
         }
+        logger.error(`Failed to push ${filePath}: ${e instanceof Error ? e.message : e}`);
+        throw e;
       }
-
-      return resp;
     },
-    description: path.basename(file.localPath),
+    description: path.basename(filePath),
   }));
 
-  await progress.withProgress(pushTasks, {
+  await progress.withProgress(uploadTasks, {
     title: snapshot ? 'Pushing Snapshot...' : 'Pushing Script...',
     showItemCount: true,
     cleanupMessage: 'Cleaning up...',
   });
 
-  // Cleanup: delete unused upstairs paths
+  // Cleanup: delete unused upstairs paths.
+  const gitignorePatterns = await readGitIgnorePatterns(rootPath, fs);
+  const gitignoreMatcher = new GlobMatcher(rootPath, gitignorePatterns);
   await cleanupUnusedUpstairsPaths({
+    ctx,
     targetUrl,
-    rootPath,
     draftPath,
-    snapshot,
-    session,
-    fs,
-    prompt,
-    logger,
     gitignoreMatcher,
   });
 
@@ -246,25 +131,18 @@ export async function executePush(opts: {
  * Delete remote files that no longer have a local counterpart.
  */
 async function cleanupUnusedUpstairsPaths(opts: {
+  ctx: ScriptContext;
   targetUrl: string;
-  rootPath: string;
   draftPath: string;
-  snapshot: boolean;
-  session: SessionManager;
-  fs: IFileSystem;
-  prompt: IPrompt;
-  logger: ILogger;
   gitignoreMatcher: GlobMatcher;
 }): Promise<void> {
-  const { targetUrl, draftPath, session, fs, prompt, logger, gitignoreMatcher } = opts;
+  const { ctx, targetUrl, draftPath, gitignoreMatcher } = opts;
+  const { fs, prompt, logger, sessionManager } = ctx;
 
-  // We need a parser to list what's upstairs
-  // For now, use a lightweight PROPFIND approach
   try {
-    const { XMLParser } = await import('fast-xml-parser');
     const parser = new XMLParser();
 
-    const response = await session.fetch(targetUrl, {
+    const response = await sessionManager.fetch(targetUrl, {
       headers: {
         [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
         [Http.Headers.CACHE_CONTROL]: Http.Headers.NO_CACHE,
@@ -284,7 +162,6 @@ async function cleanupUnusedUpstairsPaths(opts: {
       return;
     }
 
-    // Build set of local draft paths (relative to draft folder)
     const localFiles = await flattenDirectory(draftPath, fs);
     const localRelatives = new Set(
       localFiles.map(f => path.relative(draftPath, f).split(path.sep).join('/'))
@@ -302,24 +179,20 @@ async function cleanupUnusedUpstairsPaths(opts: {
 
       if (!relative || relative === '/') {continue;}
 
-      // Check if it's a draft path
       const draftPrefix = FolderNames.DRAFT + '/';
       if (!relative.startsWith(draftPrefix)) {continue;}
 
       const draftRelative = relative.slice(draftPrefix.length);
       if (!draftRelative) {continue;}
 
-      // Skip directories (end with /)
       if (draftRelative.endsWith('/')) {continue;}
 
-      // Skip gitignored files
       const localEquivalent = path.join(draftPath, ...draftRelative.split('/'));
       if (gitignoreMatcher.matches(localEquivalent)) {
         logger.info(`File is in .gitignore; skipping deletion: ${href}`);
         continue;
       }
 
-      // If no local equivalent, mark for deletion
       if (!localRelatives.has(draftRelative)) {
         pathsToDelete.push(entryUrl.href);
       }
@@ -344,7 +217,7 @@ async function cleanupUnusedUpstairsPaths(opts: {
 
     for (const url of pathsToDelete) {
       logger.info('Deleting unused upstairs path: ' + url);
-      await session.fetch(url, { method: Http.Methods.DELETE });
+      await sessionManager.fetch(url, { method: Http.Methods.DELETE });
     }
   } catch (e) {
     logger.warn(`Cleanup failed: ${e instanceof Error ? e.message : e}`);
