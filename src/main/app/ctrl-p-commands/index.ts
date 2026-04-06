@@ -12,6 +12,14 @@ import snapshot from "./snapshot";
 import goToSetup from "./goToSetup";
 import audit from "./audit";
 import auditPull from "./auditPull";
+import report from "./report";
+import clearSettings from "./clearSettings";
+import clearSessions from "./clearSessions";
+import clearAll from "./clearAll";
+import browseScriptRoot from "./browseScriptRoot";
+import toggleAdvanced from "./toggleAdvanced";
+import toggleDebug from "./toggleDebug";
+import openSettings from "./openSettings";
 
 /**
  * Namespace for Ctrl+P command related functions.
@@ -30,5 +38,13 @@ export default {
   quickDeploy,
   testTask,
   snapshot,
-  goToSetup
+  goToSetup,
+  report,
+  clearSettings,
+  clearSessions,
+  clearAll,
+  browseScriptRoot,
+  toggleAdvanced,
+  toggleDebug,
+  openSettings,
 };

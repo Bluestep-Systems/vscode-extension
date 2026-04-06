@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
-import { type ReadOnlyMap } from '../../../types';
+import type { ScriptContext } from '../../core/script/ScriptContext';
+import type { IFileSystem, IPrompt } from '../../core/providers';
 import { BasicAuthProvider } from '../../core/auth/BasicAuthProvider';
 import { SessionManager } from '../../core/session/SessionManager';
 import { OutputChannels, SettingsKeys } from '../../core/constants';
@@ -18,164 +19,59 @@ import { ScriptFactory } from '../../core/script/ScriptFactory';
 import { VscodeFileSystem, VscodePersistence, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
 
 
-export const App = new class {
+export const App = new class implements ScriptContext {
   private _context: vscode.ExtensionContext | null = null;
   private _persistence: VscodePersistence | null = null;
   private _settings: SettingsWrapper | null = null;
   private _outputChannel: vscode.LogOutputChannel | null = null;
   private _core: B6PCore | null = null;
-  public readonly appKey = SettingsKeys.APP_KEY;
-
-  // Manager instances (those still owned by App; the rest live on B6PCore)
   private _updateUI: UpdateUI | null = null;
   private _mcpServerProvider: McpServerProvider | null = null;
 
-  private readonly _disposables: vscode.Disposable[] = [];
-
-  /**
-   * a read-only map interceptor for command registrations.
-   * Commands reference App instance properties that are populated during init().
-   */
-  disposables = new class implements ReadOnlyMap<vscode.Disposable> {
-
-    #map = new Map<string, vscode.Disposable>([
-      ['bsjs-push-pull.pushScript', vscode.commands.registerCommand('bsjs-push-pull.pushScript', ctrlPCommands.pushScript)],
-      ['bsjs-push-pull.pullScript', vscode.commands.registerCommand('bsjs-push-pull.pullScript', ctrlPCommands.pullScript)],
-      ['bsjs-push-pull.pullCurrent', vscode.commands.registerCommand('bsjs-push-pull.pullCurrent', ctrlPCommands.pullCurrent)],
-      ['bsjs-push-pull.pushCurrent', vscode.commands.registerCommand('bsjs-push-pull.pushCurrent', ctrlPCommands.pushCurrent)],
-      ['bsjs-push-pull.updateCredentials', vscode.commands.registerCommand('bsjs-push-pull.updateCredentials', ctrlPCommands.updateCredentials)],
-      ['bsjs-push-pull.runTask', vscode.commands.registerCommand('bsjs-push-pull.runTask', ctrlPCommands.runTask)],
-      ['bsjs-push-pull.checkForUpdates', vscode.commands.registerCommand('bsjs-push-pull.checkForUpdates', ctrlPCommands.checkForUpdates)],
-      ['bsjs-push-pull.notify', vscode.commands.registerCommand('bsjs-push-pull.notify', ctrlPCommands.notify)],
-      ['bsjs-push-pull.quickDeploy', vscode.commands.registerCommand('bsjs-push-pull.quickDeploy', ctrlPCommands.quickDeploy)],
-      ['bsjs-push-pull.testTask', vscode.commands.registerCommand('bsjs-push-pull.testTask', ctrlPCommands.testTask)],
-      ['bsjs-push-pull.snapshot', vscode.commands.registerCommand('bsjs-push-pull.snapshot', ctrlPCommands.snapshot)],
-      ['bsjs-push-pull.report', vscode.commands.registerCommand('bsjs-push-pull.report', async () => {
-        const entries = App.scriptMetadataStore.all();
-        const summary = entries.length === 0
-          ? "No script metadata entries stored."
-          : entries.map(e => `${e.U}/${e.scriptName} (webdavId: ${e.webdavId}, records: ${e.pushPullRecords.length}, classid: ${e.scriptKey.classid}, seqnum: ${e.scriptKey.seqnum})`).join("\n");
-        App.logger.info("=== Script Metadata Store ===\n" + summary);
-
-        const orgEntries = [...App.orgCache.map()];
-        const orgSummary = orgEntries.length === 0
-          ? "No org cache entries."
-          : orgEntries.map(([u, elements]) => `${u}: ${elements.map(e => `${e.host} (lastAccess: ${new Date(e.lastAccess).toISOString()})`).join(", ")}`).join("\n");
-        App.logger.info("=== Org Cache ===\n" + orgSummary);
-
-        App.core.prompt.info(`${entries.length} metadata ${entries.length === 1 ? "entry" : "entries"}, ${orgEntries.length} org cache ${orgEntries.length === 1 ? "entry" : "entries"} stored. See output channel for details.`);
-      })],
-      ['bsjs-push-pull.clearSettings', vscode.commands.registerCommand('bsjs-push-pull.clearSettings', async () => {
-        App.core.prompt.info("Reverting to default settings");
-        App.clearMap();
-      })],
-      ['bsjs-push-pull.clearSessions', vscode.commands.registerCommand('bsjs-push-pull.clearSessions', async () => {
-        App.core.prompt.info("Clearing all Sessions");
-        App.orgCache.clearCache();
-      })],
-      ['bsjs-push-pull.clearAll', vscode.commands.registerCommand('bsjs-push-pull.clearAll', async () => {
-        App.core.prompt.info("Clearing Sessions, Auth Managers, and Settings");
-        App.clearMap(true);
-        App.orgCache.clearCache();
-        App.authManager.clear();
-      })],
-      ['bsjs-push-pull.toggleAdvanced', vscode.commands.registerCommand('bsjs-push-pull.toggleAdvanced', async () => {
-        App.toggleAdvancedMode();
-      })],
-      ['bsjs-push-pull.toggleDebug', vscode.commands.registerCommand('bsjs-push-pull.toggleDebug', async () => {
-        App.toggleDebugMode();
-      })],
-      ['bsjs-push-pull.openSettings', vscode.commands.registerCommand('bsjs-push-pull.openSettings', async () => {
-        vscode.commands.executeCommand('workbench.action.openSettings', "@ext:bluestep-systems.bsjs-push-pull");
-      })],
-      ['bsjs-push-pull.audit', vscode.commands.registerCommand('bsjs-push-pull.audit', ctrlPCommands.audit)],
-      ['bsjs-push-pull.auditPull', vscode.commands.registerCommand('bsjs-push-pull.auditPull', ctrlPCommands.auditPull)],
-      ['bsjs-push-pull.goToSetup', vscode.commands.registerCommand('bsjs-push-pull.goToSetup', ctrlPCommands.goToSetup)],
-      ['bsjs-push-pull.browseScriptRoot', vscode.commands.registerCommand('bsjs-push-pull.browseScriptRoot', async () => {
-        const result = await vscode.window.showOpenDialog({
-          canSelectFiles: false,
-          canSelectFolders: true,
-          canSelectMany: false,
-          openLabel: 'Select Script Root Folder',
-        });
-        if (result && result[0]) {
-          await vscode.workspace.getConfiguration('bsjs-push-pull').update('scriptRoot.path', result[0].fsPath, vscode.ConfigurationTarget.Global);
-          App.core.prompt.info(`Script root set to: ${result[0].fsPath}`);
-        }
-      })]
-    ]);
-    constructor() {}
-    forEach(callback: (disposable: vscode.Disposable, key: string, map: this) => void) {
-      this.#map.forEach((disposable, key) => callback(disposable, key, this));
-    }
-    get(key: string): vscode.Disposable | undefined {
-      return this.#map.get(key);
-    }
-    has(key: string): boolean {
-      return this.#map.has(key);
-    }
-  }();
+  public readonly appKey = SettingsKeys.APP_KEY;
 
   public isInitialized(): boolean {
     return this._context !== null;
   }
 
   public get context(): vscode.ExtensionContext {
-    if (!this.isInitialized()) {
-      throw new Err.ContextNotSetError('Extension context');
-    }
-    return this._context!;
+    if (this._context === null) {throw new Err.ContextNotSetError('Extension context');}
+    return this._context;
   }
 
-  get persistence(): VscodePersistence {
-    if (this._persistence === null) {
-      throw new Err.ContextNotSetError('Persistence');
-    }
+  public get persistence(): VscodePersistence {
+    if (this._persistence === null) {throw new Err.ContextNotSetError('Persistence');}
     return this._persistence;
   }
 
-  public get settings() {
-    if (this._settings === null) {
-      throw new Err.ContextNotSetError('Settings map');
-    }
-    return this._settings!;
+  public get settings(): SettingsWrapper {
+    if (this._settings === null) {throw new Err.ContextNotSetError('Settings map');}
+    return this._settings;
   }
 
-  public get logger() {
-    if (this._outputChannel === null) {
-      throw new Err.ContextNotSetError('Output channel');
-    }
+  public get logger(): vscode.LogOutputChannel {
+    if (this._outputChannel === null) {throw new Err.ContextNotSetError('Output channel');}
     return this._outputChannel;
   }
 
-  public get core() {
-    if (this._core === null) {
-      throw new Err.ContextNotSetError('B6PCore');
-    }
+  public get core(): B6PCore {
+    if (this._core === null) {throw new Err.ContextNotSetError('B6PCore');}
     return this._core;
   }
 
-  // Manager accessors — delegate to B6PCore so there's a single instance per service.
-  public get sessionManager(): SessionManager {
-    return this.core.sessionManager;
-  }
+  public get sessionManager(): SessionManager { return this.core.sessionManager; }
+  public get orgCache(): OrgCache { return this.core.orgCache; }
+  public get authManager(): BasicAuthProvider { return this.core.auth; }
+  public get scriptMetadataStore(): ScriptMetaDataStore { return this.core.scriptMetadataStore; }
 
-  public get orgCache(): OrgCache {
-    return this.core.orgCache;
-  }
-
-  public get authManager(): BasicAuthProvider {
-    return this.core.auth;
-  }
-
-  public get scriptMetadataStore(): ScriptMetaDataStore {
-    return this.core.scriptMetadataStore;
-  }
+  // ScriptContext members (delegated to B6PCore)
+  public get fs(): IFileSystem { return this.core.fs; }
+  public get prompt(): IPrompt { return this.core.prompt; }
+  public get auth(): BasicAuthProvider { return this.core.auth; }
+  public getScriptFactory() { return this.core.getScriptFactory(); }
 
   public get updateUI(): UpdateUI {
-    if (!this._updateUI) {
-      throw new Err.ManagerNotInitializedError('UpdateUI');
-    }
+    if (!this._updateUI) {throw new Err.ManagerNotInitializedError('UpdateUI');}
     return this._updateUI;
   }
 
@@ -183,22 +79,19 @@ export const App = new class {
     if (this._context !== null) {
       throw new Err.ContextAlreadySetError('Extension context');
     }
-    this._context = context;
-    this._persistence = new VscodePersistence(this._context);
 
-    this.disposables.forEach(disposable => this.context.subscriptions.push(disposable));
-    this._outputChannel = vscode.window.createOutputChannel(OutputChannels.B6P, {
-      log: true,
-    });
-    this.context.subscriptions.push(this._outputChannel);
+    this._context = context;
+    this._outputChannel = vscode.window.createOutputChannel(OutputChannels.B6P, { log: true });
+    context.subscriptions.push(this._outputChannel);
     this._settings = new SettingsWrapper();
 
-    // Initialize B6PCore with VSCode providers (shares the same persistence instance)
+    const vscodeLogger = new VscodeLogger(this._outputChannel);
+
     this._core = new B6PCore({
       fs: new VscodeFileSystem(),
-      persistence: this._persistence,
+      persistence: new VscodePersistence(context),
       prompt: new VscodePrompt(),
-      logger: new VscodeLogger(this._outputChannel),
+      logger: vscodeLogger,
       progress: new VscodeProgress(),
       isDebugMode: () => this.isDebugMode(),
       orgCacheSettings: this._settings,
@@ -211,149 +104,175 @@ export const App = new class {
         versionOverride: this._settings.get('debugMode').versionOverride
       }
     });
+    context.subscriptions.push(this._core);
 
-    // Wire the script factory's default context to B6PCore so that the
-    // ScriptFactory.* static helpers (used by older callers and tests) work.
     ScriptFactory.setDefaultContext(this._core);
 
-    vscode.window.onDidChangeActiveTextEditor(editor => {
-      if (editor) {
-        readOnlyCheck();
-      }
-    }, this, this.context.subscriptions);
+    this.registerCommands(context);
+    this.wireEvents(context);
+    this.registerUriHandler(context);
+    this.wireMcp(context, vscodeLogger);
+    this.wireUpdateUI(context, vscodeLogger);
 
-    vscode.workspace.onDidChangeConfiguration(event => {
-      if (event.affectsConfiguration(App.appKey)) {
-        this.isDebugMode() && console.log("Configuration changed, updating settings map");
-        this.settings.sync();
-      }
-    });
     this.settings.sync();
     readOnlyCheck();
 
-    // Register URI handler
-    this.context.subscriptions.push(vscode.window.registerUriHandler({
-      handleUri(uri: vscode.Uri) {
-        if (uri.path === '/pull') {
-          const params = new URLSearchParams(uri.query);
-          const formulaUrl = params.get('url');
-          if (formulaUrl) {
-            ctrlPCommands.pullScript(formulaUrl);
-          } else {
-            App.core.prompt.error('Missing "url" parameter in URI');
-          }
-        } else if (uri.path === '/audit-pull') {
-          ctrlPCommands.auditPull();
-        }
-      }
-    }));
-
-    // ---- Wire up additional services on top of B6PCore ----
-
-    const vscodeLogger: VscodeLogger = new VscodeLogger(this._outputChannel);
-    this._disposables.push(this._core);
-
-    // MCP server provider (depends on orgCache, auth, logger, context)
-    this._mcpServerProvider = new McpServerProvider(
-      this._core.orgCache,
-      this._core.auth,
-      vscodeLogger,
-      context
-    );
-    this._disposables.push(this._mcpServerProvider);
-
-    // Wire up cross-cutting events
-    //    - SessionManager notifies OrgCache on login
-    this._core.sessionManager.onLogin = (url: URL) => {
-      this._core!.orgCache.findU(url).catch((e: unknown) => {
-        this.logger.warn('Failed to cache org during login:', e instanceof Error ? e.message : String(e));
-      });
-    };
-    //    - OrgCache notifies McpServerProvider on changes
-    this._core.orgCache.onChanged = () => {
-      this._mcpServerProvider!.fireChanged();
-    };
-
-    // Update UI wrapper (uses UpdateService from B6PCore)
-    if (this._core.updateService) {
-      this._updateUI = new UpdateUI(
-        this._core.updateService,
-        this._core.fs,
-        vscodeLogger,
-        context.extensionUri,
-        context.globalStorageUri,
-        this.appKey
-      );
-      this._disposables.push(this._updateUI);
-    }
-
-    // Register LM tools
-    this.context.subscriptions.push(
+    context.subscriptions.push(
       vscode.lm.registerTool('bluestep-systems_bsjs-push-pull_pull-script', PULL_SCRIPT_TOOL),
     );
 
     return this;
   }
 
+  private registerCommands(context: vscode.ExtensionContext) {
+    const reg = (id: string, handler: (...args: never[]) => unknown) => {
+      context.subscriptions.push(vscode.commands.registerCommand(id, handler));
+    };
+
+    reg('bsjs-push-pull.pushScript', ctrlPCommands.pushScript);
+    reg('bsjs-push-pull.pullScript', ctrlPCommands.pullScript);
+    reg('bsjs-push-pull.pullCurrent', ctrlPCommands.pullCurrent);
+    reg('bsjs-push-pull.pushCurrent', ctrlPCommands.pushCurrent);
+    reg('bsjs-push-pull.updateCredentials', ctrlPCommands.updateCredentials);
+    reg('bsjs-push-pull.runTask', ctrlPCommands.runTask);
+    reg('bsjs-push-pull.checkForUpdates', ctrlPCommands.checkForUpdates);
+    reg('bsjs-push-pull.notify', ctrlPCommands.notify);
+    reg('bsjs-push-pull.quickDeploy', ctrlPCommands.quickDeploy);
+    reg('bsjs-push-pull.testTask', ctrlPCommands.testTask);
+    reg('bsjs-push-pull.snapshot', ctrlPCommands.snapshot);
+    reg('bsjs-push-pull.audit', ctrlPCommands.audit);
+    reg('bsjs-push-pull.auditPull', ctrlPCommands.auditPull);
+    reg('bsjs-push-pull.goToSetup', ctrlPCommands.goToSetup);
+
+    reg('bsjs-push-pull.report', () => ctrlPCommands.report(this));
+    reg('bsjs-push-pull.clearSettings', () => ctrlPCommands.clearSettings(this));
+    reg('bsjs-push-pull.clearSessions', () => ctrlPCommands.clearSessions(this));
+    reg('bsjs-push-pull.clearAll', () => ctrlPCommands.clearAll(this));
+    reg('bsjs-push-pull.toggleAdvanced', () => ctrlPCommands.toggleAdvanced(this));
+    reg('bsjs-push-pull.toggleDebug', () => ctrlPCommands.toggleDebug(this));
+    reg('bsjs-push-pull.openSettings', ctrlPCommands.openSettings);
+    reg('bsjs-push-pull.browseScriptRoot', () => ctrlPCommands.browseScriptRoot(this));
+  }
+
+  private wireEvents(context: vscode.ExtensionContext) {
+    vscode.window.onDidChangeActiveTextEditor(editor => {
+      if (editor) {readOnlyCheck();}
+    }, this, context.subscriptions);
+
+    context.subscriptions.push(
+      vscode.workspace.onDidChangeConfiguration(event => {
+        if (event.affectsConfiguration(this.appKey)) {
+          this.logger.debug('Configuration changed, updating settings map');
+          this.settings.sync();
+        }
+      })
+    );
+
+    // Cross-cutting wiring on B6PCore. Single-slot callbacks are fine here
+    // because App is the only owner; we null them out in dispose().
+    this.core.sessionManager.onLogin = (url: URL) => {
+      this.core.orgCache.findU(url).catch((e: unknown) => {
+        this.logger.warn('Failed to cache org during login:', e instanceof Error ? e.message : String(e));
+      });
+    };
+  }
+
+  private registerUriHandler(context: vscode.ExtensionContext) {
+    const core = this.core;
+    context.subscriptions.push(vscode.window.registerUriHandler({
+      handleUri: (uri: vscode.Uri) => {
+        if (uri.path === '/pull') {
+          const formulaUrl = new URLSearchParams(uri.query).get('url');
+          if (formulaUrl) {
+            ctrlPCommands.pullScript(formulaUrl);
+          } else {
+            core.prompt.error('Missing "url" parameter in URI');
+          }
+        } else if (uri.path === '/audit-pull') {
+          ctrlPCommands.auditPull();
+        }
+      }
+    }));
+  }
+
+  private wireMcp(context: vscode.ExtensionContext, logger: VscodeLogger) {
+    this._mcpServerProvider = new McpServerProvider(
+      this.core.orgCache,
+      this.core.auth,
+      logger,
+      context,
+    );
+    context.subscriptions.push(this._mcpServerProvider);
+
+    this.core.orgCache.onChanged = () => {
+      this._mcpServerProvider!.fireChanged();
+    };
+  }
+
+  private wireUpdateUI(context: vscode.ExtensionContext, logger: VscodeLogger) {
+    if (!this.core.updateService) {return;}
+    this._updateUI = new UpdateUI(
+      this.core.updateService,
+      this.core.fs,
+      logger,
+      context.extensionUri,
+      context.globalStorageUri,
+      this.appKey,
+    );
+    context.subscriptions.push(this._updateUI);
+  }
+
   public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
-    !alreadyAlerted && this.core.prompt.info("Cleared all Settings");
+    !alreadyAlerted && this.core.prompt.info('Cleared all Settings');
     this.settings.set('debugMode', SettingsWrapper.DEFAULT.debugMode);
     this.settings.set('advancedMode', SettingsWrapper.DEFAULT.advancedMode);
   }
 
-  public isDebugMode() {
-    if (this._settings === null) {
-      return false;
-    }
-    return this.settings.get('debugMode').enabled;
+  public isDebugMode(): boolean {
+    // Tolerant pre-init: many call sites run during early startup before
+    // settings are wired. Treat "not yet initialized" as "debug off".
+    if (this._settings === null) {return false;}
+    return this._settings.get('debugMode').enabled;
   }
 
   public toggleAdvancedMode() {
-    console.log("Toggling advanced mode");
-    this.settings.set('advancedMode', {
-      enabled: !this.settings.get('advancedMode').enabled
-    });
-    this.core.prompt.info(`Advanced mode ${this.settings.get('advancedMode').enabled ? "enabled" : "disabled"}`);
+    const current = this.settings.get('advancedMode');
+    const next = { ...current, enabled: !current.enabled };
+    this.settings.set('advancedMode', next);
+    this.logger.debug('Toggling advanced mode');
+    this.core.prompt.info(`Advanced mode ${next.enabled ? 'enabled' : 'disabled'}`);
   }
 
   public toggleDebugMode() {
-    console.log("Toggling debug mode");
-    this.settings.set('debugMode', {
-      enabled: !this.settings.get('debugMode').enabled,
-      anyDomainOverrideUrl: this.settings.get('debugMode').anyDomainOverrideUrl,
-      versionOverride: this.settings.get('debugMode').versionOverride
-    });
-    this.core.prompt.info(`Debug mode ${this.settings.get('debugMode').enabled ? "enabled" : "disabled"}`);
+    const current = this.settings.get('debugMode');
+    const next = { ...current, enabled: !current.enabled };
+    this.settings.set('debugMode', next);
+    this.logger.debug('Toggling debug mode');
+    this.core.prompt.info(`Debug mode ${next.enabled ? 'enabled' : 'disabled'}`);
   }
 
   public getVersion(): string {
-    try {
-      const extension = vscode.extensions.getExtension('bluestep-systems.bsjs-push-pull');
-      if (extension && extension.packageJSON && extension.packageJSON.version) {
-        return extension.packageJSON.version;
-      }
-      throw new Err.PackageJsonNotFoundError();
-    } catch (error) {
-      throw error;
+    const extension = vscode.extensions.getExtension('bluestep-systems.bsjs-push-pull');
+    if (extension && extension.packageJSON && extension.packageJSON.version) {
+      return extension.packageJSON.version;
     }
+    throw new Err.PackageJsonNotFoundError();
   }
 
   public runConverts() {
-    this.core.prompt.info("Not implemented yet");
+    this.core.prompt.info('Not implemented yet');
   }
 
   /**
-   * Dispose all managed resources.
+   * Best-effort teardown. VS Code disposes everything in
+   * `context.subscriptions` automatically; this just clears the
+   * cross-cutting callback slots we set on B6PCore.
    */
   public dispose() {
-    for (let i = this._disposables.length - 1; i >= 0; i--) {
-      try {
-        this._disposables[i].dispose();
-      } catch (error) {
-        this.logger.error('Error disposing item:', error);
-      }
+    if (this._core) {
+      this._core.sessionManager.onLogin = null;
+      this._core.orgCache.onChanged = null;
     }
-    this._disposables.length = 0;
   }
 }();
