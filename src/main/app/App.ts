@@ -9,15 +9,14 @@ import { UpdateManager } from './services/UpdateManager';
 import { SettingsWrapper } from './settings/SettingsWrapper';
 import { Err } from '../../core/Err';
 import { HttpClient } from '../../core/network/HttpClient';
-import { OrgCache } from './cache/OrgCache';
-import { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
+import { OrgCache } from '../../core/cache/OrgCache';
+import { ScriptMetaDataStore } from '../../core/cache/ScriptMetaDataStore';
 import { McpServerProvider } from './mcp/McpServerProvider';
 import { PULL_SCRIPT_TOOL } from './mcp/PullScriptTool';
 import { DisposableRegistry } from './util/Disposable';
 import { B6PCore } from '../../core/B6PCore';
 import { ScriptFactory } from '../../core/script/ScriptFactory';
 import { VscodeFileSystem, VscodePersistence, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
-import { migrateLegacyMetadataFiles } from './cache/ScriptMetaDataStore';
 
 
 export const App = new class {
@@ -268,9 +267,6 @@ export const App = new class {
     this._core.orgCache.onChanged = () => {
       this._mcpServerProvider!.fireChanged();
     };
-
-    // Migrate any legacy `.b6p_metadata.json` files into the persistent store.
-    void migrateLegacyMetadataFiles(this._core.scriptMetadataStore);
 
     // Update manager
     this._updateManager = new UpdateManager(

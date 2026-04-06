@@ -3,7 +3,7 @@ import { BasicAuthProvider } from '../../../core/auth/BasicAuthProvider';
 import { Http } from '../../../core/constants';
 import type { ILogger } from '../../../core/providers';
 import type { Disposable } from '../util/Disposable';
-import type { OrgCache } from '../cache/OrgCache';
+import type { OrgCache } from '../../../core/cache/OrgCache';
 
 /**
  * Provides MCP server definitions to VS Code for each known org in the OrgCache.
