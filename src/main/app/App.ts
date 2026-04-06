@@ -13,7 +13,6 @@ import { OrgCache } from '../../core/cache/OrgCache';
 import { ScriptMetaDataStore } from '../../core/cache/ScriptMetaDataStore';
 import { McpServerProvider } from './mcp/McpServerProvider';
 import { PULL_SCRIPT_TOOL } from './mcp/PullScriptTool';
-import { DisposableRegistry } from './util/Disposable';
 import { B6PCore } from '../../core/B6PCore';
 import { ScriptFactory } from '../../core/script/ScriptFactory';
 import { VscodeFileSystem, VscodePersistence, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
@@ -31,7 +30,7 @@ export const App = new class {
   private _updateManager: UpdateManager | null = null;
   private _mcpServerProvider: McpServerProvider | null = null;
 
-  private readonly _disposables = new DisposableRegistry();
+  private readonly _disposables: vscode.Disposable[] = [];
 
   /**
    * a read-only map interceptor for command registrations.
@@ -245,7 +244,7 @@ export const App = new class {
     // ---- Wire up additional services on top of B6PCore ----
 
     const vscodeLogger: VscodeLogger = new VscodeLogger(this._outputChannel);
-    this._disposables.add(this._core);
+    this._disposables.push(this._core);
 
     // MCP server provider (depends on orgCache, auth, logger, context)
     this._mcpServerProvider = new McpServerProvider(
@@ -254,7 +253,7 @@ export const App = new class {
       vscodeLogger,
       context
     );
-    this._disposables.add(this._mcpServerProvider);
+    this._disposables.push(this._mcpServerProvider);
 
     // Wire up cross-cutting events
     //    - SessionManager notifies OrgCache on login
@@ -278,7 +277,7 @@ export const App = new class {
       context.globalStorageUri,
       this.appKey
     );
-    this._disposables.add(this._updateManager);
+    this._disposables.push(this._updateManager);
 
     // Register LM tools
     this.context.subscriptions.push(
@@ -340,6 +339,13 @@ export const App = new class {
    * Dispose all managed resources.
    */
   public dispose() {
-    this._disposables.dispose();
+    for (let i = this._disposables.length - 1; i >= 0; i--) {
+      try {
+        this._disposables[i].dispose();
+      } catch (error) {
+        this.logger.error('Error disposing item:', error);
+      }
+    }
+    this._disposables.length = 0;
   }
 }();

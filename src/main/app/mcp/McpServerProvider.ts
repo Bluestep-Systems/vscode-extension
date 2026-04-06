@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { BasicAuthProvider } from '../../../core/auth/BasicAuthProvider';
 import { Http } from '../../../core/constants';
 import type { ILogger } from '../../../core/providers';
-import type { Disposable } from '../util/Disposable';
 import type { OrgCache } from '../../../core/cache/OrgCache';
 
 /**
@@ -13,7 +12,7 @@ import type { OrgCache } from '../../../core/cache/OrgCache';
  * {@link resolveMcpServerDefinition} using the extension's existing credentials.
  * @lastreviewed null
  */
-export class McpServerProvider implements Disposable {
+export class McpServerProvider {
 
   private _emitter: vscode.EventEmitter<void>;
 
