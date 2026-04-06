@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from "vscode";
 import { PrimitiveNestedObject, JsonValue, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from "../../../../types";
-import { IdUtility } from "./data/IdUtility";
+import { IdUtility } from "../../../core/data/IdUtility";
 import { ScriptKey } from './data/ScriptKey';
 import { Err } from '../../../core/Err';
 import { ScriptFactory } from '../../../core/script/ScriptFactory';
@@ -165,11 +165,11 @@ export namespace Util {
     }
     const id = new IdUtility(topId);
 
-    const ret = await id.findFileContaining(folderUri);
+    const ret = await id.findFileContaining(folderUri.fsPath, App.core.fs, App.core.prompt);
     if (!ret) {
       throw new Err.NoMatchingFileFoundError();
     }
-    return ret;
+    return vscode.Uri.file(ret);
   }
 
   /**
