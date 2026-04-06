@@ -55,7 +55,7 @@ export class SnapshotHistoryRecorder {
 
     ctx.logger.info(`Recording snapshot history for ${scriptKey.toCompoundId()}`);
 
-    const response = await ctx.session.csrfFetch(gqlUrl, {
+    const response = await ctx.sessionManager.csrfFetch(gqlUrl, {
       method: Http.Methods.POST,
       headers: {
         [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,

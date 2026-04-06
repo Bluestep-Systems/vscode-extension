@@ -7,8 +7,8 @@ import type { SessionManager } from '../session/SessionManager';
 import type { ILogger, IPrompt } from '../providers';
 import { OrgWorker } from './OrgWorker';
 
-type RawFile = { upstairsPath: string; downstairsPath: string; trailing?: string };
-type GetScriptRet = RawFile[] | null;
+type FilePointers = { upstairsPath: string; downstairsPath: string; trailing?: string };
+type GetScriptRet = FilePointers[] | null;
 
 /**
  * Parses and interacts with BlueStep WebDAV script URLs.
@@ -31,7 +31,7 @@ export class ScriptUrlParser {
 
   constructor(
     public readonly rawUrlString: string,
-    private readonly session: SessionManager,
+    private readonly sessionManager: SessionManager,
     private readonly logger: ILogger,
     private readonly prompt: IPrompt,
   ) {
@@ -103,7 +103,7 @@ export class ScriptUrlParser {
     try {
       gqlUrl.pathname = 'gql';
 
-      const res1 = await this.session.csrfFetch(gqlUrl, {
+      const res1 = await this.sessionManager.csrfFetch(gqlUrl, {
         method: Http.Methods.POST,
         headers: { [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON },
         body: parentQuery(scriptRootId),
@@ -132,7 +132,7 @@ export class ScriptUrlParser {
       }
 
       const mediaLibraryId = parents[0].id;
-      const res2 = await this.session.csrfFetch(gqlUrl, {
+      const res2 = await this.sessionManager.csrfFetch(gqlUrl, {
         method: Http.Methods.POST,
         headers: { [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON },
         body: parentQuery(mediaLibraryId),
@@ -202,9 +202,9 @@ export class ScriptUrlParser {
     return this.getSubScript(url, scriptName);
   }
 
-  async getSubScript(url: URL, scriptName: string, repository: RawFile[] = []): Promise<RawFile[] | null> {
+  async getSubScript(url: URL, scriptName: string, repository: FilePointers[] = []): Promise<FilePointers[] | null> {
     try {
-      const response = await this.session.fetch(url, {
+      const response = await this.sessionManager.fetch(url, {
         headers: {
           [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
           [Http.Headers.ACCEPT_LANGUAGE]: Http.Headers.ACCEPT_LANGUAGE_EN_US,
@@ -227,7 +227,7 @@ export class ScriptUrlParser {
         return repository;
       }
 
-      const firstLayer: RawFile[] = await Promise.all(
+      const firstLayer: FilePointers[] = await Promise.all(
         dResponses
           .map(terminal => {
             // Parse as a URL parser — only need URL fields, not the full session-aware parser

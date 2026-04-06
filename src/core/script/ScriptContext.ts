@@ -13,7 +13,7 @@ import type { OrgCache } from "../cache/OrgCache";
  */
 export interface ScriptContext {
   readonly fs: IFileSystem;
-  readonly session: SessionManager;
+  readonly sessionManager: SessionManager;
   readonly logger: ILogger;
   readonly prompt: IPrompt;
   readonly auth: BasicAuthProvider;

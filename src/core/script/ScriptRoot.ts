@@ -191,7 +191,7 @@ export class ScriptRoot {
       return metadata.scriptKey;
     }
     try {
-      this.scriptParser = new ScriptUrlParser((await this.getBaseWebDavUrl()).toString(), this.ctx.session, this.ctx.logger, this.ctx.prompt);
+      this.scriptParser = new ScriptUrlParser((await this.getBaseWebDavUrl()).toString(), this.ctx.sessionManager, this.ctx.logger, this.ctx.prompt);
       const key = await this.scriptParser.getScriptBaseKey();
       await this.modifyMetaData(meta => {
         meta.scriptKey = key;

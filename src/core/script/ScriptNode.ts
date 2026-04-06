@@ -69,7 +69,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   public async getUpstairsLastModified(): Promise<Date> {
-    const response = await this.ctx.session.fetch(await this.upstairsUrl(), {
+    const response = await this.ctx.sessionManager.fetch(await this.upstairsUrl(), {
       method: Http.Methods.HEAD
     });
     const lastModifiedHeaderValue = response.headers.get("Last-Modified");
@@ -80,7 +80,7 @@ export abstract class ScriptNode implements ScriptPathElement {
   }
 
   public async getUpstairsContent(): Promise<string> {
-    const response = await this.ctx.session.fetch(await this.upstairsUrl(), {
+    const response = await this.ctx.sessionManager.fetch(await this.upstairsUrl(), {
       method: Http.Methods.GET,
       headers: {
         [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,

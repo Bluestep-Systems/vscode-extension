@@ -39,7 +39,7 @@ export class ScriptFile extends ScriptNode {
   }
 
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL; }): Promise<string | null> {
-    const response = await this.ctx.session.fetch(ops?.upstairsOverride || await this.upstairsUrl(), {
+    const response = await this.ctx.sessionManager.fetch(ops?.upstairsOverride || await this.upstairsUrl(), {
       method: Http.Methods.HEAD
     });
     const etagHeader = response.headers.get(Http.Headers.ETAG);
@@ -114,7 +114,7 @@ export class ScriptFile extends ScriptNode {
     }
     const lookupUri = await this.upstairsUrl(parser);
     this.ctx.logger.info("downloading from:" + lookupUri);
-    const response = await this.ctx.session.fetch(lookupUri, {
+    const response = await this.ctx.sessionManager.fetch(lookupUri, {
       method: Http.Methods.GET,
       headers: {
         [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
@@ -271,7 +271,7 @@ export class ScriptFile extends ScriptNode {
       },
       body: fileContents
     };
-    let resp = await this.ctx.session.fetch(upstairsOverride, requestOptions);
+    let resp = await this.ctx.sessionManager.fetch(upstairsOverride, requestOptions);
     if (!resp.ok) {
       const details = await getDetails(resp);
       throw new Err.FileSendError(details);
@@ -283,7 +283,7 @@ export class ScriptFile extends ScriptNode {
       const snapshotOverride = new URL(upstairsOverride);
       snapshotOverride.pathname = snapshotOverride.pathname.replace(new RegExp(FolderNames.DRAFT), FolderNames.SNAPSHOT);
 
-      resp = await this.ctx.session.fetch(snapshotOverride, requestOptions);
+      resp = await this.ctx.sessionManager.fetch(snapshotOverride, requestOptions);
     }
     await this.touch();
     this.ctx.logger.info("File sent successfully:", this.uri().fsPath);

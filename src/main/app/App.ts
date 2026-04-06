@@ -160,7 +160,7 @@ export const App = new class {
 
   // Manager accessors — delegate to B6PCore so there's a single instance per service.
   public get sessionManager(): SessionManager {
-    return this.core.session;
+    return this.core.sessionManager;
   }
 
   public get orgCache(): OrgCache {
@@ -260,7 +260,7 @@ export const App = new class {
 
     // Wire up cross-cutting events
     //    - SessionManager notifies OrgCache on login
-    this._core.session.onLogin = (url: URL) => {
+    this._core.sessionManager.onLogin = (url: URL) => {
       this._core!.orgCache.findU(url).catch((e: unknown) => {
         this.logger.warn('Failed to cache org during login:', e instanceof Error ? e.message : String(e));
       });

@@ -49,7 +49,7 @@ export class B6PCore implements ScriptContext {
   readonly progress: IProgress;
 
   readonly auth: BasicAuthProvider;
-  readonly session: SessionManager;
+  readonly sessionManager: SessionManager;
   readonly scriptMetadataStore: ScriptMetaDataStore;
   readonly orgCache: OrgCache;
 
@@ -64,7 +64,7 @@ export class B6PCore implements ScriptContext {
     this._isDebugMode = providers.isDebugMode ?? (() => false);
 
     this.auth = new BasicAuthProvider(this.persistence, this.prompt, this.logger);
-    this.session = new SessionManager(
+    this.sessionManager = new SessionManager(
       this.persistence,
       this.logger,
       this.auth,
@@ -90,7 +90,7 @@ export class B6PCore implements ScriptContext {
    * Create a ScriptUrlParser wired to this core's session and logger.
    */
   private createParser(url: string): ScriptUrlParser {
-    return new ScriptUrlParser(url, this.session, this.logger, this.prompt);
+    return new ScriptUrlParser(url, this.sessionManager, this.logger, this.prompt);
   }
 
   /**
@@ -130,7 +130,7 @@ export class B6PCore implements ScriptContext {
       targetUrl,
       rootPath: opts.rootPath,
       snapshot: opts.snapshot ?? false,
-      session: this.session,
+      session: this.sessionManager,
       fs: this.fs,
       prompt: this.prompt,
       logger: this.logger,
@@ -379,7 +379,7 @@ export class B6PCore implements ScriptContext {
 
   async clearSessions(): Promise<void> {
     this.prompt.info('Clearing all sessions');
-    await this.session.clearAll();
+    await this.sessionManager.clearAll();
   }
 
   // ── Settings ──────────────────────────────────────────────────────
@@ -392,7 +392,7 @@ export class B6PCore implements ScriptContext {
   async clearAll(): Promise<void> {
     this.prompt.info('Clearing sessions, auth, and settings');
     await this.persistence.clearPublic();
-    await this.session.clearAll();
+    await this.sessionManager.clearAll();
     await this.auth.clear();
   }
 
@@ -531,7 +531,7 @@ export class B6PCore implements ScriptContext {
    * Dispose resources (session cleanup timer, etc.).
    */
   dispose(): void {
-    this.session.dispose();
+    this.sessionManager.dispose();
     this.orgCache.dispose();
   }
 }
