@@ -54,9 +54,8 @@ export class B6PCore implements ScriptContext {
   readonly scriptMetadataStore: ScriptMetaDataStore;
   readonly orgCache: OrgCache;
   readonly updateService: UpdateService | null = null;
-
+  private factory: ScriptFactory | null = null;
   private readonly _isDebugMode: () => boolean;
-
   constructor(providers: B6PProviders) {
     this.fs = providers.fs;
     this.persistence = providers.persistence;
@@ -94,6 +93,13 @@ export class B6PCore implements ScriptContext {
     }
   }
 
+  public getScriptFactory() {
+    if (!this.factory) {
+      this.factory = new ScriptFactory(this);
+    }
+    return this.factory;
+  }
+
   isDebugMode(): boolean {
     return this._isDebugMode();
   }
@@ -111,7 +117,7 @@ export class B6PCore implements ScriptContext {
    */
   private async deriveBaseUrl(filePath: string, _workspacePath: string): Promise<string | null> {
     try {
-      const sf = ScriptFactory.createFile(B6PUri.fromFsPath(filePath));
+      const sf = this.getScriptFactory().createFile(B6PUri.fromFsPath(filePath));
       return sf.getScriptRoot().getBaseWebDavUrlString();
     } catch {
       this.logger.warn(`Could not parse downstairs path: ${filePath}`);
@@ -178,7 +184,7 @@ export class B6PCore implements ScriptContext {
     }
 
     const U = await parser.getU();
-    const factory = new ScriptFactory(this);
+    const factory = this.getScriptFactory();
 
     const pullTasks = fetchedScriptObject.map(entry => ({
       execute: async () => {
@@ -259,7 +265,7 @@ export class B6PCore implements ScriptContext {
 
     const U = await parser.getU();
     const changedFiles: string[] = [];
-    const factory = new ScriptFactory(this);
+    const factory = this.getScriptFactory();
 
     for (const entry of fetchedScriptObject) {
       const ultimatePath = path.join(workspacePath, U, entry.downstairsPath);

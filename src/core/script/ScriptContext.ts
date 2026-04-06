@@ -3,6 +3,7 @@ import type { SessionManager } from "../session/SessionManager";
 import type { BasicAuthProvider } from "../auth/BasicAuthProvider";
 import type { ScriptMetaDataStore } from "../cache/ScriptMetaDataStore";
 import type { OrgCache } from "../cache/OrgCache";
+import type { ScriptFactory } from "./ScriptFactory";
 
 /**
  * The set of services that the script-tree classes ({@link ScriptRoot}, {@link ScriptFile},
@@ -20,4 +21,5 @@ export interface ScriptContext {
   readonly scriptMetadataStore: ScriptMetaDataStore;
   readonly orgCache: OrgCache;
   isDebugMode(): boolean;
+  getScriptFactory(): ScriptFactory;
 }

@@ -7,14 +7,7 @@ import type { ScriptNode } from "./ScriptNode";
 import { ScriptRoot } from "./ScriptRoot";
 import { TsConfig } from "./TsConfig";
 
-/**
- * Factory for creating ScriptNode instances bound to a {@link ScriptContext}.
- *
- * This `VERY SPECIFICALLY` exists to instantiate any ScriptNode objects.
- * You must `NEVER` call those constructors directly. This is because TypeScript
- * absolutely hates it when you do, and you risk being incapable of launching the
- * extension due to circular dependancies.
- */
+
 /**
  * Module-scoped default context. Set via {@link ScriptFactory.setDefaultContext}.
  * Used by the static convenience methods on {@link ScriptFactory} for backwards
@@ -28,7 +21,14 @@ function defaultFactory(): ScriptFactory {
   }
   return new ScriptFactory(_defaultCtx);
 }
-
+/**
+ * Factory for creating ScriptNode instances bound to a {@link ScriptContext}.
+ *
+ * This `VERY SPECIFICALLY` exists to instantiate any ScriptNode objects.
+ * You must `NEVER` call those constructors directly. This is because TypeScript
+ * absolutely hates it when you do, and you risk being incapable of launching the
+ * extension due to circular dependancies.
+ */
 export class ScriptFactory {
   constructor(public readonly ctx: ScriptContext) {}
 

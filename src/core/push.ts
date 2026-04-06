@@ -8,6 +8,7 @@ import { ScriptFactory } from './script/ScriptFactory';
 import type { ScriptContext } from './script/ScriptContext';
 import type { IFileSystem, IProgress, ProgressTask } from './providers';
 import { Err } from './Err';
+import type { ScriptFile } from './script/ScriptFile';
 
 /**
  * Recursively collect all files under a directory.
