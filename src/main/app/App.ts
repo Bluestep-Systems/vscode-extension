@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
 import { type ReadOnlyMap } from '../../../types';
-import { BasicAuthManager } from './authentication/BasicAuthManager';
+import { BasicAuthProvider } from '../../core/auth/BasicAuthProvider';
 import { SessionManager } from '../../core/session/SessionManager';
-import { OutputChannels, SettingsKeys } from '../resources/constants';
+import { OutputChannels, SettingsKeys } from '../../core/constants';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { UpdateManager } from './services/UpdateManager';
 import { SettingsWrapper } from './util/PseudoMaps';
-import { Err } from './util/Err';
-import { HttpClient } from './util/network/HttpClient';
+import { Err } from '../../core/Err';
+import { HttpClient } from '../../core/network/HttpClient';
 import { Alert } from './util/ui/Alert';
 import { OrgCache } from './cache/OrgCache';
 import { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
@@ -16,7 +16,9 @@ import { McpServerProvider } from './mcp/McpServerProvider';
 import { PULL_SCRIPT_TOOL } from './mcp/PullScriptTool';
 import { DisposableRegistry } from './util/Disposable';
 import { B6PCore } from '../../core/B6PCore';
+import { ScriptFactory } from '../../core/script/ScriptFactory';
 import { VscodeFileSystem, VscodePersistence, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
+import { migrateLegacyMetadataFiles } from './cache/ScriptMetaDataStore';
 
 
 export const App = new class {
@@ -27,11 +29,7 @@ export const App = new class {
   private _core: B6PCore | null = null;
   public readonly appKey = SettingsKeys.APP_KEY;
 
-  // Manager instances
-  private _sessionManager: SessionManager | null = null;
-  private _orgCache: OrgCache | null = null;
-  private _authManager: BasicAuthManager | null = null;
-  private _scriptMetadataStore: ScriptMetaDataStore | null = null;
+  // Manager instances (those still owned by App; the rest live on B6PCore)
   private _updateManager: UpdateManager | null = null;
   private _mcpServerProvider: McpServerProvider | null = null;
 
@@ -82,7 +80,7 @@ export const App = new class {
         Alert.info("Clearing Sessions, Auth Managers, and Settings");
         App.clearMap(true);
         App.orgCache.clearCache();
-        App.authManager.clearMap();
+        App.authManager.clear();
       })],
       ['bsjs-push-pull.toggleAdvanced', vscode.commands.registerCommand('bsjs-push-pull.toggleAdvanced', async () => {
         App.toggleAdvancedMode();
@@ -160,33 +158,21 @@ export const App = new class {
     return this._core;
   }
 
-  // Manager accessors
+  // Manager accessors — delegate to B6PCore so there's a single instance per service.
   public get sessionManager(): SessionManager {
-    if (!this._sessionManager) {
-      throw new Err.ManagerNotInitializedError('SessionManager');
-    }
-    return this._sessionManager;
+    return this.core.session;
   }
 
   public get orgCache(): OrgCache {
-    if (!this._orgCache) {
-      throw new Err.ManagerNotInitializedError('OrgCache');
-    }
-    return this._orgCache;
+    return this.core.orgCache;
   }
 
-  public get authManager(): BasicAuthManager {
-    if (!this._authManager) {
-      throw new Err.ManagerNotInitializedError('BasicAuthManager');
-    }
-    return this._authManager;
+  public get authManager(): BasicAuthProvider {
+    return this.core.auth;
   }
 
   public get scriptMetadataStore(): ScriptMetaDataStore {
-    if (!this._scriptMetadataStore) {
-      throw new Err.ManagerNotInitializedError('ScriptMetaDataStore');
-    }
-    return this._scriptMetadataStore;
+    return this.core.scriptMetadataStore;
   }
 
   public get updateManager(): UpdateManager {
@@ -217,7 +203,14 @@ export const App = new class {
       prompt: new VscodePrompt(),
       logger: new VscodeLogger(this._outputChannel),
       progress: new VscodeProgress(),
+      isDebugMode: () => this.isDebugMode(),
+      orgCacheSettings: this._settings,
+      fetchFn: (url, options) => HttpClient.getInstance().fetch(url, options),
     });
+
+    // Wire the script factory's default context to B6PCore so that the
+    // ScriptFactory.* static helpers (used by older callers and tests) work.
+    ScriptFactory.setDefaultContext(this._core);
 
     vscode.window.onDidChangeActiveTextEditor(editor => {
       if (editor) {
@@ -251,58 +244,36 @@ export const App = new class {
       }
     }));
 
-    // ---- Instantiate managers with dependency injection ----
+    // ---- Wire up additional services on top of B6PCore ----
 
     const vscodeLogger: VscodeLogger = new VscodeLogger(this._outputChannel);
+    this._disposables.add(this._core);
 
-    // 1. Auth manager (leaf dependency)
-    this._authManager = new BasicAuthManager(this._persistence);
-
-    // 2. Session manager (depends on auth)
-    this._sessionManager = new SessionManager(
-      this._persistence,
-      vscodeLogger,
-      this._authManager,
-      () => this.isDebugMode(),
-      this._core.prompt,
-      (url, options) => HttpClient.getInstance().fetch(url, options)
-    );
-    this._disposables.add(this._sessionManager);
-
-    // 3. Org cache (depends on persistence, logger, settings)
-    this._orgCache = new OrgCache(
-      this._persistence,
-      vscodeLogger,
-      this._settings,
-      () => this.isDebugMode()
-    );
-    this._disposables.add(this._orgCache);
-
-    // 4. MCP server provider (depends on orgCache, auth, logger, context)
+    // MCP server provider (depends on orgCache, auth, logger, context)
     this._mcpServerProvider = new McpServerProvider(
-      this._orgCache,
-      this._authManager,
+      this._core.orgCache,
+      this._core.auth,
       vscodeLogger,
       context
     );
     this._disposables.add(this._mcpServerProvider);
 
-    // 5. Wire up cross-cutting events
+    // Wire up cross-cutting events
     //    - SessionManager notifies OrgCache on login
-    this._sessionManager.onLogin = (url: URL) => {
-      this._orgCache!.findU(url).catch((e: unknown) => {
+    this._core.session.onLogin = (url: URL) => {
+      this._core!.orgCache.findU(url).catch((e: unknown) => {
         this.logger.warn('Failed to cache org during login:', e instanceof Error ? e.message : String(e));
       });
     };
     //    - OrgCache notifies McpServerProvider on changes
-    this._orgCache.onChanged = () => {
+    this._core.orgCache.onChanged = () => {
       this._mcpServerProvider!.fireChanged();
     };
 
-    // 6. Script metadata store
-    this._scriptMetadataStore = new ScriptMetaDataStore(this._persistence);
+    // Migrate any legacy `.b6p_metadata.json` files into the persistent store.
+    void migrateLegacyMetadataFiles(this._core.scriptMetadataStore);
 
-    // 7. Update manager
+    // Update manager
     this._updateManager = new UpdateManager(
       this._persistence,
       vscodeLogger,

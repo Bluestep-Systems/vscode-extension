@@ -1,7 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { GqlParentNameResp, XMLResponse } from '../../../types';
-import { ApiEndpoints, FolderNames, Http, MimeTypes, WebDAVElements } from '../../main/resources/constants';
-import { Err } from '../../main/app/util/Err';
+import { ApiEndpoints, FolderNames, Http, MimeTypes, WebDAVElements } from '../constants';
+import { Err } from '../Err';
 import { ScriptKey } from '../../main/app/util/data/ScriptKey';
 import type { SessionManager } from '../session/SessionManager';
 import type { ILogger, IPrompt } from '../providers';

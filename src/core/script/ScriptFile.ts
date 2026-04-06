@@ -1,14 +1,11 @@
 import * as path from 'path';
-import { CryptoAlgorithms, FileExtensions, FolderNames, Http, MimeTypes } from '../../../resources/constants';
-import { App } from "../../App";
-import { ScriptUrlParser } from "../../../../core/data/ScriptUrlParser";
+import { CryptoAlgorithms, FileExtensions, FolderNames, Http, MimeTypes } from '../constants';
+import { ScriptUrlParser } from "../data/ScriptUrlParser";
 import { Err } from "../Err";
 import { ResponseCodes } from "../network/StatusCodes";
-import { Alert } from '../ui/Alert';
 import { ScriptNode } from "./ScriptNode";
 import { TsConfig } from './TsConfig';
-import { Uri } from 'vscode';
-import { B6PUri } from '../../../../core/B6PUri';
+import { B6PUri } from '../B6PUri';
 
 /**
  * Represents a script file within the system. This is very similar to the webapps "RemoteObject" concept
@@ -16,46 +13,23 @@ import { B6PUri } from '../../../../core/B6PUri';
  */
 export class ScriptFile extends ScriptNode {
 
-  /**
-   * Regex specifically for myassn document key patterns:
-   */
   private static ComplexEtagPattern = /^"?\d{10,13}-\{.*?"class":\s*"myassn\.document\.(Proxy|LibraryServlet)MemoryDocumentKey".*?"classId":\s*\d+.*?\}"?$/;
-
-  /**
-   * Regex for numeric etags (timestamp-based identifiers).
-   * Matches patterns like: "1774030968836-123800___411192"
-   */
   private static NumericEtagPattern = /^"?\d{10,13}-[\d_]+"?$/;
-
-  /**
-   * Regex for standard etags (SHA-512 hashes).
-   */
   private static EtagPattern = /^"[a-f0-9]{128}"$/;
-
-  /**
-   * Regex for "weak" etags (SHA-512 hashes).
-   */
   private static WeakEtagPattern = /^W\/"[a-f0-9]{128}"$/;
 
-  public createFamilial(downstairsUri: Uri): ScriptFile {
+  public createFamilial(downstairsUri: B6PUri): ScriptFile {
     if (!this.scriptRoot.getAsFolder().contains(downstairsUri)) {
       throw new Err.ScriptOperationError("The provided URI is not a proper sibling within the same script root.");
     }
     return new ScriptFile(downstairsUri, this.scriptRoot);
   }
 
-  /**
-   * Caches the reason to not push this file, if determined.
-   */
   private _reasonToNotPush: string | undefined | null;
 
-  /**
-   * Gets the lowercased SHA-512 hash of the local file.
-   * @lastreviewed 2025-09-15
-   */
   public async getHash(): Promise<string | null> {
     await this.requireExists();
-    const bufferSource = await App.core.fs.readFile(B6PUri.fromFsPath(this.uri().fsPath));
+    const bufferSource = await this.ctx.fs.readFile(B6PUri.fromFsPath(this.uri().fsPath));
     const localHashBuffer = await crypto.subtle.digest(CryptoAlgorithms.SHA_512, bufferSource);
     const hexArray = Array.from(new Uint8Array(localHashBuffer));
     if (hexArray.length !== 64) {
@@ -64,50 +38,32 @@ export class ScriptFile extends ScriptNode {
     return hexArray.map(b => b.toString(16).padStart(2, '0')).join('').toLowerCase();
   }
 
-  /**
-   * Gets the hash of the upstairs file, or `null` if it doesn't exist.
-   * Extracts SHA-512 hash from the ETag header, handling both standard and weak ETags.
-   * Complex ETags (from memory documents) and numeric ETags are not supported and return null.
-   *
-   * @param ops.required If true, throws an error when upstairs hash cannot be determined
-   * @param ops.upstairsOverride Optional override URL to check instead of the default upstairs URL
-   * @returns The SHA-512 hash string in lowercase, or `null` if file doesn't exist or has complex/numeric ETag
-   * @lastreviewed 2025-09-15
-   */
   public async getUpstairsHash(ops?: { required?: boolean, upstairsOverride?: URL; }): Promise<string | null> {
-    const response = await App.sessionManager.fetch(ops?.upstairsOverride || await this.upstairsUrl(), {
+    const response = await this.ctx.session.fetch(ops?.upstairsOverride || await this.upstairsUrl(), {
       method: Http.Methods.HEAD
     });
     const etagHeader = response.headers.get(Http.Headers.ETAG);
 
-    //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
     let etag: string | null = null;
     if (ScriptFile.EtagPattern.test(etagHeader || "")) {
       etag = JSON.parse(etagHeader?.toLowerCase() || "null");
     } else if (ScriptFile.WeakEtagPattern.test(etagHeader || "")) {
-      // weak etags are prefixed with W/ and we ignore the weakness for our purposes
-      App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
+      this.ctx.isDebugMode() && console.log("weak etagHeader:", etagHeader);
       etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
     } else if (ScriptFile.NumericEtagPattern.test(etagHeader || "")) {
-      App.isDebugMode() && console.log("numeric etagHeader:", etagHeader);
-      // numeric etags don't provide a hash for integrity checking, so we skip them
+      this.ctx.isDebugMode() && console.log("numeric etagHeader:", etagHeader);
     } else {
-      App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
+      this.ctx.isDebugMode() && console.log("complex etagHeader:", etagHeader);
     }
     if (!etag) {
       if (ops?.required) {
         throw new Err.HashCalculationError();
       }
-      //TODO determine if there is a legitimate reason that this could be undefined and we should throw an error instead
-      // otherwise we can only assume it just doesn't exist upstairs
       return null;
     }
     return etag.toLowerCase();
   }
 
-  /**
-   * Gets the last verified hash from the metadata for this node, or `null` if not found.
-   */
   public async getLastVerifiedHash(): Promise<string | null> {
     await this.requireExists();
     const md = await this.getScriptRoot().getMetaData();
@@ -118,28 +74,14 @@ export class ScriptFile extends ScriptNode {
     return record ? record.lastVerifiedHash : null;
   }
 
-
-  /**
-   * Checks if the local file's integrity matches the upstairs file.
-   * Compares SHA-512 hashes between local and remote versions.
-   * 
-   * @param ops.upstairsOverride Optional override {@link URL} to check against instead of the default upstairs {@link URL}
-   * @lastreviewed 2025-09-15
-   */
   public async currentIntegrityMatches(ops?: { upstairsOverride?: URL; }): Promise<boolean> {
     const localHash = await this.getHash();
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = localHash === upstairsHash;
-    App.isDebugMode() && console.log("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", localHash, "\n", "upstairs:", upstairsHash);
+    this.ctx.isDebugMode() && console.log("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", localHash, "\n", "upstairs:", upstairsHash);
     return matches;
   }
 
-  /**
-   * Checks if the last verified hash from metadata matches the upstairs file's hash; this is to allow us to check
-   * if the upstairs file was changed since the last time we touched it.
-   * @param ops Optional override {@link URL} to check against instead of the default upstairs {@link URL}
-   * @returns Whether the old integrity matches
-   */
   public async oldIntegrityMatches(ops?: { upstairsOverride?: URL; }): Promise<boolean> {
     const lastHash = await this.getLastVerifiedHash();
     if (!lastHash) {
@@ -147,7 +89,7 @@ export class ScriptFile extends ScriptNode {
     }
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = lastHash === upstairsHash;
-    App.isDebugMode() && console.log("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
+    this.ctx.isDebugMode() && console.log("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
     return matches;
   }
 
@@ -166,28 +108,26 @@ export class ScriptFile extends ScriptNode {
   public async download(parser?: ScriptUrlParser): Promise<Response> {
     const ignore = await super.isInGitIgnore();
     if (ignore) {
-      App.logger.info(`not downloading \`${this.name()}\` because in .gitignore`);
+      this.ctx.logger.info(`not downloading \`${this.name()}\` because in .gitignore`);
       await this.deleteFromMetadata();
       return new Response("", { status: ResponseCodes.TEAPOT });
     }
     const lookupUri = await this.upstairsUrl(parser);
-    App.logger.info("downloading from:" + lookupUri);
-    const response = await App.sessionManager.fetch(lookupUri, {
+    this.ctx.logger.info("downloading from:" + lookupUri);
+    const response = await this.ctx.session.fetch(lookupUri, {
       method: Http.Methods.GET,
       headers: {
         [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
       }
     });
     if (response.status >= ResponseCodes.BAD_REQUEST) {
-      App.logger.error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
+      this.ctx.logger.error(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
       throw new Err.HttpResponseError(`Error fetching file ${lookupUri.toString()}: ${response.status} ${response.statusText}`);
     }
     const buffer = await response.arrayBuffer();
     await this.writeContent(buffer);
     const etagHeader = response.headers.get(Http.Headers.ETAG);
 
-    //TODO merge this with the other etag parsing code elsewhere in this class
-    //some etags will come back with a complex pattern (the memory documents) and so we skip the etag check on them
     if (ScriptFile.EtagPattern.test(etagHeader || "")) {
       const etag = JSON.parse(etagHeader?.toLowerCase() || "null");
       const hash = await this.getHash();
@@ -195,31 +135,24 @@ export class ScriptFile extends ScriptNode {
         throw new Err.FileIntegrityError();
       }
     } else if (ScriptFile.WeakEtagPattern.test(etagHeader || "")) {
-      // weak etags are prefixed with W/ and we ignore the weakness for our purposes
-      App.isDebugMode() && console.log("weak etagHeader:", etagHeader);
+      this.ctx.isDebugMode() && console.log("weak etagHeader:", etagHeader);
       const etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
       const hash = await this.getHash();
       if (hash !== etag) {
         throw new Err.FileIntegrityError();
       }
     } else if (ScriptFile.NumericEtagPattern.test(etagHeader || "")) {
-      App.isDebugMode() && console.log("numeric etagHeader:", etagHeader);
-      // numeric etags don't provide a hash for integrity checking, so we skip them
+      this.ctx.isDebugMode() && console.log("numeric etagHeader:", etagHeader);
     } else if (ScriptFile.ComplexEtagPattern.test(etagHeader || "")) {
-      App.isDebugMode() && console.log("complex etagHeader:", etagHeader);
-      // complex etags are from the illusory document files and we skip the integrity check on them
+      this.ctx.isDebugMode() && console.log("complex etagHeader:", etagHeader);
     } else {
       throw new Err.EtagParsingError(etagHeader || 'null');
     }
 
-    // touch the lastPulled time
     await this.touch();
     return response;
   }
-  /**
-  * Removes this file's record from the metadata push/pull tracking.
-  * @lastreviewed 2025-09-15
-  */
+
   private async deleteFromMetadata() {
     await this.getScriptRoot().modifyMetaData((md) => {
       const index = md.pushPullRecords.findIndex(record => record.downstairsPath === this.uri().fsPath);
@@ -228,32 +161,19 @@ export class ScriptFile extends ScriptNode {
       }
     });
   }
-  /**
-   * Deletes the script file from metadata and the local file system.
-   * @throws {Error} When the file does not exist
-   * @lastreviewed 2025-09-18
-   */
+
   public async delete() {
     await super.delete();
     await this.deleteFromMetadata();
   }
 
-  /**
-   * Gets the file name from the downstairs URI.
-   * @lastreviewed 2025-10-01
-   */
   public name(): string {
     return path.parse(this.uri().fsPath).base;
   }
-  /**
-   * Returns the {@link URL} for the proper upstairs file.
-   * Constructs the appropriate WebDAV {@link URL} based on the file type (root, metadata, declarations, or draft).
-   * @lastreviewed 2025-10-01
-   */
-  public async upstairsUrl(parser?: ScriptUrlParser): Promise<URL> {
 
+  public async upstairsUrl(parser?: ScriptUrlParser): Promise<URL> {
     const upstairsBaseUrl = await this.getScriptRoot(parser).getBaseWebDavUrl();
-    App.isDebugMode() && console.log("base upstairs URL:", upstairsBaseUrl.toString());
+    this.ctx.isDebugMode() && console.log("base upstairs URL:", upstairsBaseUrl.toString());
     const newUrl = new URL(upstairsBaseUrl);
     if (this.parser.type === "root") {
       return newUrl;
@@ -267,15 +187,7 @@ export class ScriptFile extends ScriptNode {
 
     return newUrl;
   }
-  /**
-   * Determines a reason to not push this file upstairs.
-   * Checks various conditions including metadata files, declarations, external models, 
-   * .gitignore patterns, info/objects folders, and integrity matching.
-   * 
-   * @param ops.upstairsOverride Optional override URL to check against instead of the default upstairs URL
-   * @returns Empty string if the file can be pushed, otherwise a descriptive reason why not
-   * @lastreviewed 2025-09-15
-   */
+
   public async getReasonToNotPush(ops?: { upstairsOverride?: URL; }): Promise<string | null> {
     if (this._reasonToNotPush !== undefined) {
       return this._reasonToNotPush;
@@ -283,10 +195,6 @@ export class ScriptFile extends ScriptNode {
     return await this.setReasonToNotPush(ops);
   }
 
-  /**
-   * Sets the reason to not push this file (so it can be cached)
-   * and returns it.
-   */
   private async setReasonToNotPush(ops?: { upstairsOverride?: URL; }): Promise<string | null> {
     if (this.parser.type === "root") {
       this._reasonToNotPush = "Node is the root folder";
@@ -328,41 +236,34 @@ export class ScriptFile extends ScriptNode {
 
   async upload(arg?: { upstairsUrlOverrideString?: string, isSnapshot?: boolean; }): Promise<Response | void> {
     if (await this.isFolder()) {
-      //TODO remove this when we are confident it isn't needed anymore
       throw new Err.ScriptOperationError("somehow a folder got created to upload with this method. ");
     }
-    App.logger.info("Preparing to send file:", this.uri().fsPath);
-    App.logger.info("To target formula URI:", arg?.upstairsUrlOverrideString);
-    const upstairsOverride = new URL(arg?.upstairsUrlOverrideString || this.upstairsUrl().toString());
+    this.ctx.logger.info("Preparing to send file:", this.uri().fsPath);
+    this.ctx.logger.info("To target formula URI:", arg?.upstairsUrlOverrideString);
+    const upstairsOverride = new URL(arg?.upstairsUrlOverrideString || (await this.upstairsUrl()).toString());
     const thisUpstairs = await this.upstairsUrl();
     upstairsOverride.pathname = thisUpstairs.pathname;
-    // we skip snapshots/builds because when they go to be uploaded
-    // they will always have been freshly created.
     if (!this.isInSnapshot() && !(await this.isInItsRespectiveBuildFolder()) && !(await this.oldIntegrityMatches())) {
       const OVERWRITE = 'Overwrite';
       const CANCEL = 'Cancel';
-      const overwrite = await Alert.prompt(
+      const overwrite = await this.ctx.prompt.confirm(
         `The upstairs file (${upstairsOverride}) has changed since the last time you pushed or pulled. Do you wish to overwrite it?`,
-        [
-          OVERWRITE,
-          CANCEL
-        ]
+        [OVERWRITE, CANCEL]
       );
       if (overwrite !== OVERWRITE) {
-        await Alert.popup((arg?.isSnapshot ? "Snapshot" : "Push") + " cancelled by user.");
+        await this.ctx.prompt.popup((arg?.isSnapshot ? "Snapshot" : "Push") + " cancelled by user.");
         throw new Err.UserCancelledError(`User ${overwrite ? overwrite + "ed" : "cancelled"} push due to upstairs file change`);
       }
     }
     const reason = await this.getReasonToNotPush({ upstairsOverride });
 
     if (reason) {
-      App.logger.info(`${reason}; not pushing file:`, this.uri().fsPath);
+      this.ctx.logger.info(`${reason}; not pushing file:`, this.uri().fsPath);
       return;
     }
-    App.logger.info("Destination:", upstairsOverride.toString());
+    this.ctx.logger.info("Destination:", upstairsOverride.toString());
 
-    //TODO investigate if this can be done via streaming
-    const fileContents = await App.core.fs.readFile(B6PUri.fromFsPath(this.uri().fsPath));
+    const fileContents = await this.ctx.fs.readFile(B6PUri.fromFsPath(this.uri().fsPath));
     const requestOptions = {
       method: Http.Methods.PUT,
       headers: {
@@ -370,12 +271,11 @@ export class ScriptFile extends ScriptNode {
       },
       body: fileContents
     };
-    let resp = await App.sessionManager.fetch(upstairsOverride, requestOptions);
+    let resp = await this.ctx.session.fetch(upstairsOverride, requestOptions);
     if (!resp.ok) {
       const details = await getDetails(resp);
       throw new Err.FileSendError(details);
     }
-    // to snapshot we simply need to reupload the exact same file but to the snapshot folder instead
     if (arg?.isSnapshot) {
       if (this.parser.type !== FolderNames.DRAFT) {
         throw new Err.ScriptOperationError("This should never happen, this is here as a safetycheck and should be removed when we're confident.");
@@ -383,10 +283,10 @@ export class ScriptFile extends ScriptNode {
       const snapshotOverride = new URL(upstairsOverride);
       snapshotOverride.pathname = snapshotOverride.pathname.replace(new RegExp(FolderNames.DRAFT), FolderNames.SNAPSHOT);
 
-      resp = await App.sessionManager.fetch(snapshotOverride, requestOptions);
+      resp = await this.ctx.session.fetch(snapshotOverride, requestOptions);
     }
     await this.touch();
-    App.logger.info("File sent successfully:", this.uri().fsPath);
+    this.ctx.logger.info("File sent successfully:", this.uri().fsPath);
     return resp;
     async function getDetails(resp: Response) {
       return `
@@ -402,44 +302,30 @@ export class ScriptFile extends ScriptNode {
     }
   }
 
-  /**
-   * Determines if the file is a tsconfig.json file.
-   */
   public isTsConfig(): boolean {
     return this.name() === TsConfig.NAME;
   }
 
-  /**
-   * Determines if the file is a markdown file based on its extension.
-   */
   public isMarkdown(): boolean {
     return this.extension === FileExtensions.MARKDOWN;
   }
 
-  /**
- * Gets the content of the local file as UTF-8 text.
- * @lastreviewed 2025-09-15
- */
   public async getDownstairsContent(): Promise<string> {
     await this.requireExists();
     const downstairsUri = this.uri();
     try {
-      const fileData = await App.core.fs.readFile(B6PUri.fromFsPath(downstairsUri.fsPath));
+      const fileData = await this.ctx.fs.readFile(B6PUri.fromFsPath(downstairsUri.fsPath));
       return Buffer.from(fileData).toString('utf8');
     } catch (e) {
       if (e instanceof Error || typeof e === 'string') {
-        App.logger.error(e);
+        this.ctx.logger.error(e);
       } else {
-        App.logger.error(`Error reading downstairs file: ${e}`);
+        this.ctx.logger.error(`Error reading downstairs file: ${e}`);
       }
       throw new Err.FileReadError(`Error reading downstairs file: ${e}`);
     }
   }
 
-  /**
-   * Records the current file's hash in the metadata for future integrity checks.
-   * @lastreviewed 2025-09-15
-   */
   async touch(): Promise<void> {
     await this.requireExists();
     const lastHash = await this.getHash();
@@ -455,14 +341,9 @@ export class ScriptFile extends ScriptNode {
         });
       }
     });
-    App.isDebugMode() && console.log("Updated metadata:", metaData);
+    this.ctx.isDebugMode() && console.log("Updated metadata:", metaData);
   }
 
-  /**
-   * Common function to ensure the file exists before performing operations.
-   * @throws {Err.FileNotFoundError} When the file does not exist
-   * @lastreviewed 2025-10-08
-   */
   private async requireExists(): Promise<void> {
     if (!await this.exists()) {
       throw new Err.FileNotFoundError(this.uri().fsPath);

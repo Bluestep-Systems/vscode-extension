@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import { ApiEndpoints } from "../../resources/constants";
+import { ApiEndpoints } from "../../../core/constants";
 import { Alert } from "../util/ui/Alert";
 import { ProgressHelper } from "../util/ui/ProgressHelper";
 import { App } from '../App';
 import { Util } from '../util';
-import { Err } from "../util/Err";
+import { Err } from "../../../core/Err";
 import push from "./push";
 
 /**

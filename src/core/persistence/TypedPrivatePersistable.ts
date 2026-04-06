@@ -3,7 +3,7 @@ import { PrivateKeys } from "./PersistenceKeys";
 import type { Serializable } from "./Serializable";
 import { revive } from "./Serializable";
 import { TypedPersistable } from "./TypedPersistable";
-import { Err } from "../../main/app/util/Err";
+import { Err } from "../Err";
 
 /**
  * A typed private persistable pseudomap that uses IPersistence secret storage.

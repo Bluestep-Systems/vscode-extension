@@ -4,7 +4,7 @@ import { Persistable } from "./Persistable";
 import { PrivateKeys } from "./PersistenceKeys";
 import type { Serializable } from "./Serializable";
 import { revive } from "./Serializable";
-import { Err } from '../../main/app/util/Err';
+import { Err } from '../Err';
 
 /**
  * A persistable map that uses the IPersistence interface for secret storage.

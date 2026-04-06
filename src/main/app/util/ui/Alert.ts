@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { App } from '../../App';
-import type { Err } from '../Err';
+import type { Err } from '../../../../core/Err';
 
 /**
  * Namespace for alerting the user via VS Code's UI.

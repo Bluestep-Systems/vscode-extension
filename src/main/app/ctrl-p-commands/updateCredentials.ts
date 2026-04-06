@@ -10,7 +10,7 @@ export default async function (): Promise<void> {
 
   try {
 
-    await App.authManager.createOrUpdate();
+    await App.authManager.getOrCreate();
       
     return void 0;
 

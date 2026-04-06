@@ -1,8 +1,10 @@
 import { SourceOps } from "../../../../types";
 import { App } from "../App";
 import { Util } from "../util";
-import { ScriptFactory } from "../util/script/ScriptFactory";
+import { ScriptFactory } from "../../../core/script/ScriptFactory";
+import { B6PUri } from "../../../core/B6PUri";
 import { Alert } from "../util/ui/Alert";
+import pushCurrent from "./pushCurrent";
 export default async function snapshot({ overrideFormulaUri, sourceOps }: { overrideFormulaUri?: string, sourceOps?: SourceOps } = {}) {
   
   try {
@@ -14,8 +16,10 @@ export default async function snapshot({ overrideFormulaUri, sourceOps }: { over
     // "contextual" meaning currently open or determined from sourceOps
     const contextualUri = await Util.getDownstairsFileUri(sourceOps);
     App.logger.info("Contextual URI determined to be:", contextualUri?.toString() ?? "undefined");
-    const sf = ScriptFactory.createFile(contextualUri);
-    sf.getScriptRoot().snapshot();
+    const sf = ScriptFactory.createFile(B6PUri.fromFsPath(contextualUri.fsPath));
+    await sf.getScriptRoot().snapshot(async (sr) => {
+      await pushCurrent({ isSnapshot: true, sr });
+    });
     // console.log("sf.getScriptRoot().getDraftBuildFolderUri())", sf.getScriptRoot().getDraftBuildFolderUri());
     // await fs().delete(sf.getScriptRoot().getDraftBuildFolderUri()).catch(e => {console.error(e);});
     // console.log("Deleted draft build folder");

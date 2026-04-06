@@ -1,4 +1,3 @@
-import * as crypto from 'crypto';
 import * as path from 'path';
 import { BasicAuthProvider } from './auth/BasicAuthProvider';
 import { B6PUri } from './B6PUri';
@@ -7,6 +6,14 @@ import { DownstairsPathParser } from './data/DownstairsPathParser';
 import { SessionManager } from './session/SessionManager';
 import type { B6PProviders, IFileSystem, ILogger, IPersistence, IProgress, IPrompt } from './providers';
 import { executePush } from './push';
+import { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
+import { OrgCache, type IOrgCacheSettings } from './cache/OrgCache';
+import type { ScriptContext } from './script/ScriptContext';
+import { ScriptFactory } from './script/ScriptFactory';
+
+const NOOP_ORG_CACHE_SETTINGS: IOrgCacheSettings = {
+  getParsedAnyDomainOverrideUrl: () => null,
+};
 
 /**
  * Result returned by the audit command.
@@ -34,7 +41,7 @@ export interface ReportResult {
  * This class contains zero `vscode.*` imports — all platform-specific
  * behaviour is delegated to the providers.
  */
-export class B6PCore {
+export class B6PCore implements ScriptContext {
   readonly fs: IFileSystem;
   readonly persistence: IPersistence;
   readonly prompt: IPrompt;
@@ -43,6 +50,10 @@ export class B6PCore {
 
   readonly auth: BasicAuthProvider;
   readonly session: SessionManager;
+  readonly scriptMetadataStore: ScriptMetaDataStore;
+  readonly orgCache: OrgCache;
+
+  private readonly _isDebugMode: () => boolean;
 
   constructor(providers: B6PProviders) {
     this.fs = providers.fs;
@@ -50,9 +61,29 @@ export class B6PCore {
     this.prompt = providers.prompt;
     this.logger = providers.logger;
     this.progress = providers.progress;
+    this._isDebugMode = providers.isDebugMode ?? (() => false);
 
     this.auth = new BasicAuthProvider(this.persistence, this.prompt, this.logger);
-    this.session = new SessionManager(this.persistence, this.logger, this.auth, () => false, this.prompt);
+    this.session = new SessionManager(
+      this.persistence,
+      this.logger,
+      this.auth,
+      this._isDebugMode,
+      this.prompt,
+      providers.fetchFn,
+    );
+    this.scriptMetadataStore = new ScriptMetaDataStore(this.persistence);
+    this.orgCache = new OrgCache(
+      this.persistence,
+      this.logger,
+      providers.orgCacheSettings ?? NOOP_ORG_CACHE_SETTINGS,
+      this._isDebugMode,
+      this.prompt,
+    );
+  }
+
+  isDebugMode(): boolean {
+    return this._isDebugMode();
   }
 
   /**
@@ -144,6 +175,7 @@ export class B6PCore {
     }
 
     const U = await parser.getU();
+    const factory = new ScriptFactory(this);
 
     const pullTasks = fetchedScriptObject.map(entry => ({
       execute: async () => {
@@ -156,11 +188,19 @@ export class B6PCore {
             await this.fs.createDirectory(uri);
           }
         } else {
-          // Download the file
-          const response = await this.session.fetch(entry.upstairsPath);
-          const data = new Uint8Array(await response.arrayBuffer());
+          // Use ScriptFile.download() so that we get gitignore filtering, ETag-based
+          // integrity verification, and `lastPulled` metadata tracking — all the
+          // behaviour the previous inline fetch+writeFile loop was missing.
           const fileUri = B6PUri.fromFsPath(ultimatePath);
-          await this.fs.writeFile(fileUri, data);
+          const scriptRoot = factory.createScriptRoot(fileUri);
+          scriptRoot.withParser(parser);
+          const file = factory.createFile(fileUri, scriptRoot);
+          // Make sure the parent directory exists before download writes the file.
+          const parentUri = fileUri.dirname;
+          if (!(await this.fs.exists(parentUri))) {
+            await this.fs.createDirectory(parentUri);
+          }
+          await file.download(parser);
         }
         return ultimatePath;
       },
@@ -216,6 +256,7 @@ export class B6PCore {
 
     const U = await parser.getU();
     const changedFiles: string[] = [];
+    const factory = new ScriptFactory(this);
 
     for (const entry of fetchedScriptObject) {
       const ultimatePath = path.join(workspacePath, U, entry.downstairsPath);
@@ -227,20 +268,15 @@ export class B6PCore {
         changedFiles.push(entry.downstairsPath + ' (new)');
         continue;
       }
-      // Compare file hash against server
-      const localContent = await this.fs.readFile(fileUri);
-      const localHash = crypto.createHash('sha512').update(localContent).digest('hex');
-      const response = await this.session.fetch(entry.upstairsPath, { method: 'HEAD' });
-      const etag = response.headers.get('etag');
-      if (etag) {
-        // ETag format is typically "hash" or W/"hash"
-        const serverHash = etag.replace(/^W\//, '').replace(/"/g, '');
-        if (localHash !== serverHash) {
-          changedFiles.push(entry.downstairsPath);
-        }
-      } else {
-        // No ETag — can't compare, mark as potentially changed
-        changedFiles.push(entry.downstairsPath + ' (no etag)');
+      // Use ScriptFile.currentIntegrityMatches() so that we get the same robust
+      // ETag handling (standard / weak / numeric / complex) used by download().
+      const scriptRoot = factory.createScriptRoot(fileUri);
+      scriptRoot.withParser(parser);
+      const file = factory.createFile(fileUri, scriptRoot);
+      const upstairsOverride = new URL(entry.upstairsPath);
+      const matches = await file.currentIntegrityMatches({ upstairsOverride });
+      if (!matches) {
+        changedFiles.push(entry.downstairsPath);
       }
     }
 
@@ -496,5 +532,6 @@ export class B6PCore {
    */
   dispose(): void {
     this.session.dispose();
+    this.orgCache.dispose();
   }
 }

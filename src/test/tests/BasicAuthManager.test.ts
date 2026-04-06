@@ -9,7 +9,7 @@ import { SessionManager } from '../../core/session/SessionManager';
 //@ts-ignore
 import { BasicAuth } from '../../main/app/authentication/classes';
 //@ts-ignore
-import { Err } from '../../main/app/util/Err';
+import { Err } from '../../core/Err';
 //@ts-ignore
 import type { BasicAuthParams } from '../../../types';
 

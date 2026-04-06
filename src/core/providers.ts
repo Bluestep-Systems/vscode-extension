@@ -1,4 +1,5 @@
 import type { B6PUri } from './B6PUri';
+import type { IOrgCacheSettings } from './cache/OrgCache';
 
 // ── File System ─────────────────────────────────────────────────────
 
@@ -124,4 +125,17 @@ export interface B6PProviders {
   prompt: IPrompt;
   logger: ILogger;
   progress: IProgress;
+  /** Optional debug-mode flag callback. Defaults to `() => false` if not provided. */
+  isDebugMode?: () => boolean;
+  /**
+   * Optional org-cache settings (provides override URLs for U values).
+   * Defaults to a no-op implementation that returns `null` for all lookups.
+   */
+  orgCacheSettings?: IOrgCacheSettings;
+  /**
+   * Optional low-level fetch function to use for the SessionManager. Defaults to
+   * `globalThis.fetch`. Consumers (e.g. the VS Code extension) can pass a wrapped
+   * fetch that adds proxy/cookie handling.
+   */
+  fetchFn?: (url: string | URL, init?: RequestInit) => Promise<Response>;
 }

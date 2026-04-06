@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 import { App } from '../App';
 import { Util } from '../util';
-import { ScriptFactory } from '../util/script/ScriptFactory';
+import { ScriptFactory } from '../../../core/script/ScriptFactory';
+import { B6PUri } from '../../../core/B6PUri';
 import { Alert } from '../util/ui/Alert';
-import type { ScriptRoot } from '../util/script/ScriptRoot';
+import type { ScriptRoot } from '../../../core/script/ScriptRoot';
 
 /**
  * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location using B6PCore.
@@ -19,11 +20,11 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot }): 
       if (activeEditorUri === undefined) {
         return;
       }
-      actual_sr = ScriptFactory.createScriptRoot(activeEditorUri);
+      actual_sr = ScriptFactory.createScriptRoot(B6PUri.fromFsPath(activeEditorUri.fsPath));
     }
 
     // Check for unsaved changes
-    const dirtyDocs = await Util.getDirtyDocs(actual_sr.getRootUri());
+    const dirtyDocs = await Util.getDirtyDocs(vscode.Uri.file(actual_sr.getRootUri().fsPath));
     if (dirtyDocs.length > 0) {
       const SAVE_AND_PUSH = 'Save and Push';
       const CANCEL = 'Cancel';

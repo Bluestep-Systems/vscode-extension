@@ -11,11 +11,11 @@ import { Auth } from '../../main/app/authentication';
 //@ts-ignore
 import { SessionManager } from '../../core/session/SessionManager';
 //@ts-ignore
-import { Err } from '../../main/app/util/Err';
+import { Err } from '../../core/Err';
 //@ts-ignore
-import { ResponseCodes } from '../../main/app/util/network/StatusCodes';
+import { ResponseCodes } from '../../core/network/StatusCodes';
 //@ts-ignore
-import { HttpClient } from '../../main/app/util/network/HttpClient';
+import { HttpClient } from '../../core/network/HttpClient';
 
 // suite('SessionManager Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

@@ -1,10 +1,7 @@
 import * as path from 'path';
 
 /**
- * Core-layer glob matcher that operates on plain filesystem paths.
- *
- * Replaces the VS Code–dependent `GlobMatcher` which used
- * `vscode.RelativePattern` and `vscode.languages.match`.
+ * Glob matcher that operates on plain filesystem paths.
  *
  * Supports common glob patterns: `*`, `**`, `?`, `{a,b}`, `[abc]`.
  */

@@ -9,9 +9,9 @@ import { ScriptMetaData } from '../../../types';
 //@ts-ignore
 import { App } from '../../main/app/App';
 //@ts-ignore
-import { ScriptFactory } from '../../main/app/util/script/ScriptFactory';
+import { ScriptFactory } from '../../core/script/ScriptFactory';
 //@ts-ignore
-import { ScriptRoot } from '../../main/app/util/script/ScriptRoot';
+import { ScriptRoot } from '../../core/script/ScriptRoot';
 
 // suite('ScriptRoot Tests', () => {
 //     let mockFileSystem: MockFileSystem;

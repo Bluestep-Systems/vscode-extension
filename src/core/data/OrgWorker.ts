@@ -1,5 +1,5 @@
-import { ApiEndpoints, Http } from '../../main/resources/constants';
-import { Err } from '../../main/app/util/Err';
+import { ApiEndpoints, Http } from '../constants';
+import { Err } from '../Err';
 
 /**
  * Helper class for getting info from the org associated with a given URL.

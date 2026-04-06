@@ -3,10 +3,10 @@ import * as vscode from "vscode";
 import { PrimitiveNestedObject, JsonValue, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from "../../../../types";
 import { IdUtility } from "./data/IdUtility";
 import { ScriptKey } from './data/ScriptKey';
-import { Err } from './Err';
-import { ScriptFactory } from './script/ScriptFactory';
-import type { ScriptFolder } from './script/ScriptFolder';
-import { ApiEndpoints, Http, MimeTypes } from '../../resources/constants';
+import { Err } from '../../../core/Err';
+import { ScriptFactory } from '../../../core/script/ScriptFactory';
+import type { ScriptFolder } from '../../../core/script/ScriptFolder';
+import { ApiEndpoints, Http, MimeTypes } from '../../../core/constants';
 import { App } from '../App';
 import { Alert } from './ui/Alert';
 import { B6PUri } from '../../../core/B6PUri';
@@ -261,14 +261,15 @@ export namespace Util {
     }
     return dirtyDocs;
   }
-  export async function flattenDirectory(dir: ScriptFolder): Promise<vscode.Uri[]> {
-    const result: vscode.Uri[] = [];
-    const items = await vscode.workspace.fs.readDirectory(dir.uri());
+  export async function flattenDirectory(dir: ScriptFolder): Promise<B6PUri[]> {
+    const result: B6PUri[] = [];
+    const dirUri = dir.uri();
+    const items = await App.core.fs.readDirectory(dirUri);
 
-    result.push(vscode.Uri.joinPath(dir.uri(), '/')); // include the directory itself
+    result.push(dirUri.joinPath('/')); // include the directory itself
     for (const [name, type] of items) {
-      const fullPath = vscode.Uri.joinPath(dir.uri(), name);
-      if (type === vscode.FileType.Directory) {
+      const fullPath = dirUri.joinPath(name);
+      if (type === 'directory') {
         const subFolder = ScriptFactory.createFolder(fullPath);
         result.push(...(await flattenDirectory(subFolder)));
       } else {

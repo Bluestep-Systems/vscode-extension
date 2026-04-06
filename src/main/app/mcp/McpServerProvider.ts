@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { BasicAuthManager } from '../authentication/BasicAuthManager';
-import { Http } from '../../resources/constants';
+import { BasicAuthProvider } from '../../../core/auth/BasicAuthProvider';
+import { Http } from '../../../core/constants';
 import type { ILogger } from '../../../core/providers';
 import type { Disposable } from '../util/Disposable';
 import type { OrgCache } from '../cache/OrgCache';
@@ -28,7 +28,7 @@ export class McpServerProvider implements Disposable {
    */
   constructor(
     private readonly orgCache: OrgCache,
-    private readonly authManager: BasicAuthManager,
+    private readonly authManager: BasicAuthProvider,
     private readonly logger: ILogger,
     context: vscode.ExtensionContext
   ) {
@@ -107,7 +107,7 @@ export class McpServerProvider implements Disposable {
     server: vscode.McpHttpServerDefinition,
   ): Promise<vscode.McpHttpServerDefinition | undefined> {
     try {
-      if (!this.authManager.hasAuth()) {
+      if (!(await this.authManager.hasCredentials())) {
         this.logger.info('MCP: No credentials available, skipping server resolve');
         return undefined;
       }

@@ -2,7 +2,7 @@ import type { SourceOps } from '../../../../types';
 import { App } from '../App';
 import { Util } from '../util';
 import { Alert } from '../util/ui/Alert';
-import { ScriptRoot } from '../util/script/ScriptRoot';
+import { ScriptRoot } from '../../../core/script/ScriptRoot';
 
 /**
  * Pushes a script to a WebDAV location using the platform-agnostic B6PCore.

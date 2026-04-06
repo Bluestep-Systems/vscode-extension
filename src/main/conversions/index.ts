@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Converter } from "./Converter";
-import { ExtensionConfig } from '../resources/constants';
+import { ExtensionConfig } from '../../core/constants';
 
 export const REQUIRED_CONVERTERS: Converter[] = [
   // future converters go here; make sure they are in order.

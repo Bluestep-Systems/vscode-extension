@@ -1,8 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Err } from '../Err';
-import { ScriptRoot } from '../script/ScriptRoot';
-import { FolderNames } from '../../../resources/constants';
+import { Err } from '../../../../core/Err';
+import { ScriptRoot } from '../../../../core/script/ScriptRoot';
+import { FolderNames } from '../../../../core/constants';
 
 /**
  * A utility class to parse downstairs URIs into their components.

@@ -1,6 +1,6 @@
 import * as path from 'path';
-import { Err } from '../../main/app/util/Err';
-import { FolderNames, SpecialFiles } from '../../main/resources/constants';
+import { Err } from '../Err';
+import { FolderNames, SpecialFiles } from '../constants';
 
 /**
  * Core-layer equivalent of `DownstairsUriParser`.

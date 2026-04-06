@@ -1,7 +1,7 @@
 import type { SessionData } from '../../../types';
-import { ApiEndpoints, Http } from '../../main/resources/constants';
-import { Err } from '../../main/app/util/Err';
-import { ResponseCodes } from '../../main/app/util/network/StatusCodes';
+import { ApiEndpoints, Http } from '../constants';
+import { Err } from '../Err';
+import { ResponseCodes } from '../network/StatusCodes';
 import type { IAuth, ILogger, IPersistence, IPrompt } from '../providers';
 
 const SESSION_PERSISTENCE_KEY = 'sessions';

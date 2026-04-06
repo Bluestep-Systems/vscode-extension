@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { HttpClient } from '../../main/app/util/network/HttpClient';
+import { HttpClient } from '../../core/network/HttpClient';
 
 suite('HttpClient Mock Test Suite', () => {
   let mockHttp: ReturnType<typeof HttpClient.enableTestMode>;

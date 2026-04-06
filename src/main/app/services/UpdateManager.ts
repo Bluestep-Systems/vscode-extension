@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
-import { FileExtensions, GitHubUrls, Http, SettingsKeys } from '../../resources/constants';
+import { FileExtensions, GitHubUrls, Http, SettingsKeys } from '../../../core/constants';
 import { PrivateKeys, PrivateTypedPersistable } from '../../../core/persistence';
 import type { IPersistence, ILogger } from '../../../core/providers';
 import type { SettingsWrapper } from '../util/PseudoMaps/SettingsWrapper';

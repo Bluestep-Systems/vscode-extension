@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { Alert } from '../ui/Alert';
 import { MetaDataDotJsonContent } from '../../../../../types';
 import { Util } from '../';
-import { Err } from '../Err';
+import { Err } from '../../../../core/Err';
 
 /**
  * A utility class for dealing with IDs in the format `363769__FID_dummyTestEndpoint`.

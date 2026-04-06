@@ -11,7 +11,7 @@ import { SessionManager } from '../../core/session/SessionManager';
 //@ts-ignore
 import { UPDATE_MANAGER } from '../../main/app/services/UpdateManager';
 //@ts-ignore
-import { Err } from '../../main/app/util/Err';
+import { Err } from '../../core/Err';
 
 // suite('App Singleton Tests', () => {
 

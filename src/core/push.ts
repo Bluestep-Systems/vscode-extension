@@ -1,7 +1,7 @@
 import * as crypto from 'crypto';
 import * as path from 'path';
-import { FolderNames, Http, MimeTypes, SpecialFiles } from '../main/resources/constants';
-import { Err } from '../main/app/util/Err';
+import { FolderNames, Http, MimeTypes, SpecialFiles } from './constants';
+import { Err } from './Err';
 import { B6PUri } from './B6PUri';
 import { GlobMatcher } from './data/GlobMatcher';
 import type { SessionManager } from './session/SessionManager';

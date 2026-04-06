@@ -9,7 +9,7 @@ import { SessionManager } from '../../core/session/SessionManager';
 //@ts-ignore
 import { UPDATE_MANAGER } from '../../main/app/services/UpdateManager';
 //@ts-ignore
-import { ScriptFactory } from '../../main/app/util/script/ScriptFactory';
+import { ScriptFactory } from '../../core/script/ScriptFactory';
 
 // suite('Extension Integration Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

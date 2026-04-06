@@ -1,4 +1,4 @@
-import { Http, MimeTypes } from "../../../resources/constants";
+import { Http, MimeTypes } from "../constants";
 
 /**
  * Interface defining HTTP client operations needed for network requests.

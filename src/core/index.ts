@@ -18,7 +18,7 @@ export { GlobMatcher } from './data/GlobMatcher';
 export { IdUtility } from './data/IdUtility';
 
 // Re-export already-clean modules from main (no vscode deps)
-export { Err } from '../main/app/util/Err';
+export { Err } from './Err';
 export { ScriptKey } from '../main/app/util/data/ScriptKey';
 
 // Core session + auth

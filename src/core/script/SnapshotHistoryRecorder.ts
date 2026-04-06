@@ -1,9 +1,8 @@
 import * as path from 'path';
-import { Http } from '../../../resources/constants';
-import { MimeTypes } from '../../../resources/constants/MimeTypes';
-import { App } from '../../App';
+import { Http } from '../constants';
+import { MimeTypes } from '../constants/MimeTypes';
 import { Err } from '../Err';
-import { B6PUri } from '../../../../core/B6PUri';
+import { B6PUri } from '../B6PUri';
 import type { ScriptRoot } from './ScriptRoot';
 
 /**
@@ -21,23 +20,18 @@ const TEXT_EXTENSIONS = new Set([
  */
 export class SnapshotHistoryRecorder {
 
-  /**
-   * Records a snapshot history entry for the given script.
-   *
-   * @param scriptRoot The script root to record history for
-   * @param message The commit message (may be empty string)
-   */
   static async record(scriptRoot: ScriptRoot, message: string): Promise<void> {
+    const ctx = scriptRoot.ctx;
     const scriptKey = await scriptRoot.getScriptKey();
     const mutationName = scriptKey.mutationName;
     const inputType = scriptKey.inputType;
 
     if (!mutationName || !inputType) {
-      App.logger.warn(`No GraphQL mutation known for classid ${scriptKey.classid}; skipping history recording.`);
+      ctx.logger.warn(`No GraphQL mutation known for classid ${scriptKey.classid}; skipping history recording.`);
       return;
     }
 
-    const author = await this.getAuthor();
+    const author = await this.getAuthor(scriptRoot);
     const saveState = await this.buildSaveState(scriptRoot);
     const historyKey = JSON.stringify({
       author,
@@ -59,9 +53,9 @@ export class SnapshotHistoryRecorder {
       }],
     };
 
-    App.logger.info(`Recording snapshot history for ${scriptKey.toCompoundId()}`);
+    ctx.logger.info(`Recording snapshot history for ${scriptKey.toCompoundId()}`);
 
-    const response = await App.sessionManager.csrfFetch(gqlUrl, {
+    const response = await ctx.session.csrfFetch(gqlUrl, {
       method: Http.Methods.POST,
       headers: {
         [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
@@ -79,26 +73,20 @@ export class SnapshotHistoryRecorder {
       throw new Err.HttpResponseError(`GraphQL errors recording snapshot history: ${json.errors.map(e => e.message).join(', ')}`);
     }
 
-    App.logger.info('Snapshot history recorded successfully.');
+    ctx.logger.info('Snapshot history recorded successfully.');
   }
 
-  /**
-   * Gets the current user's username for the history author field.
-   */
-  private static async getAuthor(): Promise<string> {
+  private static async getAuthor(scriptRoot: ScriptRoot): Promise<string> {
     try {
-      const auth = await App.authManager.getAuthObject(undefined, false);
-      return auth.sObj.username;
+      const auth = await scriptRoot.ctx.auth.getOrCreate();
+      return auth.username;
     } catch {
       return 'unknown';
     }
   }
 
-  /**
-   * Builds the hydrated save state object containing all file contents from the draft folder.
-   * This mirrors the structure that BSJS creates in `#hydrateContentForHistory`.
-   */
   private static async buildSaveState(scriptRoot: ScriptRoot): Promise<SaveState> {
+    const ctx = scriptRoot.ctx;
     const draftFolder = scriptRoot.getDraftFolder();
     const allNodes = await draftFolder.flatten();
     const draftRootPath = draftFolder.uri().fsPath;
@@ -118,27 +106,23 @@ export class SnapshotHistoryRecorder {
         const ext = path.extname(node.path()).toLowerCase();
         if (TEXT_EXTENSIONS.has(ext)) {
           try {
-            const bytes = await App.core.fs.readFile(B6PUri.fromFsPath(node.uri().fsPath));
+            const bytes = await ctx.fs.readFile(B6PUri.fromFsPath(node.uri().fsPath));
             const content = Buffer.from(bytes).toString('utf-8');
             settings[relativePath] = { content };
           } catch (e) {
-            App.logger.warn(`Failed to read file for history: ${node.path()}: ${e}`);
+            ctx.logger.warn(`Failed to read file for history: ${node.path()}: ${e}`);
           }
         }
       }
     }
 
     return {
-      version: 1, // this is hardcoded in bsjs, too. remove?
+      version: 1,
       isSnapshot: true,
       settings,
     };
   }
 
-  /**
-   * Returns a copy of settings with `content` stripped out — used for the `draft` field,
-   * which stores metadata but not the full file contents.
-   */
   private static stripContent(settings: Record<string, FileSetting | FolderSetting>): Record<string, Omit<FileSetting, 'content'> | FolderSetting> {
     const stripped: Record<string, object> = {};
     for (const [key, value] of Object.entries(settings)) {
