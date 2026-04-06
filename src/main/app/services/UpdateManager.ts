@@ -3,7 +3,7 @@ import { ClientInfo, GithubRelease, UpdateInfo } from '../../../../types';
 import { FileExtensions, GitHubUrls, Http, SettingsKeys } from '../../../core/constants';
 import { PrivateKeys, PrivateTypedPersistable } from '../../../core/persistence';
 import type { IPersistence, ILogger } from '../../../core/providers';
-import type { SettingsWrapper } from '../util/PseudoMaps/SettingsWrapper';
+import type { SettingsWrapper } from '../settings/SettingsWrapper';
 import { App } from '../App';
 import { B6PUri } from '../../../core/B6PUri';
 

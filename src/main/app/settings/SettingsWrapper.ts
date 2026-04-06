@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import type { Settings, JsonValue } from "../../../../../types";
-import { App } from "../../App";
-import { Util } from "..";
-import { TypedMap, Persistable } from "../../../../core/persistence";
+import type { Settings, JsonValue } from "../../../../types";
+import { App } from "../App";
+import { Util } from "../util";
+import { TypedMap, Persistable } from "../../../core/persistence";
 
 /**
  * A wrapper around the vscode settings for this extension to provide typed access and modification.

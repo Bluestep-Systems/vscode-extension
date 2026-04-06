@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from "vscode";
 import { PrimitiveNestedObject, JsonValue, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from "../../../../types";
 import { IdUtility } from "../../../core/data/IdUtility";
-import { ScriptKey } from './data/ScriptKey';
+import { ScriptKey } from '../../../core/data/ScriptKey';
 import { Err } from '../../../core/Err';
 import { ScriptFactory } from '../../../core/script/ScriptFactory';
 import type { ScriptFolder } from '../../../core/script/ScriptFolder';

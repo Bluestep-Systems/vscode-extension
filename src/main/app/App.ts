@@ -6,7 +6,7 @@ import { OutputChannels, SettingsKeys } from '../../core/constants';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { UpdateManager } from './services/UpdateManager';
-import { SettingsWrapper } from './util/PseudoMaps';
+import { SettingsWrapper } from './settings/SettingsWrapper';
 import { Err } from '../../core/Err';
 import { HttpClient } from '../../core/network/HttpClient';
 import { OrgCache } from './cache/OrgCache';
