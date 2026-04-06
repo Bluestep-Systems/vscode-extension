@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { ApiEndpoints } from "../../../core/constants";
-import { ProgressHelper } from "../util/ui/ProgressHelper";
 import { App } from '../App';
 import { Util } from '../util';
 import { Err } from "../../../core/Err";
@@ -51,7 +50,7 @@ export default async function (): Promise<void> {
     }
   }
 
-  await ProgressHelper.withProgress(deployTasks, {
+  await App.core.progress.withProgress(deployTasks, {
     title: "Doing Quick Deploy...",
     showItemCount: true
   });
