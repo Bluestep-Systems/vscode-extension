@@ -48,12 +48,12 @@ export class ScriptFile extends ScriptNode {
     if (ScriptFile.EtagPattern.test(etagHeader || "")) {
       etag = JSON.parse(etagHeader?.toLowerCase() || "null");
     } else if (ScriptFile.WeakEtagPattern.test(etagHeader || "")) {
-      this.ctx.isDebugMode() && console.log("weak etagHeader:", etagHeader);
+      this.ctx.logger.debug("weak etagHeader:", etagHeader);
       etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
     } else if (ScriptFile.NumericEtagPattern.test(etagHeader || "")) {
-      this.ctx.isDebugMode() && console.log("numeric etagHeader:", etagHeader);
+      this.ctx.logger.debug("numeric etagHeader:", etagHeader);
     } else {
-      this.ctx.isDebugMode() && console.log("complex etagHeader:", etagHeader);
+      this.ctx.logger.debug("complex etagHeader:", etagHeader);
     }
     if (!etag) {
       if (ops?.required) {
@@ -78,7 +78,7 @@ export class ScriptFile extends ScriptNode {
     const localHash = await this.getHash();
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = localHash === upstairsHash;
-    this.ctx.isDebugMode() && console.log("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", localHash, "\n", "upstairs:", upstairsHash);
+    this.ctx.logger.debug("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", localHash, "\n", "upstairs:", upstairsHash);
     return matches;
   }
 
@@ -89,7 +89,7 @@ export class ScriptFile extends ScriptNode {
     }
     const upstairsHash = await this.getUpstairsHash(ops);
     const matches = lastHash === upstairsHash;
-    this.ctx.isDebugMode() && console.log("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
+    this.ctx.logger.debug("filename:", this.name(), "\n", "matches:", matches, "\n", "local:", lastHash, "\n", "upstairs:", upstairsHash);
     return matches;
   }
 
@@ -135,16 +135,16 @@ export class ScriptFile extends ScriptNode {
         throw new Err.FileIntegrityError();
       }
     } else if (ScriptFile.WeakEtagPattern.test(etagHeader || "")) {
-      this.ctx.isDebugMode() && console.log("weak etagHeader:", etagHeader);
+      this.ctx.logger.debug("weak etagHeader:", etagHeader);
       const etag = JSON.parse(etagHeader?.substring(2).toLowerCase() || "null");
       const hash = await this.getHash();
       if (hash !== etag) {
         throw new Err.FileIntegrityError();
       }
     } else if (ScriptFile.NumericEtagPattern.test(etagHeader || "")) {
-      this.ctx.isDebugMode() && console.log("numeric etagHeader:", etagHeader);
+      this.ctx.logger.debug("numeric etagHeader:", etagHeader);
     } else if (ScriptFile.ComplexEtagPattern.test(etagHeader || "")) {
-      this.ctx.isDebugMode() && console.log("complex etagHeader:", etagHeader);
+      this.ctx.logger.debug("complex etagHeader:", etagHeader);
     } else {
       throw new Err.EtagParsingError(etagHeader || 'null');
     }
@@ -173,7 +173,7 @@ export class ScriptFile extends ScriptNode {
 
   public async upstairsUrl(parser?: ScriptUrlParser): Promise<URL> {
     const upstairsBaseUrl = await this.getScriptRoot(parser).getBaseWebDavUrl();
-    this.ctx.isDebugMode() && console.log("base upstairs URL:", upstairsBaseUrl.toString());
+    this.ctx.logger.debug("base upstairs URL:", upstairsBaseUrl.toString());
     const newUrl = new URL(upstairsBaseUrl);
     if (this.parser.type === "root") {
       return newUrl;
