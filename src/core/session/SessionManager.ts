@@ -303,6 +303,8 @@ export class SessionManager {
       }
       this.triggerNextCleanup();
     }, delay);
+    // Don't keep the process alive just for cleanup (critical for the CLI).
+    this.cleanupTimer.unref?.();
   }
 }
 

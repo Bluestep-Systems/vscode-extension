@@ -125,6 +125,19 @@ export class B6PCore implements ScriptContext {
     }
   }
 
+  /**
+   * Derive the workspace folder (parent of the org folder) from a file path
+   * inside a script root. Returns null if the path can't be parsed.
+   */
+  deriveWorkspacePath(filePath: string): string | null {
+    try {
+      const sf = this.getScriptFactory().createFile(B6PUri.fromFsPath(filePath));
+      return sf.getScriptRoot().getOrgUri().dirname.fsPath;
+    } catch {
+      return null;
+    }
+  }
+
   // ── Push / Pull ───────────────────────────────────────────────────
 
   async push(opts: {

@@ -75,6 +75,8 @@ export class OrgCache implements OrgCacheDisposable {
     }
     this.orgCacheMap.store();
     this._cleanupTimer = setTimeout(() => this.cleanupOldEntries(), Numerical.millisecondsInXDays(1));
+    // Don't keep the process alive just for cleanup (critical for the CLI).
+    this._cleanupTimer.unref?.();
   }
 
   /** Validates the cache to ensure no duplicate hosts exist. */

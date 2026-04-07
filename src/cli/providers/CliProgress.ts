@@ -1,10 +1,16 @@
 import type { IProgress, ProgressTask } from '../../core/providers';
+import type { ActivityPauser } from './CliPrompt';
 
 export class CliProgress implements IProgress {
   private readonly quiet: boolean;
+  private pauser: ActivityPauser | null = null;
 
   constructor(opts: { quiet?: boolean } = {}) {
     this.quiet = opts.quiet ?? false;
+  }
+
+  setActivityPauser(pauser: ActivityPauser | null): void {
+    this.pauser = pauser;
   }
 
   async withProgress<T>(
@@ -15,6 +21,9 @@ export class CliProgress implements IProgress {
     let completed = 0;
     const results: T[] = [];
 
+    // Own stderr for the duration of the progress block so the background
+    // spinner doesn't fight our \r writes.
+    this.pauser?.pause();
     if (!this.quiet) {
       process.stderr.write(`${options.title}\n`);
     }
@@ -37,6 +46,7 @@ export class CliProgress implements IProgress {
         process.stderr.write(`  ${options.cleanupMessage}\n`);
       }
     }
+    this.pauser?.resume();
 
     return results;
   }

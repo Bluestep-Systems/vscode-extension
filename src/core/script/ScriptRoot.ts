@@ -203,11 +203,11 @@ export class ScriptRoot {
   }
 
   async getU() {
-    const metadata = await this.getMetaData();
-    if (!metadata) {
-      return await this.orgWorker().getU();
-    }
-    return metadata.U || (() => { throw new Err.InvalidStateError("Missing origin in metadata"); })();
+    // The U is the name of the org folder on disk, so the filesystem path is
+    // the authoritative source. Metadata may not yet exist (fresh clone, or
+    // persistence wiped), and OrgWorker only exists to *fetch* a U from a
+    // live URL — we already know it.
+    return this.getUFromPath();
   }
 
   public async anyOrigin() {

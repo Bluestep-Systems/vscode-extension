@@ -4,6 +4,7 @@ import { Util } from "../util";
 import { ScriptFile } from '../../../core/script/ScriptFile';
 import { ScriptFactory } from '../../../core/script/ScriptFactory';
 import { B6PUri } from '../../../core/B6PUri';
+import { Err } from '../../../core/Err';
 
 export default async function () {
   try {
@@ -14,7 +15,16 @@ export default async function () {
     if (!activeEditorUri) {
       return; // if there's no active editor, just return. not our problem
     }
-    const sf = ScriptFactory.createFile(B6PUri.fromFsPath(activeEditorUri.fsPath));
+    let sf: ScriptFile;
+    try {
+      sf = ScriptFactory.createFile(B6PUri.fromFsPath(activeEditorUri.fsPath));
+    } catch (e) {
+      if (e instanceof Err.InvalidUriStructureError) {
+        // Not a B6P script path (no U###### segment, etc.) — not our concern.
+        return;
+      }
+      throw e;
+    }
     if (!(await sf.exists())) {
       return; // if the active editor is not part of a script, just return. not our problem
     }

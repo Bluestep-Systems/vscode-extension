@@ -26,6 +26,9 @@
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
+  "bin": {
+    "b6p": "./dist/cli.js"
+  },
   "contributes": {
     "configuration": [
       {

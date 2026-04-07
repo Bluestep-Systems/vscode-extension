@@ -1,29 +1,41 @@
 import type { ILogger } from '../../core/providers';
+import type { ActivityPauser } from './CliPrompt';
 
 export class CliLogger implements ILogger {
   private readonly verbose: boolean;
+  private pauser: ActivityPauser | null = null;
 
   constructor(opts: { verbose?: boolean } = {}) {
     this.verbose = opts.verbose ?? false;
   }
 
+  setActivityPauser(pauser: ActivityPauser | null): void {
+    this.pauser = pauser;
+  }
+
+  private write(line: string): void {
+    this.pauser?.pause();
+    process.stderr.write(line);
+    this.pauser?.resume();
+  }
+
   info(...args: unknown[]): void {
     if (this.verbose) {
-      process.stderr.write(`[INFO] ${args.map(String).join(' ')}\n`);
+      this.write(`[INFO] ${args.map(String).join(' ')}\n`);
     }
   }
 
   warn(...args: unknown[]): void {
-    process.stderr.write(`[WARN] ${args.map(String).join(' ')}\n`);
+    this.write(`[WARN] ${args.map(String).join(' ')}\n`);
   }
 
   error(...args: unknown[]): void {
-    process.stderr.write(`[ERROR] ${args.map(String).join(' ')}\n`);
+    this.write(`[ERROR] ${args.map(String).join(' ')}\n`);
   }
 
   debug(...args: unknown[]): void {
     if (this.verbose) {
-      process.stderr.write(`[DEBUG] ${args.map(String).join(' ')}\n`);
+      this.write(`[DEBUG] ${args.map(String).join(' ')}\n`);
     }
   }
 }

@@ -16,7 +16,9 @@ import { McpServerProvider } from './mcp/McpServerProvider';
 import { PULL_SCRIPT_TOOL } from './mcp/PullScriptTool';
 import { B6PCore } from '../../core/B6PCore';
 import { ScriptFactory } from '../../core/script/ScriptFactory';
-import { VscodeFileSystem, VscodePersistence, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
+import { VscodeFileSystem, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
+import { SharedFilePersistence } from '../../core/persistence/SharedFilePersistence';
+import { PrivateKeys, PublicKeys } from '../../core/persistence/PersistenceKeys';
 
 export const App = new class AppImpl implements ScriptContext {
   private _core: B6PCore | null = null;
@@ -66,9 +68,12 @@ export const App = new class AppImpl implements ScriptContext {
     const settings = new VsCodeSettingsWrapper();
     const vscodeLogger = new VscodeLogger(outputChannel);
 
+    const persistence = new SharedFilePersistence();
+    persistence.setPendingBootstrap(() => migrateFromVscodeStores(persistence, context));
+
     const core = new B6PCore({
       fs: new VscodeFileSystem(),
-      persistence: new VscodePersistence(context),
+      persistence,
       prompt: new VscodePrompt(),
       logger: vscodeLogger,
       progress: new VscodeProgress(),
@@ -259,3 +264,49 @@ export const App = new class AppImpl implements ScriptContext {
     }
   }
 }();
+
+/**
+ * One-shot migration from VS Code's `workspaceState` and `SecretStorage`
+ * into the shared file-backed persistence. Only runs when the corresponding
+ * shared files do not yet exist, so subsequent activations are a no-op.
+ *
+ * VS Code's `SecretStorage` has no enumeration API, so secret migration is
+ * limited to the keys we know about (the `PrivateKeys` enum).
+ */
+async function migrateFromVscodeStores(
+  persistence: SharedFilePersistence,
+  context: vscode.ExtensionContext,
+): Promise<void> {
+  await persistence.seedIfMissing({
+    publicEntries: async () => {
+      const out: Record<string, unknown> = {};
+      for (const key of context.workspaceState.keys()) {
+        const value = context.workspaceState.get(key);
+        if (value !== undefined) {
+          out[key] = value;
+        }
+      }
+      // Also pull values stored under the public-key enum that might predate
+      // workspaceState.keys() reporting them.
+      for (const key of Object.values(PublicKeys)) {
+        if (!(key in out)) {
+          const value = context.workspaceState.get(key);
+          if (value !== undefined) {
+            out[key] = value;
+          }
+        }
+      }
+      return out;
+    },
+    secretEntries: async () => {
+      const out: Record<string, string> = {};
+      for (const key of Object.values(PrivateKeys)) {
+        const value = await context.secrets.get(key);
+        if (value !== undefined) {
+          out[key] = value;
+        }
+      }
+      return out;
+    },
+  });
+}

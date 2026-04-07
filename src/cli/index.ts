@@ -1,29 +1,94 @@
 import { Command } from 'commander';
 import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as os from 'os';
 import { B6PCore } from '../core/B6PCore';
+import { SharedFilePersistence } from '../core/persistence/SharedFilePersistence';
 import { NodeFileSystem } from './providers/NodeFileSystem';
-import { DotfilePersistence } from './providers/DotfilePersistence';
 import { CliPrompt } from './providers/CliPrompt';
 import { CliLogger } from './providers/CliLogger';
 import { CliProgress } from './providers/CliProgress';
+import { Spinner } from './providers/Spinner';
 
 function resolve(p: string): string {
   return path.resolve(process.cwd(), p);
 }
 
-function createCore(globalOpts: { yes?: boolean; json?: boolean; verbose?: boolean; quiet?: boolean }): {
+async function createCore(
+  globalOpts: { yes?: boolean; json?: boolean; verbose?: boolean; quiet?: boolean },
+  initialSpinnerLabel = 'Working…',
+): Promise<{
   core: B6PCore;
   prompt: CliPrompt;
-} {
+  spinner: Spinner;
+}> {
   const prompt = new CliPrompt({ autoYes: globalOpts.yes, json: globalOpts.json });
+  const logger = new CliLogger({ verbose: globalOpts.verbose });
+  const progress = new CliProgress({ quiet: globalOpts.quiet || globalOpts.json });
+  // Disable the spinner in JSON / quiet mode so stderr stays clean for consumers.
+  const spinner = new Spinner(initialSpinnerLabel, {
+    enabled: !globalOpts.json && !globalOpts.quiet && process.stderr.isTTY === true,
+  });
+  prompt.setActivityPauser(spinner);
+  logger.setActivityPauser(spinner);
+  progress.setActivityPauser(spinner);
+
+  const persistence = new SharedFilePersistence();
+  await migrateLegacyDotfiles(persistence);
   const core = new B6PCore({
     fs: new NodeFileSystem(),
-    persistence: new DotfilePersistence(process.cwd()),
+    persistence,
     prompt,
-    logger: new CliLogger({ verbose: globalOpts.verbose }),
-    progress: new CliProgress({ quiet: globalOpts.quiet || globalOpts.json }),
+    logger,
+    progress,
   });
-  return { core, prompt };
+  spinner.start();
+  return { core, prompt, spinner };
+}
+
+/**
+ * One-shot migration from previous persistence formats into the shared
+ * `~/.b6p/state.json` + `secrets.enc`. Merges every file in the old
+ * per-workspace `~/.b6p/state/` directory (the largest one wins on key
+ * collision, since that's almost always the VS Code extension's store)
+ * and the plaintext `~/.b6p/secrets.json`. Only runs when the shared
+ * target file doesn't yet exist.
+ */
+async function migrateLegacyDotfiles(persistence: SharedFilePersistence): Promise<void> {
+  const configDir = path.join(os.homedir(), '.b6p');
+  const legacySecretsPath = path.join(configDir, 'secrets.json');
+  const legacyStateDir = path.join(configDir, 'state');
+
+  await persistence.seedIfMissing({
+    publicEntries: async () => {
+      let entries: { size: number; data: Record<string, unknown> }[] = [];
+      try {
+        const names = await fs.readdir(legacyStateDir);
+        for (const name of names) {
+          if (!name.endsWith('.json')) {continue;}
+          const full = path.join(legacyStateDir, name);
+          try {
+            const raw = await fs.readFile(full, 'utf-8');
+            const data = JSON.parse(raw) as Record<string, unknown>;
+            entries.push({ size: raw.length, data });
+          } catch { /* skip unreadable */ }
+        }
+      } catch { /* no legacy dir */ }
+      // Merge small → large so larger files win on collision.
+      entries.sort((a, b) => a.size - b.size);
+      const merged: Record<string, unknown> = {};
+      for (const e of entries) {Object.assign(merged, e.data);}
+      return merged;
+    },
+    secretEntries: async () => {
+      try {
+        const raw = await fs.readFile(legacySecretsPath, 'utf-8');
+        return JSON.parse(raw) as Record<string, string>;
+      } catch {
+        return {};
+      }
+    },
+  });
 }
 
 const program = new Command('b6p')
@@ -44,7 +109,7 @@ program
   .option('--snapshot', 'Push as snapshot')
   .action(async (targetUrl: string | undefined, opts: { file?: string; root?: string; snapshot?: boolean }) => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
       if (opts.file) {
         await core.pushCurrent({ filePath: resolve(opts.file), snapshot: opts.snapshot });
@@ -56,6 +121,7 @@ program
         });
       }
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -69,13 +135,17 @@ program
   .option('--workspace <path>', 'Target workspace folder (default: cwd)')
   .action(async (formulaUrl: string | undefined, opts: { file?: string; workspace?: string }) => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
-      if (opts.file) {
-        await core.pullCurrent({
-          filePath: resolve(opts.file),
-          workspacePath: resolve(opts.workspace || '.'),
-        });
+      // Default to "pull current" when no formula URL is given:
+      // use --file if provided, otherwise treat cwd as the file path so the
+      // script root can be derived by walking up.
+      if (!formulaUrl) {
+        const filePath = resolve(opts.file ?? '.');
+        const workspacePath = opts.workspace
+          ? resolve(opts.workspace)
+          : core.deriveWorkspacePath(filePath) ?? process.cwd();
+        await core.pullCurrent({ filePath, workspacePath });
       } else {
         await core.pull({
           formulaUrl,
@@ -83,6 +153,7 @@ program
         });
       }
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -92,23 +163,27 @@ program
 program
   .command('audit')
   .description('Compare local script against server state')
-  .requiredOption('--file <path>', 'File within the script to audit')
+  .option('--file <path>', 'File within the script to audit (default: cwd)')
   .option('--pull', 'Pull if differences are detected')
   .option('--workspace <path>', 'Workspace folder (default: cwd)')
-  .action(async (opts: { file: string; pull?: boolean; workspace?: string }) => {
+  .action(async (opts: { file?: string; pull?: boolean; workspace?: string }) => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
-      const workspacePath = resolve(opts.workspace || '.');
+      const filePath = resolve(opts.file ?? '.');
+      const workspacePath = opts.workspace
+        ? resolve(opts.workspace)
+        : core.deriveWorkspacePath(filePath) ?? process.cwd();
       if (opts.pull) {
-        await core.auditPull({ filePath: resolve(opts.file), workspacePath });
+        await core.auditPull({ filePath, workspacePath });
       } else {
-        const result = await core.audit({ filePath: resolve(opts.file), workspacePath });
+        const result = await core.audit({ filePath, workspacePath });
         if (globalOpts.json) {
           process.stdout.write(JSON.stringify(result, null, 2) + '\n');
         }
       }
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -120,10 +195,11 @@ program
   .description('Quick deploy from a config file to multiple targets')
   .action(async (configFile: string) => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
       await core.deploy({ configPath: resolve(configFile) });
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -139,10 +215,11 @@ auth
   .description('Set or update credentials')
   .action(async () => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
       await core.updateCredentials();
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -152,10 +229,11 @@ auth
   .description('Clear stored credentials')
   .action(async () => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
-      await core.clearSessions();
+      await core.auth.clear();
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -169,10 +247,11 @@ program
   .description('Clear all active sessions')
   .action(async () => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
-      await core.clearSessions();
+      await core.sessionManager.clearAll();
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -188,7 +267,7 @@ config
   .description('Set a configuration value')
   .action(async (key: string, value: string) => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
       let parsed: unknown;
       try {
@@ -198,6 +277,7 @@ config
       }
       await core.setConfig(key, parsed);
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -207,10 +287,11 @@ config
   .description('Reset all settings to defaults')
   .action(async () => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
       await core.clearSettings();
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -222,13 +303,14 @@ program
   .description('Report current state')
   .action(async () => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
       const result = await core.report();
       if (globalOpts.json) {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
       }
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -240,10 +322,11 @@ program
   .description('Check for extension updates')
   .action(async () => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
       await core.checkForUpdates();
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });
@@ -256,7 +339,7 @@ program
   .requiredOption('--file <path>', 'File within the script')
   .action(async (opts: { file: string }) => {
     const globalOpts = program.opts();
-    const { core, prompt } = createCore(globalOpts);
+    const { core, prompt, spinner } = await createCore(globalOpts);
     try {
       const url = await core.getSetupUrl({ filePath: resolve(opts.file) });
       if (url) {
@@ -267,6 +350,7 @@ program
         }
       }
     } finally {
+      spinner.stop();
       prompt.close();
     }
   });

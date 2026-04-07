@@ -1,4 +1,5 @@
 const esbuild = require("esbuild");
+const fs = require("fs");
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
@@ -62,6 +63,14 @@ async function main() {
 		},
 		plugins: [
 			esbuildProblemMatcherPlugin,
+			{
+				name: 'chmod-cli',
+				setup(build) {
+					build.onEnd(() => {
+						try { fs.chmodSync('dist/cli.js', 0o755); } catch {}
+					});
+				},
+			},
 		],
 	});
 
