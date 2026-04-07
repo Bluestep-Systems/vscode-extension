@@ -18,108 +18,89 @@ import { B6PCore } from '../../core/B6PCore';
 import { ScriptFactory } from '../../core/script/ScriptFactory';
 import { VscodeFileSystem, VscodePersistence, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
 
-
-export const App = new class implements ScriptContext {
-  private _context: vscode.ExtensionContext | null = null;
-  private _persistence: VscodePersistence | null = null;
+export const App = new class AppImpl implements ScriptContext {
+  private _core: B6PCore | null = null;
   private _settings: SettingsWrapper | null = null;
   private _outputChannel: vscode.LogOutputChannel | null = null;
-  private _core: B6PCore | null = null;
   private _updateUI: UpdateUI | null = null;
-  private _mcpServerProvider: McpServerProvider | null = null;
 
   public readonly appKey = SettingsKeys.APP_KEY;
 
   public isInitialized(): boolean {
-    return this._context !== null;
-  }
-
-  public get context(): vscode.ExtensionContext {
-    if (this._context === null) {throw new Err.ContextNotSetError('Extension context');}
-    return this._context;
-  }
-
-  public get persistence(): VscodePersistence {
-    if (this._persistence === null) {throw new Err.ContextNotSetError('Persistence');}
-    return this._persistence;
-  }
-
-  public get settings(): SettingsWrapper {
-    if (this._settings === null) {throw new Err.ContextNotSetError('Settings map');}
-    return this._settings;
-  }
-
-  public get logger(): vscode.LogOutputChannel {
-    if (this._outputChannel === null) {throw new Err.ContextNotSetError('Output channel');}
-    return this._outputChannel;
+    return this._core !== null;
   }
 
   public get core(): B6PCore {
-    if (this._core === null) {throw new Err.ContextNotSetError('B6PCore');}
+    if (this._core === null) {throw new Err.ContextNotSetError('App');}
     return this._core;
   }
-
-  public get sessionManager(): SessionManager { return this.core.sessionManager; }
-  public get orgCache(): OrgCache { return this.core.orgCache; }
-  public get authManager(): BasicAuthProvider { return this.core.auth; }
-  public get scriptMetadataStore(): ScriptMetaDataStore { return this.core.scriptMetadataStore; }
+  public get settings(): SettingsWrapper {
+    if (this._settings === null) {throw new Err.ContextNotSetError('App');}
+    return this._settings;
+  }
+  public get logger(): vscode.LogOutputChannel {
+    if (this._outputChannel === null) {throw new Err.ContextNotSetError('App');}
+    return this._outputChannel;
+  }
+  public get updateUI(): UpdateUI {
+    if (this._updateUI === null) {throw new Err.ManagerNotInitializedError('UpdateUI');}
+    return this._updateUI;
+  }
 
   // ScriptContext members (delegated to B6PCore)
+  public get sessionManager(): SessionManager { return this.core.sessionManager; }
+  public get orgCache(): OrgCache { return this.core.orgCache; }
+  public get scriptMetadataStore(): ScriptMetaDataStore { return this.core.scriptMetadataStore; }
   public get fs(): IFileSystem { return this.core.fs; }
   public get prompt(): IPrompt { return this.core.prompt; }
   public get auth(): BasicAuthProvider { return this.core.auth; }
   public getScriptFactory() { return this.core.getScriptFactory(); }
 
-  public get updateUI(): UpdateUI {
-    if (!this._updateUI) {throw new Err.ManagerNotInitializedError('UpdateUI');}
-    return this._updateUI;
-  }
-
   public init(context: vscode.ExtensionContext) {
-    if (this._context !== null) {
+    if (this._core !== null) {
       throw new Err.ContextAlreadySetError('Extension context');
     }
 
-    this._context = context;
-    this._outputChannel = vscode.window.createOutputChannel(OutputChannels.B6P, { log: true });
-    context.subscriptions.push(this._outputChannel);
-    this._settings = new SettingsWrapper();
+    const outputChannel = vscode.window.createOutputChannel(OutputChannels.B6P, { log: true });
+    context.subscriptions.push(outputChannel);
 
-    const vscodeLogger = new VscodeLogger(this._outputChannel);
+    const settings = new SettingsWrapper();
+    const vscodeLogger = new VscodeLogger(outputChannel);
 
-    this._core = new B6PCore({
+    const core = new B6PCore({
       fs: new VscodeFileSystem(),
       persistence: new VscodePersistence(context),
       prompt: new VscodePrompt(),
       logger: vscodeLogger,
       progress: new VscodeProgress(),
-      isDebugMode: () => this.isDebugMode(),
-      orgCacheSettings: this._settings,
+      isDebugMode: () => settings.get('debugMode').enabled,
+      orgCacheSettings: settings,
       fetchFn: (url, options) => HttpClient.getInstance().fetch(url, options),
       updateServiceConfig: {
         currentVersion: this.getVersion(),
         repoOwner: 'bluestep-systems',
         repoName: 'vscode-extension',
-        enabled: this._settings.get('updateCheck').enabled,
-        versionOverride: this._settings.get('debugMode').versionOverride
+        enabled: settings.get('updateCheck').enabled,
+        versionOverride: settings.get('debugMode').versionOverride
       }
     });
-    context.subscriptions.push(this._core);
+    context.subscriptions.push(core);
 
-    ScriptFactory.setDefaultContext(this._core);
+    ScriptFactory.setDefaultContext(core);
 
+    this._outputChannel = outputChannel;
+    this._settings = settings;
+    this._core = core;
+    this._updateUI = this.buildUpdateUI(context, core, vscodeLogger);
+
+    this.buildMcp(context, core, vscodeLogger);
     this.registerCommands(context);
     this.wireEvents(context);
     this.registerUriHandler(context);
-    this.wireMcp(context, vscodeLogger);
-    this.wireUpdateUI(context, vscodeLogger);
+    this.registerLanguageModelTools(context);
 
-    this.settings.sync();
+    settings.sync();
     readOnlyCheck();
-
-    context.subscriptions.push(
-      vscode.lm.registerTool('bluestep-systems_bsjs-push-pull_pull-script', PULL_SCRIPT_TOOL),
-    );
 
     return this;
   }
@@ -155,17 +136,16 @@ export const App = new class implements ScriptContext {
   }
 
   private wireEvents(context: vscode.ExtensionContext) {
-    vscode.window.onDidChangeActiveTextEditor(editor => {
-      if (editor) {readOnlyCheck();}
-    }, this, context.subscriptions);
-
     context.subscriptions.push(
+      vscode.window.onDidChangeActiveTextEditor(editor => {
+        if (editor) {readOnlyCheck();}
+      }),
       vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration(this.appKey)) {
           this.logger.debug('Configuration changed, updating settings map');
           this.settings.sync();
         }
-      })
+      }),
     );
 
     // Cross-cutting wiring on B6PCore. Single-slot callbacks are fine here
@@ -175,6 +155,12 @@ export const App = new class implements ScriptContext {
         this.logger.warn('Failed to cache org during login:', e instanceof Error ? e.message : String(e));
       });
     };
+  }
+
+  private registerLanguageModelTools(context: vscode.ExtensionContext) {
+    context.subscriptions.push(
+      vscode.lm.registerTool('bluestep-systems_bsjs-push-pull_pull-script', PULL_SCRIPT_TOOL),
+    );
   }
 
   private registerUriHandler(context: vscode.ExtensionContext) {
@@ -195,36 +181,39 @@ export const App = new class implements ScriptContext {
     }));
   }
 
-  private wireMcp(context: vscode.ExtensionContext, logger: VscodeLogger) {
-    this._mcpServerProvider = new McpServerProvider(
-      this.core.orgCache,
-      this.core.auth,
-      logger,
-      context,
-    );
-    context.subscriptions.push(this._mcpServerProvider);
-
-    this.core.orgCache.onChanged = () => {
-      this._mcpServerProvider!.fireChanged();
-    };
+  private buildMcp(
+    context: vscode.ExtensionContext,
+    core: B6PCore,
+    logger: VscodeLogger,
+  ): void {
+    const provider = new McpServerProvider(core.orgCache, core.auth, logger, context);
+    context.subscriptions.push(provider);
+    core.orgCache.onChanged = () => provider.fireChanged();
   }
 
-  private wireUpdateUI(context: vscode.ExtensionContext, logger: VscodeLogger) {
-    if (!this.core.updateService) {return;}
-    this._updateUI = new UpdateUI(
-      this.core.updateService,
-      this.core.fs,
+  private buildUpdateUI(
+    context: vscode.ExtensionContext,
+    core: B6PCore,
+    logger: VscodeLogger,
+  ): UpdateUI | null {
+    if (!core.updateService) {return null;}
+    const updateUI = new UpdateUI(
+      core.updateService,
+      core.fs,
       logger,
       context.extensionUri,
       context.globalStorageUri,
       this.appKey,
     );
-    context.subscriptions.push(this._updateUI);
+    context.subscriptions.push(updateUI);
+    return updateUI;
   }
 
   public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
-    !alreadyAlerted && this.core.prompt.info('Cleared all Settings');
+    if (!alreadyAlerted) {
+      this.core.prompt.info('Cleared all Settings');
+    }
     this.settings.set('debugMode', SettingsWrapper.DEFAULT.debugMode);
     this.settings.set('advancedMode', SettingsWrapper.DEFAULT.advancedMode);
   }
@@ -260,17 +249,13 @@ export const App = new class implements ScriptContext {
     throw new Err.PackageJsonNotFoundError();
   }
 
-  public runConverts() {
-    this.core.prompt.info('Not implemented yet');
-  }
-
   /**
    * Best-effort teardown. VS Code disposes everything in
    * `context.subscriptions` automatically; this just clears the
    * cross-cutting callback slots we set on B6PCore.
    */
   public dispose() {
-    if (this._core) {
+    if (this._core !== null) {
       this._core.sessionManager.onLogin = null;
       this._core.orgCache.onChanged = null;
     }
