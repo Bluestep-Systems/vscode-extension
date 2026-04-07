@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { BasicAuthProvider } from '../../../core/auth/BasicAuthProvider';
-import { Http } from '../../../core/constants';
-import type { ILogger } from '../../../core/providers';
-import type { OrgCache } from '../../../core/cache/OrgCache';
+import { BasicAuthProvider } from '@bluestep-systems/b6p-core';
+import { Http } from '@bluestep-systems/b6p-core';
+import type { ILogger } from '@bluestep-systems/b6p-core';
+import type { OrgCache } from '@bluestep-systems/b6p-core';
 
 /**
  * Provides MCP server definitions to VS Code for each known org in the OrgCache.

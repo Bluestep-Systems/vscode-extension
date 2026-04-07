@@ -7,11 +7,11 @@ import { App } from '../../main/app/App';
 //@ts-ignore
 import { Auth } from '../../main/app/authentication';
 //@ts-ignore
-import { SessionManager } from '../../core/session/SessionManager';
+import { SessionManager } from '@bluestep-systems/b6p-core';
 //@ts-ignore
 import { UPDATE_MANAGER } from '../../main/app/services/UpdateManager';
 //@ts-ignore
-import { Err } from '../../core/Err';
+import { Err } from '@bluestep-systems/b6p-core';
 
 // suite('App Singleton Tests', () => {
 

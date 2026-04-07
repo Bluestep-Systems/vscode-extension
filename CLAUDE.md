@@ -2,15 +2,26 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository Layout
+
+This is an **npm workspaces monorepo** with three packages:
+
+- `packages/b6p-core/` — `@bluestep-systems/b6p-core`: vscode-free core library (WebDAV, sessions, persistence, types)
+- `packages/b6p-cli/`  — `@bluestep-systems/b6p-cli`: standalone `b6p` CLI binary
+- `packages/b6p-vscode/` — `bsjs-push-pull`: the VS Code extension (Marketplace artifact)
+
+Both `b6p-cli` and `b6p-vscode` depend on `b6p-core`. The core has zero `vscode` imports — anything reaching for `vscode` lives in `b6p-vscode`.
+
+When editing, the package boundary matters: cross-package imports must go through `'@bluestep-systems/b6p-core'`, not relative paths. If you add a new exported symbol in core, also add it to `packages/b6p-core/src/index.ts`.
+
 ## Common Development Commands
 
-### Build and Package
+### Build and Package (run from repo root)
 ```bash
-npm run compile          # Build TypeScript and lint
-npm run watch           # Parallel TypeScript + esbuild watching
-npm run package         # Production build
-npm run package-extension # Create .vsix package
-./build-vsix.sh -h      # See all build options
+npm run compile          # Build core → cli → extension (in dependency order)
+npm run watch            # Parallel watch across all three packages
+npm run package-extension # Build .vsix into packages/b6p-vscode/
+./build-vsix.sh -h       # See all build options (puts artifacts in releases/)
 ./build-vsix.sh -r -g -k # Release build with git and clean
 ```
 
@@ -31,14 +42,15 @@ npm run format-check  # Check formatting
 
 ## Architecture Overview
 
-This is a **WebDAV-based VS Code extension** for syncing JavaScript files with BlueStep systems using a singleton pattern with hierarchical context management.
+This is a **WebDAV-based VS Code extension** (plus a standalone CLI sharing the same core) for syncing JavaScript files with BlueStep systems using a singleton pattern with hierarchical context management.
 
 ### Core Components
 
-- **App singleton** (`src/main/app/App.ts`): Root context manager that initializes all services and registers commands
-- **ContextNode pattern** (`src/main/app/context/ContextNode.ts`): Base class for all components requiring VS Code context and persistence
-- **SessionManager** (`src/main/app/b6p_session/SessionManager.ts`): Handles WebDAV authentication, CSRF tokens, and HTTP session management
-- **BasicAuthManager** (`src/main/app/authentication/BasicAuthManager.ts`): Manages credentials per authentication profile ("flag")
+- **App singleton** (`packages/b6p-vscode/src/main/app/App.ts`): VS Code-side root context manager that initializes services and registers commands
+- **B6PCore** (`packages/b6p-core/src/B6PCore.ts`): Vscode-free orchestrator used by both the CLI and the extension; provides `push`, `pull`, `audit`, `deploy`, etc.
+- **ContextNode pattern** (`packages/b6p-vscode/src/main/app/context/ContextNode.ts`): Base class for components requiring VS Code context and persistence
+- **SessionManager** (`packages/b6p-core/src/session/SessionManager.ts`): WebDAV auth, CSRF tokens, HTTP session management
+- **BasicAuthProvider** (`packages/b6p-core/src/auth/BasicAuthProvider.ts`): Credential management per authentication profile ("flag")
 
 ### Key Architectural Patterns
 

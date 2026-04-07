@@ -3,19 +3,19 @@ import * as assert from 'assert';
 //@ts-ignore
 import * as vscode from 'vscode';
 //@ts-ignore
-import type { SessionData } from '../../../types';
+import type { SessionData } from '@bluestep-systems/b6p-core';
 //@ts-ignore
 import { App } from '../../main/app/App';
 //@ts-ignore
 import { Auth } from '../../main/app/authentication';
 //@ts-ignore
-import { SessionManager } from '../../core/session/SessionManager';
+import { SessionManager } from '@bluestep-systems/b6p-core';
 //@ts-ignore
-import { Err } from '../../core/Err';
+import { Err } from '@bluestep-systems/b6p-core';
 //@ts-ignore
-import { ResponseCodes } from '../../core/network/StatusCodes';
+import { ResponseCodes } from '@bluestep-systems/b6p-core';
 //@ts-ignore
-import { HttpClient } from '../../core/network/HttpClient';
+import { HttpClient } from '@bluestep-systems/b6p-core';
 
 // suite('SessionManager Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { ScriptContext } from "../../../core/script/ScriptContext";
+import type { ScriptContext } from '@bluestep-systems/b6p-core';
 
 export default async function(ctx: ScriptContext) {
   const result = await vscode.window.showOpenDialog({

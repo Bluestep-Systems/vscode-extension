@@ -5,11 +5,11 @@ import * as vscode from 'vscode';
 //@ts-ignore
 import { App } from '../../main/app/App';
 //@ts-ignore
-import { SessionManager } from '../../core/session/SessionManager';
+import { SessionManager } from '@bluestep-systems/b6p-core';
 //@ts-ignore
 import { UPDATE_MANAGER } from '../../main/app/services/UpdateManager';
 //@ts-ignore
-import { ScriptFactory } from '../../core/script/ScriptFactory';
+import { ScriptFactory } from '@bluestep-systems/b6p-core';
 
 // suite('Extension Integration Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

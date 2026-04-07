@@ -1,24 +1,24 @@
 import * as vscode from 'vscode';
-import type { ScriptContext } from '../../core/script/ScriptContext';
-import type { IFileSystem, ILogger, IPrompt } from '../../core/providers';
-import { BasicAuthProvider } from '../../core/auth/BasicAuthProvider';
-import { SessionManager } from '../../core/session/SessionManager';
-import { OutputChannels, SettingsKeys } from '../../core/constants';
+import type { ScriptContext } from '@bluestep-systems/b6p-core';
+import type { IFileSystem, ILogger, IPrompt } from '@bluestep-systems/b6p-core';
+import { BasicAuthProvider } from '@bluestep-systems/b6p-core';
+import { SessionManager } from '@bluestep-systems/b6p-core';
+import { OutputChannels, SettingsKeys } from '@bluestep-systems/b6p-core';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { UpdateUI } from './services/UpdateUI';
 import { VsCodeSettingsWrapper } from './settings/VsCodeSettingsWrapper';
-import { Err } from '../../core/Err';
-import { HttpClient } from '../../core/network/HttpClient';
-import { OrgCache } from '../../core/cache/OrgCache';
-import { ScriptMetaDataStore } from '../../core/cache/ScriptMetaDataStore';
+import { Err } from '@bluestep-systems/b6p-core';
+import { HttpClient } from '@bluestep-systems/b6p-core';
+import { OrgCache } from '@bluestep-systems/b6p-core';
+import { ScriptMetaDataStore } from '@bluestep-systems/b6p-core';
 import { McpServerProvider } from './mcp/McpServerProvider';
 import { PULL_SCRIPT_TOOL } from './mcp/PullScriptTool';
-import { B6PCore } from '../../core/B6PCore';
-import { ScriptFactory } from '../../core/script/ScriptFactory';
+import { B6PCore } from '@bluestep-systems/b6p-core';
+import { ScriptFactory } from '@bluestep-systems/b6p-core';
 import { VscodeFileSystem, VscodePrompt, VscodeLogger, VscodeProgress } from '../providers';
-import { SharedFilePersistence } from '../../core/persistence/SharedFilePersistence';
-import { PrivateKeys, PublicKeys } from '../../core/persistence/PersistenceKeys';
+import { SharedFilePersistence } from '@bluestep-systems/b6p-core';
+import { PrivateKeys, PublicKeys } from '@bluestep-systems/b6p-core';
 
 export const App = new class AppImpl implements ScriptContext {
   private _core: B6PCore | null = null;

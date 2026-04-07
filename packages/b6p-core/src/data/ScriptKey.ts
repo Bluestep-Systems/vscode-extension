@@ -1,6 +1,6 @@
 import { Err } from '../Err';
 import { registerSerializable, type SerializableClass } from '../persistence';
-import type { JsonValue } from '../../../types';
+import type { JsonValue } from '../types';
 
 const COMPOUND_ID_SEPARATOR = "___";
 const SERIALIZABLE_TAG = "ScriptKey";

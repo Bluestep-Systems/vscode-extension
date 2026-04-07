@@ -1,11 +1,11 @@
 import * as assert from 'assert';
 import * as path from 'path';
 import { App } from '../../main/app/App';
-import { MockFileSystem } from '../../core/testing/MockFileSystem';
-import { B6PUri } from '../../core/B6PUri';
-import { ScriptFactory } from '../../core/script/ScriptFactory';
-import { ScriptNode } from '../../core/script/ScriptNode';
-import { ScriptRoot } from '../../core/script/ScriptRoot';
+import { MockFileSystem } from '@bluestep-systems/b6p-core';
+import { B6PUri } from '@bluestep-systems/b6p-core';
+import { ScriptFactory } from '@bluestep-systems/b6p-core';
+import { ScriptNode } from '@bluestep-systems/b6p-core';
+import { ScriptRoot } from '@bluestep-systems/b6p-core';
 
 suite('ScriptNode Tests', () => {
   let mockFs: MockFileSystem;

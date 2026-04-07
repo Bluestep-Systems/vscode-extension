@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
-import type { IPersistence } from '../../core/providers';
+import type { IPersistence } from '@bluestep-systems/b6p-core';
 
 /**
  * File-based persistence for CLI use.

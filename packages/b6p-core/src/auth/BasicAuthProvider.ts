@@ -1,4 +1,4 @@
-import type { BasicAuthParams } from '../../../types';
+import type { BasicAuthParams } from '../types';
 import type { ILogger, IPersistence, IPrompt } from '../providers';
 
 const PERSISTENCE_KEY = 'basicAuth';

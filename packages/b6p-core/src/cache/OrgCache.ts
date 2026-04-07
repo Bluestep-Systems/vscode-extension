@@ -1,4 +1,4 @@
-import { BlueHqAnyUrlResp, OrgCacheElement } from "../../../types";
+import { BlueHqAnyUrlResp, OrgCacheElement } from '../types';
 import { BlueHQ, Http, Numerical } from "../constants";
 import { OrgWorker } from "../data/OrgWorker";
 import { HttpClient } from "../network/HttpClient";

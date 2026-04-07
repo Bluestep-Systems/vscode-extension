@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { IProgress, ProgressTask } from '../../core/providers';
+import type { IProgress, ProgressTask } from '@bluestep-systems/b6p-core';
 
 interface ProgressOptions {
   title: string;

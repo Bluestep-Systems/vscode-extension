@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as path from 'path';
-import { DownstairsPathParser } from '../../core/data/DownstairsPathParser';
-import { B6PUri } from '../../core/B6PUri';
+import { DownstairsPathParser } from '@bluestep-systems/b6p-core';
+import { B6PUri } from '@bluestep-systems/b6p-core';
 
 suite('DownstairsPathParser Tests', () => {
 

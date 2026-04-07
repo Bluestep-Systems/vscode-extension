@@ -1,4 +1,4 @@
-import type { IProgress, ProgressTask } from '../../core/providers';
+import type { IProgress, ProgressTask } from '@bluestep-systems/b6p-core';
 import type { ActivityPauser } from './CliPrompt';
 
 export class CliProgress implements IProgress {

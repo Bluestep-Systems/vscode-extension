@@ -7,7 +7,7 @@ import { ContextNode } from '../../main/app/context/ContextNode';
 //@ts-ignore
 import { PseudoMap } from '../../main/app/util/PseudoMaps';
 //@ts-ignore
-import { JsonValue } from '../../../types';
+import { JsonValue } from '@bluestep-systems/b6p-core';
 
 // suite('ContextNode Pattern Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

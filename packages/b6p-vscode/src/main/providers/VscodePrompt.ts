@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { IPrompt } from '../../core/providers';
+import type { IPrompt } from '@bluestep-systems/b6p-core';
 
 /**
  * VSCode implementation of the prompt provider.

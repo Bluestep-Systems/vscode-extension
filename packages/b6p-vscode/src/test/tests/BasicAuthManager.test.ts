@@ -5,13 +5,13 @@ import * as vscode from 'vscode';
 //@ts-ignore
 import { BASIC_AUTH_MANAGER } from '../../main/app/authentication/BasicAuthManager';
 //@ts-ignore
-import { SessionManager } from '../../core/session/SessionManager';
+import { SessionManager } from '@bluestep-systems/b6p-core';
 //@ts-ignore
 import { BasicAuth } from '../../main/app/authentication/classes';
 //@ts-ignore
-import { Err } from '../../core/Err';
+import { Err } from '@bluestep-systems/b6p-core';
 //@ts-ignore
-import type { BasicAuthParams } from '../../../types';
+import type { BasicAuthParams } from '@bluestep-systems/b6p-core';
 
 // suite('BasicAuthManager Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

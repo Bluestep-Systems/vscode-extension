@@ -1,4 +1,4 @@
-import type { ScriptContext } from "../../../core/script/ScriptContext";
+import type { ScriptContext } from '@bluestep-systems/b6p-core';
 
 export default async function(ctx: ScriptContext) {
   const entries = ctx.scriptMetadataStore.all();

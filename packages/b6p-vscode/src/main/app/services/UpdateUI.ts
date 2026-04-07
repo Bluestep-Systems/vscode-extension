@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import { FileExtensions, SettingsKeys } from '../../../core/constants';
-import { B6PUri } from '../../../core/B6PUri';
-import type { UpdateInfo } from '../../../core/update/types';
-import type { UpdateService } from '../../../core/update/UpdateService';
-import type { IFileSystem, ILogger } from '../../../core/providers';
+import { FileExtensions, SettingsKeys } from '@bluestep-systems/b6p-core';
+import { B6PUri } from '@bluestep-systems/b6p-core';
+import type { UpdateInfo } from '@bluestep-systems/b6p-core';
+import type { UpdateService } from '@bluestep-systems/b6p-core';
+import type { IFileSystem, ILogger } from '@bluestep-systems/b6p-core';
 
 /**
  * VS Code-specific UI wrapper for the UpdateService.

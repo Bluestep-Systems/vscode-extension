@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { B6PUri } from '../../core/B6PUri';
-import type { FileStat, IFileSystem } from '../../core/providers';
+import { B6PUri } from '@bluestep-systems/b6p-core';
+import type { FileStat, IFileSystem } from '@bluestep-systems/b6p-core';
 
 export class NodeFileSystem implements IFileSystem {
 

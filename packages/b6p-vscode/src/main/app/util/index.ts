@@ -1,14 +1,14 @@
 import * as path from 'path';
 import * as vscode from "vscode";
-import { PrimitiveNestedObject, JsonValue, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from "../../../../types";
-import { IdUtility } from "../../../core/data/IdUtility";
-import { ScriptKey } from '../../../core/data/ScriptKey';
-import { Err } from '../../../core/Err';
-import { ScriptFactory } from '../../../core/script/ScriptFactory';
-import type { ScriptFolder } from '../../../core/script/ScriptFolder';
-import { ApiEndpoints, Http, MimeTypes } from '../../../core/constants';
+import { PrimitiveNestedObject, JsonValue, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from '@bluestep-systems/b6p-core';
+import { IdUtility } from '@bluestep-systems/b6p-core';
+import { ScriptKey } from '@bluestep-systems/b6p-core';
+import { Err } from '@bluestep-systems/b6p-core';
+import { ScriptFactory } from '@bluestep-systems/b6p-core';
+import type { ScriptFolder } from '@bluestep-systems/b6p-core';
+import { ApiEndpoints, Http, MimeTypes } from '@bluestep-systems/b6p-core';
 import { App } from '../App';
-import { B6PUri } from '../../../core/B6PUri';
+import { B6PUri } from '@bluestep-systems/b6p-core';
 /**
  * Utility functions and types.
  * 

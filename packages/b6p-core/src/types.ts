@@ -1,9 +1,9 @@
-import type { ScriptKey } from '../src/main/app/util/data/ScriptKey';
+import type { ScriptKey } from './data/ScriptKey';
 
 /**
  * A map-like interface that only allows read operations.
  */
-declare interface ReadOnlyMap<T> {
+export interface ReadOnlyMap<T> {
   get(key: string): T | undefined;
   has(key: string): boolean;
   forEach(callback: (value: T, key: string, map: this) => void): void;
@@ -126,14 +126,14 @@ export type BasicAuthParams = {
 /**
  * GQL response for script queries, either "good" or "bad".
  */
-type ScriptGqlResp = ScriptGQLGoodResp | ScriptGQLBadResp;
+export type ScriptGqlResp = ScriptGQLGoodResp | ScriptGQLBadResp;
 
 /**
  * how a GQL response looks when it is "good"
  * 
  * //TODO this is incomplete for every GQL query possible. This should be tied to specific queries
  */
-type ScriptGQLGoodResp = {
+export type ScriptGQLGoodResp = {
   "data": {
     "children": [
       {
@@ -152,7 +152,7 @@ type ScriptGQLGoodResp = {
 /**
  * how a GQL response looks when there were errors with the query
  */
-type ScriptGQLBadResp = {
+export type ScriptGQLBadResp = {
   "errors": [
     {
       "message": string;
@@ -163,13 +163,13 @@ type ScriptGQLBadResp = {
 /**
  * Options needed to to override the source in a script operation.
  */
-type SourceOps = { sourceOrigin: string, topId: string; };
+export type SourceOps = { sourceOrigin: string, topId: string; };
 
 /**
  * The metadata for the Script objects used locally.
  * //TODO: we should eventually
  */
-type ScriptMetaData = {
+export type ScriptMetaData = {
 
   /**
    * The WebDAV ID extracted from the file path.
@@ -310,7 +310,7 @@ type SandboxSizes =
 /**
  * This is the content of a config.json found in every script folder.
  */
-type ConfigJsonContent = {
+export type ConfigJsonContent = {
 
   /**
    * the main script file to execute (relative to the script folder)
@@ -363,101 +363,11 @@ type ConfigJsonContent = {
   scriptlibrary: "private";
 };
 
-/**
- * Information about a release of the B6P platform.
- * @deprecated Use UpdateInfo from '../src/core/update/types' instead
- */
-export type UpdateInfo = {
-  version: string;
-  downloadUrl: string;
-  releaseNotes: string;
-  publishedAt: string;
-};
-/**
- * @deprecated Use ClientInfo from '../src/core/update/types' instead
- */
-export type ClientInfo = {
-  version: string;
-  lastChecked: number;
-  githubToken: string | null;
-  setupShown: boolean;
-};
-export type GithubRelease = {
-  url: string;
-  html_url: string;
-  assets_url: string;
-  upload_url: string;
-  tarball_url: string;
-  zipball_url: string;
-  id: number;
-  node_id: string;
-  tag_name: string;
-  target_commitish: string;
-  name: string;
-  body: string;
-  draft: boolean;
-  prerelease: boolean;
-  immutable: boolean;
-  created_at: string;
-  published_at: string;
-  author: {
-    login: string;
-    id: number;
-    node_id: string;
-    avatar_url: string;
-    gravatar_id: string;
-    url: string;
-    html_url: string;
-    followers_url: string;
-    following_url: string;
-    gists_url: string;
-    starred_url: string;
-    subscriptions_url: string;
-    organizations_url: string;
-    repos_url: string;
-    events_url: string;
-    received_events_url: string;
-    type: "User";
-    site_admin: false;
-  };
-  assets: [
-    {
-      url: string;
-      browser_download_url: string;
-      id: number;
-      node_id: string;
-      name: string;
-      label: string;
-      state: "uploaded";
-      content_type: "application/zip";
-      size: number;
-      digest: string;
-      download_count: number;
-      created_at: string;
-      updated_at: string;
-      uploader: {
-        login: string;
-        id: number;
-        node_id: string;
-        avatar_url: string;
-        gravatar_id: string;
-        url: string;
-        html_url: string;
-        followers_url: string;
-        following_url: string;
-        gists_url: string;
-        starred_url: string;
-        subscriptions_url: string;
-        organizations_url: string;
-        repos_url: string;
-        events_url: string;
-        received_events_url: string;
-        type: "User";
-        site_admin: false;
-      };
-    }
-  ];
-};
+// NOTE: UpdateInfo, ClientInfo, and GithubRelease previously lived here as
+// duplicates of the canonical definitions in ./update/types.ts. They have been
+// removed from this file during the workspaces split — import them from
+// '@bluestep-systems/b6p-core' (which re-exports the canonical versions) or
+// directly from './update/types'.
 
 /**
  * The settings used by the extension.
@@ -722,7 +632,7 @@ export type TsConfig = {
 /**
  * An element in the OrgCache, representing a known host and the last access time.
  */
-type OrgCacheElement = {
+export type OrgCacheElement = {
   /**
    * a list of known hosts for this org
    */

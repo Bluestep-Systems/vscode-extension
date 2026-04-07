@@ -1,4 +1,4 @@
-import type { JsonValue } from '../../../types';
+import type { JsonValue } from '../types';
 
 const SERIALIZABLE_TAG = '__serializable' as const;
 

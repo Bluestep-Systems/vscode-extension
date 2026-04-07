@@ -1,5 +1,5 @@
 import * as readline from 'readline/promises';
-import type { IPrompt } from '../../core/providers';
+import type { IPrompt } from '@bluestep-systems/b6p-core';
 
 /**
  * CLI implementation of the prompt provider.

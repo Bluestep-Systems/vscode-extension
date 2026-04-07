@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { HttpClient } from '../../core/network/HttpClient';
+import { HttpClient } from '@bluestep-systems/b6p-core';
 
 suite('HttpClient Mock Test Suite', () => {
   let mockHttp: ReturnType<typeof HttpClient.enableTestMode>;

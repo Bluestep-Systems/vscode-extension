@@ -1,5 +1,5 @@
 import path from 'path';
-import { ScriptMetaData } from '../../../types';
+import { ScriptMetaData } from '../types';
 import { FileExtensions, FolderNames, SpecialFiles } from '../constants';
 import { DownstairsPathParser } from '../data/DownstairsPathParser';
 import { OrgWorker } from '../data/OrgWorker';

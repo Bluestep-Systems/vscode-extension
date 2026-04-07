@@ -1,5 +1,5 @@
 import * as path from 'path';
-import type { MetaDataDotJsonContent } from '../../../types';
+import type { MetaDataDotJsonContent } from '../types';
 import { Err } from '../Err';
 import { B6PUri } from '../B6PUri';
 import type { IFileSystem, IPrompt } from '../providers';

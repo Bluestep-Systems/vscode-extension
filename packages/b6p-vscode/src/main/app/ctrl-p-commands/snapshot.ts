@@ -1,8 +1,8 @@
-import { SourceOps } from "../../../../types";
+import { SourceOps } from '@bluestep-systems/b6p-core';
 import { App } from "../App";
 import { Util } from "../util";
-import { ScriptFactory } from "../../../core/script/ScriptFactory";
-import { B6PUri } from "../../../core/B6PUri";
+import { ScriptFactory } from '@bluestep-systems/b6p-core';
+import { B6PUri } from '@bluestep-systems/b6p-core';
 import pushCurrent from "./pushCurrent";
 export default async function snapshot({ overrideFormulaUri, sourceOps }: { overrideFormulaUri?: string, sourceOps?: SourceOps } = {}) {
   

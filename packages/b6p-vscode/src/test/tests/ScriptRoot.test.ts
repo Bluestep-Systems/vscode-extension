@@ -5,13 +5,13 @@ import * as path from 'path';
 //@ts-ignore
 import * as vscode from 'vscode';
 //@ts-ignore
-import { ScriptMetaData } from '../../../types';
+import { ScriptMetaData } from '@bluestep-systems/b6p-core';
 //@ts-ignore
 import { App } from '../../main/app/App';
 //@ts-ignore
-import { ScriptFactory } from '../../core/script/ScriptFactory';
+import { ScriptFactory } from '@bluestep-systems/b6p-core';
 //@ts-ignore
-import { ScriptRoot } from '../../core/script/ScriptRoot';
+import { ScriptRoot } from '@bluestep-systems/b6p-core';
 
 // suite('ScriptRoot Tests', () => {
 //     let mockFileSystem: MockFileSystem;

@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
-import type { Settings, JsonValue } from "../../../../types";
+import type { Settings, JsonValue } from '@bluestep-systems/b6p-core';
 import { App } from "../App";
 import { Util } from "../util";
-import { TypedMap, Persistable } from "../../../core/persistence";
+import { TypedMap, Persistable } from '@bluestep-systems/b6p-core';
 
 /**
  * A wrapper around the vscode settings for this extension to provide typed access and modification.

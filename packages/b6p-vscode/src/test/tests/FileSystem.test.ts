@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { MockFileSystem } from '../../core/testing/MockFileSystem';
-import { B6PUri } from '../../core/B6PUri';
+import { MockFileSystem } from '@bluestep-systems/b6p-core';
+import { B6PUri } from '@bluestep-systems/b6p-core';
 
 suite('Core MockFileSystem Tests', () => {
   let mockFs: MockFileSystem;

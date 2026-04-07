@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import { App } from "../App";
 import { Util } from "../util";
-import { ScriptFile } from '../../../core/script/ScriptFile';
-import { ScriptFactory } from '../../../core/script/ScriptFactory';
-import { B6PUri } from '../../../core/B6PUri';
-import { Err } from '../../../core/Err';
+import { ScriptFile } from '@bluestep-systems/b6p-core';
+import { ScriptFactory } from '@bluestep-systems/b6p-core';
+import { B6PUri } from '@bluestep-systems/b6p-core';
+import { Err } from '@bluestep-systems/b6p-core';
 
 export default async function () {
   try {

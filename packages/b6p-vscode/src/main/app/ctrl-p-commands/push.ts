@@ -1,7 +1,7 @@
-import type { SourceOps } from '../../../../types';
+import type { SourceOps } from '@bluestep-systems/b6p-core';
 import { App } from '../App';
 import { Util } from '../util';
-import { ScriptRoot } from '../../../core/script/ScriptRoot';
+import { ScriptRoot } from '@bluestep-systems/b6p-core';
 
 /**
  * Pushes a script to a WebDAV location using the platform-agnostic B6PCore.

@@ -4,48 +4,54 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-            "label": "watch",
-            "dependsOn": [
-                "npm: watch:tsc",
-                "npm: watch:esbuild"
-            ],
-            "presentation": {
-                "reveal": "never"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "type": "npm",
-            "script": "watch:esbuild",
-            "group": "build",
-            "problemMatcher": "$esbuild-watch",
-            "isBackground": true,
-            "label": "npm: watch:esbuild",
-            "presentation": {
-                "group": "watch",
-                "reveal": "never"
-            }
-        },
+			"label": "watch",
+			"dependsOn": [
+				"npm: watch:core",
+				"npm: watch:vscode"
+			],
+			"presentation": {
+				"reveal": "never"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
 		{
-            "type": "npm",
-            "script": "watch:tsc",
-            "group": "build",
-            "problemMatcher": "$tsc-watch",
-            "isBackground": true,
-            "label": "npm: watch:tsc",
-            "presentation": {
-                "group": "watch",
-                "reveal": "never"
-            }
-        },
+			"type": "npm",
+			"script": "watch:core",
+			"path": "",
+			"group": "build",
+			"problemMatcher": "$tsc-watch",
+			"isBackground": true,
+			"label": "npm: watch:core",
+			"detail": "tsc -w on @bluestep-systems/b6p-core",
+			"presentation": {
+				"group": "watch",
+				"reveal": "never"
+			}
+		},
+		{
+			"type": "npm",
+			"script": "watch:vscode",
+			"path": "",
+			"group": "build",
+			"problemMatcher": "$esbuild-watch",
+			"isBackground": true,
+			"label": "npm: watch:vscode",
+			"detail": "esbuild --watch on bsjs-push-pull",
+			"presentation": {
+				"group": "watch",
+				"reveal": "never"
+			}
+		},
 		{
 			"type": "npm",
 			"script": "watch-tests",
+			"path": "packages/b6p-vscode",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
+			"label": "npm: watch-tests",
 			"presentation": {
 				"reveal": "never",
 				"group": "watchers"
@@ -55,7 +61,8 @@
 		{
 			"label": "tasks: watch-tests",
 			"dependsOn": [
-				"npm: watch",
+				"npm: watch:core",
+				"npm: watch:vscode",
 				"npm: watch-tests"
 			],
 			"problemMatcher": []

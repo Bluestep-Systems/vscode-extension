@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { ApiEndpoints } from "../../../core/constants";
+import { ApiEndpoints } from '@bluestep-systems/b6p-core';
 import { App } from '../App';
 import { Util } from '../util';
-import { Err } from "../../../core/Err";
+import { Err } from '@bluestep-systems/b6p-core';
 import push from "./push";
 
 /**

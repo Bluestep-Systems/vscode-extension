@@ -1,4 +1,4 @@
-import type { SessionData } from '../../../types';
+import type { SessionData } from '../types';
 import { ApiEndpoints, Http } from '../constants';
 import { Err } from '../Err';
 import { ResponseCodes } from '../network/StatusCodes';

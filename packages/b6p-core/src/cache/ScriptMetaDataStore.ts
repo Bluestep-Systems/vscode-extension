@@ -1,4 +1,4 @@
-import type { ScriptMetaData } from "../../../types";
+import type { ScriptMetaData } from '../types';
 import { PublicKeys, PublicPersistanceMap } from "../persistence";
 import type { IPersistence } from "../providers";
 

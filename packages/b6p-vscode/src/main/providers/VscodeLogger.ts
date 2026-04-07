@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { ILogger } from '../../core/providers';
+import type { ILogger } from '@bluestep-systems/b6p-core';
 
 /**
  * VSCode implementation of the logger provider.

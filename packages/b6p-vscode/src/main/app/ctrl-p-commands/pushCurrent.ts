@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { App } from '../App';
 import { Util } from '../util';
-import { ScriptFactory } from '../../../core/script/ScriptFactory';
-import { B6PUri } from '../../../core/B6PUri';
-import type { ScriptRoot } from '../../../core/script/ScriptRoot';
+import { ScriptFactory } from '@bluestep-systems/b6p-core';
+import { B6PUri } from '@bluestep-systems/b6p-core';
+import type { ScriptRoot } from '@bluestep-systems/b6p-core';
 
 /**
  * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location using B6PCore.

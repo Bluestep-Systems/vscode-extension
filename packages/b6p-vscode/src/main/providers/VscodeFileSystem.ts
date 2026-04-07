@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import type { IFileSystem, FileStat } from '../../core/providers';
-import { B6PUri } from '../../core/B6PUri';
+import type { IFileSystem, FileStat } from '@bluestep-systems/b6p-core';
+import { B6PUri } from '@bluestep-systems/b6p-core';
 
 /**
  * VSCode implementation of the file system provider.

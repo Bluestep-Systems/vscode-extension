@@ -5,3 +5,6 @@ out
 *.vsix
 *.zip
 archive
+releases/
+packages/*/dist/
+packages/*/out/
