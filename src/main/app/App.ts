@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import type { ScriptContext } from '../../core/script/ScriptContext';
-import type { IFileSystem, IPrompt } from '../../core/providers';
+import type { IFileSystem, ILogger, IPrompt } from '../../core/providers';
 import { BasicAuthProvider } from '../../core/auth/BasicAuthProvider';
 import { SessionManager } from '../../core/session/SessionManager';
 import { OutputChannels, SettingsKeys } from '../../core/constants';
 import ctrlPCommands from './ctrl-p-commands';
 import readOnlyCheck from './services/ReadOnlyChecker';
 import { UpdateUI } from './services/UpdateUI';
-import { SettingsWrapper } from './settings/SettingsWrapper';
+import { VsCodeSettingsWrapper } from './settings/VsCodeSettingsWrapper';
 import { Err } from '../../core/Err';
 import { HttpClient } from '../../core/network/HttpClient';
 import { OrgCache } from '../../core/cache/OrgCache';
@@ -20,8 +20,7 @@ import { VscodeFileSystem, VscodePersistence, VscodePrompt, VscodeLogger, Vscode
 
 export const App = new class AppImpl implements ScriptContext {
   private _core: B6PCore | null = null;
-  private _settings: SettingsWrapper | null = null;
-  private _outputChannel: vscode.LogOutputChannel | null = null;
+  private _settings: VsCodeSettingsWrapper | null = null;
   private _updateUI: UpdateUI | null = null;
 
   public readonly appKey = SettingsKeys.APP_KEY;
@@ -34,13 +33,13 @@ export const App = new class AppImpl implements ScriptContext {
     if (this._core === null) {throw new Err.ContextNotSetError('App');}
     return this._core;
   }
-  public get settings(): SettingsWrapper {
+  public get settings(): VsCodeSettingsWrapper {
     if (this._settings === null) {throw new Err.ContextNotSetError('App');}
     return this._settings;
   }
-  public get logger(): vscode.LogOutputChannel {
-    if (this._outputChannel === null) {throw new Err.ContextNotSetError('App');}
-    return this._outputChannel;
+  public get logger(): ILogger {
+    if (this.core.logger === null) {throw new Err.ContextNotSetError('App');}
+    return this.core.logger;
   }
   public get updateUI(): UpdateUI {
     if (this._updateUI === null) {throw new Err.ManagerNotInitializedError('UpdateUI');}
@@ -64,7 +63,7 @@ export const App = new class AppImpl implements ScriptContext {
     const outputChannel = vscode.window.createOutputChannel(OutputChannels.B6P, { log: true });
     context.subscriptions.push(outputChannel);
 
-    const settings = new SettingsWrapper();
+    const settings = new VsCodeSettingsWrapper();
     const vscodeLogger = new VscodeLogger(outputChannel);
 
     const core = new B6PCore({
@@ -88,7 +87,6 @@ export const App = new class AppImpl implements ScriptContext {
 
     ScriptFactory.setDefaultContext(core);
 
-    this._outputChannel = outputChannel;
     this._settings = settings;
     this._core = core;
     this._updateUI = this.buildUpdateUI(context, core, vscodeLogger);
@@ -214,8 +212,8 @@ export const App = new class AppImpl implements ScriptContext {
     if (!alreadyAlerted) {
       this.core.prompt.info('Cleared all Settings');
     }
-    this.settings.set('debugMode', SettingsWrapper.DEFAULT.debugMode);
-    this.settings.set('advancedMode', SettingsWrapper.DEFAULT.advancedMode);
+    this.settings.set('debugMode', VsCodeSettingsWrapper.DEFAULT.debugMode);
+    this.settings.set('advancedMode', VsCodeSettingsWrapper.DEFAULT.advancedMode);
   }
 
   public isDebugMode(): boolean {

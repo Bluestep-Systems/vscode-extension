@@ -16,7 +16,7 @@ import { TypedMap, Persistable } from "../../../core/persistence";
  * 
  * @lastreviewed 2025-10-01
  */
-export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
+export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persistable {
   public static readonly DEFAULT: Settings = {
     debugMode: { enabled: false, anyDomainOverrideUrl: "U131364=https://templateassisted.myassn.com/", versionOverride: "1.1.0" },
     advancedMode: { enabled: false },
@@ -28,15 +28,15 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
   constructor() {
     // Read from user settings (global) with fallback to defaults
     const config = vscode.workspace.getConfiguration().inspect<Settings>(App.appKey)?.globalValue ||
-      SettingsWrapper.DEFAULT;
+      VsCodeSettingsWrapper.DEFAULT;
     super(config);
   }
 
 
   override get<K extends keyof Settings>(key: K): Settings[K] {
-    let ret = super.get(key) || SettingsWrapper.DEFAULT[key];
-    if (Object.keys(ret).length !== Object.keys(SettingsWrapper.DEFAULT[key]).length) {
-      ret = { ...SettingsWrapper.DEFAULT[key], ...ret };
+    let ret = super.get(key) || VsCodeSettingsWrapper.DEFAULT[key];
+    if (Object.keys(ret).length !== Object.keys(VsCodeSettingsWrapper.DEFAULT[key]).length) {
+      ret = { ...VsCodeSettingsWrapper.DEFAULT[key], ...ret };
     }
     return ret;
   }
@@ -97,10 +97,10 @@ export class SettingsWrapper extends TypedMap<Settings> implements Persistable {
   sync(): void {
     // Read the effective configuration value (includes recent updates)
     const inspectResult = vscode.workspace.getConfiguration().inspect<Settings>(App.appKey);
-    const config = inspectResult?.globalValue || SettingsWrapper.DEFAULT;
+    const config = inspectResult?.globalValue || VsCodeSettingsWrapper.DEFAULT;
     // Merge with defaults to ensure all keys are present
     // It appears VScode likes to drop keys that are set to undefined or false for some reason
-    const fleshedOut = { ...SettingsWrapper.DEFAULT, ...config };
+    const fleshedOut = { ...VsCodeSettingsWrapper.DEFAULT, ...config };
 
     // Update each property individually to maintain type safety
     for (const key of Object.keys(fleshedOut)) {
