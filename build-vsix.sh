@@ -1,6 +1,13 @@
 #!/bin/bash
+# Build a .vsix for the bsjs-push-pull VS Code extension.
+# After the workspaces split, all extension-specific work happens inside
+# packages/b6p-vscode/. The build artifact lands in <repo-root>/releases/.
 set -euo pipefail
-cd $(dirname ${0})
+cd "$(dirname "${0}")"
+REPO_ROOT="$(pwd)"
+EXT_DIR="${REPO_ROOT}/packages/b6p-vscode"
+RELEASES_DIR="${REPO_ROOT}/releases"
+cd "${EXT_DIR}"
 
 # Backup file for rollback
 PACKAGE_JSON_BACKUP=""
@@ -103,10 +110,10 @@ fi
 
 npm run package-extension
 
-# Ensure packages directory exists
-mkdir -p ./packages
+# Ensure releases directory exists at the repo root
+mkdir -p "${RELEASES_DIR}"
 
-# Verify exactly one vsix file was created
+# Verify exactly one vsix file was created (in the extension package dir)
 VSIX_FILES=(bsjs-push-pull-*.vsix)
 if [[ ${#VSIX_FILES[@]} -eq 0 ]]; then
   echo "❌ Error: No VSIX file was created"
@@ -116,8 +123,8 @@ elif [[ ${#VSIX_FILES[@]} -gt 1 ]]; then
   exit 1
 fi
 
-# Move the vsix file to packages directory
-mv "${VSIX_FILES[0]}" ./packages/
+# Move the vsix file to the repo-root releases directory
+mv "${VSIX_FILES[0]}" "${RELEASES_DIR}/"
 
 
 # Git mode: perform git operations
@@ -162,10 +169,10 @@ if [[ "$CLEAN" == true ]]; then
 
   # Get all VSIX files sorted by modification time (newest first)
   # Using ls -t for cross-platform compatibility (works on Linux and macOS)
-  if [[ -d ./packages ]]; then
-    cd ./packages
+  if [[ -d "${RELEASES_DIR}" ]]; then
+    pushd "${RELEASES_DIR}" >/dev/null
     VSIX_FILES=($(ls -t *.vsix 2>/dev/null))
-    cd ..
+    popd >/dev/null
   else
     VSIX_FILES=()
   fi
@@ -174,7 +181,7 @@ if [[ "$CLEAN" == true ]]; then
     # Remove files beyond the keep count
     for ((i=$KEEP_COUNT; i<${#VSIX_FILES[@]}; i++)); do
       echo "Removing: ${VSIX_FILES[i]}"
-      rm -f "./packages/${VSIX_FILES[i]}"
+      rm -f "${RELEASES_DIR}/${VSIX_FILES[i]}"
     done
     echo "Kept ${KEEP_COUNT} most recent version(s)"
   else

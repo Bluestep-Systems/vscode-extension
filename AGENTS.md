@@ -2,6 +2,14 @@
 
 ## Overview
 
+This repository is now an **npm workspaces monorepo** with three packages under `packages/`:
+
+- `packages/b6p-core/` (`@bluestep-systems/b6p-core`) — vscode-free core library
+- `packages/b6p-cli/` (`@bluestep-systems/b6p-cli`) — standalone `b6p` CLI
+- `packages/b6p-vscode/` (`bsjs-push-pull`) — the VS Code extension
+
+Old paths like `src/main/app/...` should be read as `packages/b6p-vscode/src/main/app/...`. Old paths like `src/core/...` are now `packages/b6p-core/src/...`. Cross-package imports MUST use the package name (`'@bluestep-systems/b6p-core'`), never relative paths across the boundary. New exported symbols in core must be added to `packages/b6p-core/src/index.ts`.
+
 When making changes to this VS Code extension codebase, AI agents MUST obey the guidelines delineated below:
 
 ## Required Documentation Updates
