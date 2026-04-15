@@ -1,5 +1,5 @@
-import { App } from "../App";
+import type { ScriptContext } from '@bluestep-systems/b6p-core';
 
-export default function() {
-  App.core.prompt.popup("This feature is coming soon!");
+export default function (ctx: ScriptContext) {
+  ctx.prompt.popup("This feature is coming soon!");
 }

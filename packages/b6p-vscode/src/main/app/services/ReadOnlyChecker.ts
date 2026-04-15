@@ -6,7 +6,7 @@ import { ScriptFactory } from '@bluestep-systems/b6p-core';
 import { B6PUri } from '@bluestep-systems/b6p-core';
 import { Err } from '@bluestep-systems/b6p-core';
 
-export default async function () {
+export default async function (scriptFactory: ScriptFactory) {
   try {
     if (App.isDebugMode()) {
      return; // in debug mode, don't enforce read-only
@@ -17,7 +17,7 @@ export default async function () {
     }
     let sf: ScriptFile;
     try {
-      sf = ScriptFactory.createFile(B6PUri.fromFsPath(activeEditorUri.fsPath));
+      sf = scriptFactory.createFile(B6PUri.fromFsPath(activeEditorUri.fsPath));
     } catch (e) {
       if (e instanceof Err.InvalidUriStructureError) {
         // Not a B6P script path (no U###### segment, etc.) — not our concern.
