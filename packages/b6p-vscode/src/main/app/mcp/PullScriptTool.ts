@@ -30,7 +30,7 @@ export const PULL_SCRIPT_TOOL: vscode.LanguageModelTool<PullScriptInput> = {
 
     try {
       App.logger.info(`PullScriptTool: Pulling script from ${webDavUrl}`);
-      await ctrlPCommands.pullScript(webDavUrl);
+      await ctrlPCommands.pullScript(App, webDavUrl);
 
       return new vscode.LanguageModelToolResult([
         new vscode.LanguageModelTextPart(

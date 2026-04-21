@@ -1,14 +1,12 @@
 import * as vscode from 'vscode';
-import { App } from '../App';
-import { Util } from '../util';
-import { ScriptFactory } from '@bluestep-systems/b6p-core';
+import type { B6PCore, ScriptRoot } from '@bluestep-systems/b6p-core';
 import { B6PUri } from '@bluestep-systems/b6p-core';
-import type { ScriptRoot } from '@bluestep-systems/b6p-core';
+import { Util } from '../util';
 
 /**
  * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location using B6PCore.
  */
-export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot }): Promise<void> {
+export default async function (core: B6PCore, args?: { isSnapshot: boolean; sr: ScriptRoot }): Promise<void> {
   try {
     // Determine the script root
     let actual_sr: ScriptRoot;
@@ -19,7 +17,7 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot }): 
       if (activeEditorUri === undefined) {
         return;
       }
-      actual_sr = ScriptFactory.createScriptRoot(B6PUri.fromFsPath(activeEditorUri.fsPath));
+      actual_sr = core.getScriptFactory().createScriptRoot(B6PUri.fromFsPath(activeEditorUri.fsPath));
     }
 
     // Check for unsaved changes
@@ -39,16 +37,13 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot }): 
       }
     }
 
-    // Use B6PCore for pushCurrent
-    await App.core.pushCurrent({
+    await core.pushCurrent({
       filePath: actual_sr.getRootUri().fsPath,
       snapshot: args?.isSnapshot ?? false,
     });
-
-    // Success message shown by B6PCore
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    App.core.prompt.error(`Error pushing current file: ${message}`);
-    App.logger.error('Push current file error:', e);
+    core.prompt.error(`Error pushing current file: ${message}`);
+    core.logger.error('Push current file error:', e);
   }
 }

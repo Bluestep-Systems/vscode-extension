@@ -1,17 +1,16 @@
 import * as vscode from 'vscode';
-import { ApiEndpoints } from '@bluestep-systems/b6p-core';
-import { App } from '../App';
+import { ApiEndpoints, Err } from '@bluestep-systems/b6p-core';
+import type { App } from '../App';
 import { Util } from '../util';
-import { Err } from '@bluestep-systems/b6p-core';
 import push from "./push";
 
 /**
  * Pushes the current file to multiple origins and topIds as specified by a function in the current file.
  */
-export default async function (): Promise<void> {
+export default async function (app: typeof App): Promise<void> {
   const activeTextEditor = vscode.window.activeTextEditor;
   if (activeTextEditor === undefined) {
-    App.core.prompt.error("No active text editor found");
+    app.core.prompt.error("No active text editor found");
     return;
   }
   const curText = activeTextEditor.document.getText();
@@ -19,14 +18,13 @@ export default async function (): Promise<void> {
   const getArgs = eval(curText) as (() => { recipientOrgs: string[], topIds: string[], sourceOrigin: string; });
 
   if (typeof getArgs !== 'function') {
-    App.core.prompt.error("getArgs is not a function!");
+    app.core.prompt.error("getArgs is not a function!");
     return;
   }
   const { recipientOrgs, topIds, sourceOrigin } = getArgs();
-  App.logger.info("Quick Deploy triggered");
+  app.logger.info("Quick Deploy triggered");
   const origins = recipientOrgs.map(v => new URL(v).origin);
 
-  // Create tasks for all origin/topId combinations
   const deployTasks = [];
   for (const origin of origins) {
     for (const topId of topIds) {
@@ -34,14 +32,14 @@ export default async function (): Promise<void> {
         execute: async () => {
           const webDavId = await Util.getScriptWebdavId(origin, topId);
           if (webDavId !== null) {
-            await push({
+            await push(app, {
               overrideFormulaUrl: `${origin}${ApiEndpoints.FILES}${webDavId}/`,
               sourceOps: { sourceOrigin, topId },
               skipMessage: true
             });
             return { origin, topId, webDavId };
           } else {
-            App.core.prompt.error(`Could not find script at ${origin} with topId ${topId}`);
+            app.core.prompt.error(`Could not find script at ${origin} with topId ${topId}`);
             throw new Err.ScriptNotFoundError(origin, topId);
           }
         },
@@ -50,11 +48,10 @@ export default async function (): Promise<void> {
     }
   }
 
-  await App.core.progress.withProgress(deployTasks, {
+  await app.core.progress.withProgress(deployTasks, {
     title: "Doing Quick Deploy...",
     showItemCount: true
   });
 
-
-  App.core.prompt.popup("Quick Deploy complete!");
+  app.core.prompt.popup("Quick Deploy complete!");
 }

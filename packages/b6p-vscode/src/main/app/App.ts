@@ -101,32 +101,31 @@ export const App = new class AppImpl implements ScriptContext {
     this.wireEvents(context);
     this.registerUriHandler(context);
     this.registerLanguageModelTools(context);
-
     settings.sync();
-    readOnlyCheck();
+    readOnlyCheck(this.getScriptFactory());
 
     return this;
   }
 
   private registerCommands(context: vscode.ExtensionContext) {
-    const reg = (id: string, handler: (...args: never[]) => unknown) => {
+    const reg = (id: string, handler: () => unknown) => {
       context.subscriptions.push(vscode.commands.registerCommand(id, handler));
     };
 
-    reg('bsjs-push-pull.pushScript', ctrlPCommands.pushScript);
-    reg('bsjs-push-pull.pullScript', ctrlPCommands.pullScript);
-    reg('bsjs-push-pull.pullCurrent', ctrlPCommands.pullCurrent);
-    reg('bsjs-push-pull.pushCurrent', ctrlPCommands.pushCurrent);
-    reg('bsjs-push-pull.updateCredentials', ctrlPCommands.updateCredentials);
+    reg('bsjs-push-pull.pushScript', () => ctrlPCommands.pushScript(this));
+    reg('bsjs-push-pull.pullScript', () => ctrlPCommands.pullScript(this));
+    reg('bsjs-push-pull.pullCurrent', () => ctrlPCommands.pullCurrent(this.core));
+    reg('bsjs-push-pull.pushCurrent', () => ctrlPCommands.pushCurrent(this.core));
+    reg('bsjs-push-pull.updateCredentials', () => ctrlPCommands.updateCredentials(this));
     reg('bsjs-push-pull.runTask', ctrlPCommands.runTask);
-    reg('bsjs-push-pull.checkForUpdates', ctrlPCommands.checkForUpdates);
-    reg('bsjs-push-pull.notify', ctrlPCommands.notify);
-    reg('bsjs-push-pull.quickDeploy', ctrlPCommands.quickDeploy);
+    reg('bsjs-push-pull.checkForUpdates', () => ctrlPCommands.checkForUpdates(this));
+    reg('bsjs-push-pull.notify', () => ctrlPCommands.notify(this));
+    reg('bsjs-push-pull.quickDeploy', () => ctrlPCommands.quickDeploy(this));
     reg('bsjs-push-pull.testTask', ctrlPCommands.testTask);
-    reg('bsjs-push-pull.snapshot', ctrlPCommands.snapshot);
-    reg('bsjs-push-pull.audit', ctrlPCommands.audit);
-    reg('bsjs-push-pull.auditPull', ctrlPCommands.auditPull);
-    reg('bsjs-push-pull.goToSetup', ctrlPCommands.goToSetup);
+    reg('bsjs-push-pull.snapshot', () => ctrlPCommands.snapshot(this.core));
+    reg('bsjs-push-pull.audit', () => ctrlPCommands.audit(this.core));
+    reg('bsjs-push-pull.auditPull', () => ctrlPCommands.auditPull(this.core));
+    reg('bsjs-push-pull.goToSetup', () => ctrlPCommands.goToSetup(this));
 
     reg('bsjs-push-pull.report', () => ctrlPCommands.report(this));
     reg('bsjs-push-pull.clearSettings', () => ctrlPCommands.clearSettings(this));
@@ -141,7 +140,7 @@ export const App = new class AppImpl implements ScriptContext {
   private wireEvents(context: vscode.ExtensionContext) {
     context.subscriptions.push(
       vscode.window.onDidChangeActiveTextEditor(editor => {
-        if (editor) {readOnlyCheck();}
+        if (editor) {readOnlyCheck(this.getScriptFactory());}
       }),
       vscode.workspace.onDidChangeConfiguration(event => {
         if (event.affectsConfiguration(this.appKey)) {
@@ -173,12 +172,12 @@ export const App = new class AppImpl implements ScriptContext {
         if (uri.path === '/pull') {
           const formulaUrl = new URLSearchParams(uri.query).get('url');
           if (formulaUrl) {
-            ctrlPCommands.pullScript(formulaUrl);
+            ctrlPCommands.pullScript(this, formulaUrl);
           } else {
             core.prompt.error('Missing "url" parameter in URI');
           }
         } else if (uri.path === '/audit-pull') {
-          ctrlPCommands.auditPull();
+          ctrlPCommands.auditPull(this.core);
         }
       }
     }));

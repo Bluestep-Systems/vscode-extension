@@ -56,6 +56,7 @@ export class B6PCore implements ScriptContext {
   readonly updateService: UpdateService | null = null;
   private factory: ScriptFactory | null = null;
   private readonly _isDebugMode: () => boolean;
+  private readonly activePulls = new Map<string, Promise<void>>();
   constructor(providers: B6PProviders) {
     this.fs = providers.fs;
     this.persistence = providers.persistence;
@@ -184,13 +185,30 @@ export class B6PCore implements ScriptContext {
   async pull(opts: {
     formulaUrl?: string;
     workspacePath: string;
-  }): Promise<void> {
+  }): Promise<boolean> {
     const formulaUrl = opts.formulaUrl ?? await this.prompt.inputBox({ prompt: 'Paste in the desired formula URL' });
     if (formulaUrl === undefined) {
       this.prompt.error('No formula URL provided');
-      return;
+      return false;
     }
-    this.logger.info(`Pulling script from ${formulaUrl} into ${opts.workspacePath}`);
+
+    if (this.activePulls.has(formulaUrl)) {
+      this.prompt.warn(`A pull operation for ${formulaUrl} is already in progress`);
+      return false;
+    }
+
+    const task = this.pullImpl(formulaUrl, opts.workspacePath);
+    this.activePulls.set(formulaUrl, task);
+    try {
+      await task;
+    } finally {
+      this.activePulls.delete(formulaUrl);
+    }
+    return true;
+  }
+
+  private async pullImpl(formulaUrl: string, workspacePath: string): Promise<void> {
+    this.logger.info(`Pulling script from ${formulaUrl} into ${workspacePath}`);
 
     const parser = this.createParser(formulaUrl);
     const fetchedScriptObject = await parser.getScript();
@@ -204,7 +222,7 @@ export class B6PCore implements ScriptContext {
 
     const pullTasks = fetchedScriptObject.map(entry => ({
       execute: async () => {
-        const ultimatePath = path.join(opts.workspacePath, U, entry.downstairsPath);
+        const ultimatePath = path.join(workspacePath, U, entry.downstairsPath);
         const isDirectory = ultimatePath.endsWith('/') || entry.downstairsPath.endsWith('/');
 
         if (isDirectory) {

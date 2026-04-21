@@ -1,7 +1,6 @@
-import type { SourceOps } from '@bluestep-systems/b6p-core';
-import { App } from '../App';
+import type { ScriptRoot, SourceOps } from '@bluestep-systems/b6p-core';
+import type { App } from '../App';
 import { Util } from '../util';
-import { ScriptRoot } from '@bluestep-systems/b6p-core';
 
 /**
  * Pushes a script to a WebDAV location using the platform-agnostic B6PCore.
@@ -12,43 +11,41 @@ import { ScriptRoot } from '@bluestep-systems/b6p-core';
  * @param isSnapshot Whether this is a snapshot push
  * @param scriptRoot Optional pre-resolved ScriptRoot instance
  */
-export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot, scriptRoot }: {
-  overrideFormulaUrl?: string;
-  sourceOps?: SourceOps;
-  skipMessage?: boolean;
-  isSnapshot?: boolean;
-  scriptRoot?: ScriptRoot;
-}): Promise<void> {
+export default async function (
+  app: typeof App,
+  { overrideFormulaUrl, sourceOps, skipMessage, isSnapshot, scriptRoot }: {
+    overrideFormulaUrl?: string;
+    sourceOps?: SourceOps;
+    skipMessage?: boolean;
+    isSnapshot?: boolean;
+    scriptRoot?: ScriptRoot;
+  } = {}
+): Promise<void> {
   try {
-    // Get the source file path
     let rootPath: string;
     if (scriptRoot) {
       rootPath = scriptRoot.getRootUri().fsPath;
     } else {
       const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
       if (sourceEditorUri === undefined) {
-        App.core.prompt.error('No source path provided');
+        app.core.prompt.error('No source path provided');
         return;
       }
-      App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
+      app.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
       rootPath = sourceEditorUri.fsPath;
     }
 
-    // Use B6PCore for the push operation (handles all business logic)
-    await App.core.push({
-      targetUrl: overrideFormulaUrl, // Will prompt if undefined
+    await app.core.push({
+      targetUrl: overrideFormulaUrl,
       rootPath,
       snapshot: isSnapshot ?? false,
     });
 
-    // Show completion message (unless squelched)
-    if (!skipMessage && !(App.settings.get("squelch").pushComplete)) {
-      App.core.prompt.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
+    if (!skipMessage && !(app.settings.get("squelch").pushComplete)) {
+      app.core.prompt.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
     }
   } catch (e) {
-    App.core.prompt.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);
+    app.core.prompt.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);
     throw e;
   }
 }
-
-
