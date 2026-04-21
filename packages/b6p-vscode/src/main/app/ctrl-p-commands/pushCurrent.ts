@@ -8,7 +8,7 @@ import type { ScriptRoot } from '@bluestep-systems/b6p-core';
 /**
  * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location using B6PCore.
  */
-export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot }): Promise<void> {
+export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot; message?: string }): Promise<void> {
   try {
     // Determine the script root
     let actual_sr: ScriptRoot;
@@ -43,6 +43,7 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot }): 
     await App.core.pushCurrent({
       filePath: actual_sr.getRootUri().fsPath,
       snapshot: args?.isSnapshot ?? false,
+      message: args?.message,
     });
 
     // Success message shown by B6PCore
