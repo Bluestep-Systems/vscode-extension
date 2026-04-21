@@ -33,7 +33,7 @@ async function pullImpl(overrideFormulaUri?: string): Promise<void> {
 
     // Show completion message (unless squelched)
     if (!(App.settings.get("squelch").pullComplete)) {
-      App.core.prompt.popup('Pull complete!');
+      App.core.prompt.info('Pull complete!');
     }
   } catch (e) {
     App.core.prompt.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);

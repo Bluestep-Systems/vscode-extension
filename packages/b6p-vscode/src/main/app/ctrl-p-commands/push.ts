@@ -43,7 +43,7 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
 
     // Show completion message (unless squelched)
     if (!skipMessage && !(App.settings.get("squelch").pushComplete)) {
-      App.core.prompt.popup(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
+      App.core.prompt.info(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
     }
   } catch (e) {
     App.core.prompt.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);

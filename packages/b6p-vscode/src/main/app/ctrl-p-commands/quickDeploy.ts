@@ -56,5 +56,5 @@ export default async function (): Promise<void> {
   });
 
 
-  App.core.prompt.popup("Quick Deploy complete!");
+  App.core.prompt.info("Quick Deploy complete!");
 }
