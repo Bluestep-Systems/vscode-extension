@@ -50,7 +50,7 @@ This is a **WebDAV-based VS Code extension** (plus a standalone CLI sharing the 
 - **B6PCore** (`packages/b6p-core/src/B6PCore.ts`): Vscode-free orchestrator used by both the CLI and the extension; provides `push`, `pull`, `audit`, `deploy`, etc.
 - **ContextNode pattern** (`packages/b6p-vscode/src/main/app/context/ContextNode.ts`): Base class for components requiring VS Code context and persistence
 - **SessionManager** (`packages/b6p-core/src/session/SessionManager.ts`): WebDAV auth, CSRF tokens, HTTP session management
-- **BasicAuthProvider** (`packages/b6p-core/src/auth/BasicAuthProvider.ts`): Credential management per authentication profile ("flag")
+- **BearerAuthProvider** (`packages/b6p-core/src/auth/BearerAuthProvider.ts`): Stores a single `{token, label}` bearer-token credential and produces the `Authorization: Bearer …` header. The `label` identifies the credential profile (no more multi-profile "flag" dispatch).
 
 ### Key Architectural Patterns
 

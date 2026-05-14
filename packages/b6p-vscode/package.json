@@ -235,7 +235,7 @@
   },
   "dependencies": {
     "@bluestep-systems/b6p-core": "^0.1.0",
-    "fast-xml-parser": "^5.5.6"
+    "fast-xml-parser": "^5.8.0"
   },
   "license": "MIT"
 }

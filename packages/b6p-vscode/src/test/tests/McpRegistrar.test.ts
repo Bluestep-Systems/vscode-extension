@@ -31,7 +31,7 @@ suite('McpRegistrar Tests', () => {
       const result = await registrar.register({
         workspaceDir: '/workspace',
         serverName: 'bluestep-acme',
-        entry: { type: 'sse', url: 'https://acme.bluestep.net/sse', headers: { Authorization: 'Basic xyz' } },
+        entry: { type: 'sse', url: 'https://acme.bluestep.net/sse', headers: { Authorization: 'Bearer xyz' } },
       });
 
       assert.strictEqual(result.replaced, false);
@@ -40,7 +40,7 @@ suite('McpRegistrar Tests', () => {
       assert.deepStrictEqual(json.mcpServers['bluestep-acme'], {
         type: 'sse',
         url: 'https://acme.bluestep.net/sse',
-        headers: { Authorization: 'Basic xyz' },
+        headers: { Authorization: 'Bearer xyz' },
       });
     });
 

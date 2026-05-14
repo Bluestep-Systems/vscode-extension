@@ -119,28 +119,6 @@ export namespace Err {
     }
   }
 
-  // Authentication Errors
-
-  /**
-   * Base class for authentication-related errors.
-   */
-  export class AuthenticationError extends Error {
-    constructor(message: string) {
-      super(message);
-      this.name = "AuthenticationError";
-    }
-  }
-
-  /**
-   * Error thrown when credentials are not found for a given flag.
-   */
-  export class CredentialsNotFoundError extends AuthenticationError {
-    constructor(flag: string) {
-      super(`No existing credentials found for flag: ${flag}`);
-      this.name = "CredentialsNotFoundError";
-    }
-  }
-
   // Session Management Errors
 
   /**

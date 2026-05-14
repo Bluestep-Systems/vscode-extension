@@ -1,6 +1,6 @@
 import type { IFileSystem, ILogger, IPrompt } from "../providers";
 import type { SessionManager } from "../session/SessionManager";
-import type { BasicAuthProvider } from "../auth/BasicAuthProvider";
+import type { BearerAuthProvider } from "../auth/BearerAuthProvider";
 import type { ScriptMetaDataStore } from "../cache/ScriptMetaDataStore";
 import type { OrgCache } from "../cache/OrgCache";
 import type { ScriptFactory } from "./ScriptFactory";
@@ -17,7 +17,7 @@ export interface ScriptContext {
   readonly sessionManager: SessionManager;
   readonly logger: ILogger;
   readonly prompt: IPrompt;
-  readonly auth: BasicAuthProvider;
+  readonly auth: BearerAuthProvider;
   readonly scriptMetadataStore: ScriptMetaDataStore;
   readonly orgCache: OrgCache;
   isDebugMode(): boolean;

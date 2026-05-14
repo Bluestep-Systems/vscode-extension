@@ -1,5 +1,5 @@
 import * as path from 'path';
-import { BasicAuthProvider } from './auth/BasicAuthProvider';
+import { BearerAuthProvider } from './auth/BearerAuthProvider';
 import { B6PUri } from './B6PUri';
 import { ScriptUrlParser } from './data/ScriptUrlParser';
 import { DownstairsPathParser } from './data/DownstairsPathParser';
@@ -51,7 +51,7 @@ export class B6PCore implements ScriptContext {
   readonly logger: ILogger;
   readonly progress: IProgress;
 
-  readonly auth: BasicAuthProvider;
+  readonly auth: BearerAuthProvider;
   readonly sessionManager: SessionManager;
   readonly scriptMetadataStore: ScriptMetaDataStore;
   readonly orgCache: OrgCache;
@@ -68,7 +68,7 @@ export class B6PCore implements ScriptContext {
     this._isDebugMode = providers.isDebugMode ?? (() => false);
     this.fetchFn = providers.fetchFn ?? globalThis.fetch.bind(globalThis);
 
-    this.auth = new BasicAuthProvider(this.persistence, this.prompt, this.logger);
+    this.auth = new BearerAuthProvider(this.persistence, this.prompt, this.logger);
     this.sessionManager = new SessionManager(
       this.persistence,
       this.logger,
@@ -514,9 +514,9 @@ export class B6PCore implements ScriptContext {
    * Register a BlueStep-hosted MCP server in a workspace-local `.mcp.json`.
    *
    * Claude Code talks to the BlueStep endpoint directly over the MCP HTTP
-   * transport — `b6p` is only writing the pointer. The stored basic-auth
-   * credentials get embedded as an `Authorization` header so the server can
-   * authenticate the user without a separate handshake.
+   * transport — `b6p` is only writing the pointer. The stored bearer token
+   * gets embedded as an `Authorization` header so the server can authenticate
+   * the user without a separate handshake.
    *
    * Transport selection: probes the endpoint for streamable-HTTP support
    * and writes `type: "http"` when available, otherwise falls back to
@@ -524,7 +524,7 @@ export class B6PCore implements ScriptContext {
    *
    * Safety: refuses to write unless `.mcp.json` is already covered by a
    * `.gitignore` reachable from the workspace, or the caller passes
-   * `force: true`. This file ends up holding basic-auth credentials.
+   * `force: true`. This file ends up holding the bearer token.
    */
   async registerMcpServer(opts: {
     url: string;
@@ -552,7 +552,7 @@ export class B6PCore implements ScriptContext {
       if (!ignored) {
         throw new Error(
           `Refusing to write .mcp.json in ${opts.workspacePath}: no reachable .gitignore covers it. ` +
-          `This file will contain your basic-auth credentials. ` +
+          `This file will contain your bearer token. ` +
           `Add ".mcp.json" to a .gitignore (or rerun with --force to override).`,
         );
       }
@@ -578,7 +578,7 @@ export class B6PCore implements ScriptContext {
       `Restart Claude Code (or run /mcp) to pick up the new server.`,
     );
     this.prompt.warn(
-      `${result.filePath} contains your basic-auth credentials — keep it gitignored.`,
+      `${result.filePath} contains your bearer token — keep it gitignored.`,
     );
     return result;
   }

@@ -60,7 +60,7 @@ npm run package-extension  # Create .vsix package
 ## Critical Conventions
 
 ### Authentication & Sessions
-- **BasicAuthManager**: Singleton managing credentials per "flag" (authentication profile)
+- **BearerAuthProvider**: Stores a single `{token, label}` bearer-token credential and emits the `Authorization: Bearer …` header. `label` identifies the credential profile; the legacy multi-"flag" dispatch concept has been removed.
 - **SessionManager**: Handles WebDAV authentication, CSRF token management, and cookie persistence
 - Session flow: Login → CSRF token extraction → Request retry with tokens
 - Custom `csrfFetch()` with automatic retry and re-authentication

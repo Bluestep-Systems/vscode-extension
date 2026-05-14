@@ -79,7 +79,7 @@ export class SnapshotHistoryRecorder {
   private static async getAuthor(scriptRoot: ScriptRoot): Promise<string> {
     try {
       const auth = await scriptRoot.ctx.auth.getOrCreate();
-      return auth.username;
+      return auth.label;
     } catch {
       return 'unknown';
     }

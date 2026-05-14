@@ -26,7 +26,7 @@ export { ScriptKey } from './data/ScriptKey';
 export { ScriptUrlParser } from './data/ScriptUrlParser';
 
 // ─── Auth + sessions ─────────────────────────────────────────────────
-export { BasicAuthProvider } from './auth/BasicAuthProvider';
+export { BearerAuthProvider } from './auth/BearerAuthProvider';
 export { SessionManager } from './session/SessionManager';
 
 // ─── Network ─────────────────────────────────────────────────────────
@@ -104,7 +104,7 @@ export type {
   PrimitiveNestedObject,
   XMLResponse,
   SessionData,
-  BasicAuthParams,
+  BearerAuthParams,
   MetaDataDotJsonContent,
   Settings,
   TsConfig,

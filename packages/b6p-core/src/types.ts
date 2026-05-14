@@ -116,11 +116,15 @@ export type SessionData = {
 };
 
 /**
- * Basic auth information.
+ * Bearer-token auth information.
+ *
+ * `label` is a free-form human-readable name for the token (e.g. "personal",
+ * "ci"). Not sent on the wire — used as the credential profile identifier
+ * (subsumes the old multi-"flag" credential dispatch concept) and for UX.
  */
-export type BasicAuthParams = {
-  username: string;
-  password: string;
+export type BearerAuthParams = {
+  token: string;
+  label: string;
 };
 
 /**

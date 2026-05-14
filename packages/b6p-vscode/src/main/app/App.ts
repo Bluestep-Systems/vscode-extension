@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import type { ScriptContext } from '@bluestep-systems/b6p-core';
 import type { IFileSystem, ILogger, IPrompt } from '@bluestep-systems/b6p-core';
-import { BasicAuthProvider } from '@bluestep-systems/b6p-core';
+import { BearerAuthProvider } from '@bluestep-systems/b6p-core';
 import { SessionManager } from '@bluestep-systems/b6p-core';
 import { OutputChannels, SettingsKeys } from '@bluestep-systems/b6p-core';
 import ctrlPCommands from './ctrl-p-commands';
@@ -54,7 +54,7 @@ export const App = new class AppImpl implements ScriptContext {
   public get scriptMetadataStore(): ScriptMetaDataStore { return this.core.scriptMetadataStore; }
   public get fs(): IFileSystem { return this.core.fs; }
   public get prompt(): IPrompt { return this.core.prompt; }
-  public get auth(): BasicAuthProvider { return this.core.auth; }
+  public get auth(): BearerAuthProvider { return this.core.auth; }
   public getScriptFactory() { return this.core.getScriptFactory(); }
 
   public init(context: vscode.ExtensionContext) {

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BasicAuthProvider } from '@bluestep-systems/b6p-core';
+import { BearerAuthProvider } from '@bluestep-systems/b6p-core';
 import { Http } from '@bluestep-systems/b6p-core';
 import type { ILogger } from '@bluestep-systems/b6p-core';
 import type { OrgCache } from '@bluestep-systems/b6p-core';
@@ -20,14 +20,14 @@ export class McpServerProvider {
    * Creates a new McpServerProvider and registers it with VS Code.
    *
    * @param orgCache The OrgCache to read server definitions from
-   * @param authManager The BasicAuthManager for credential injection
+   * @param authManager The BearerAuthProvider for credential injection
    * @param logger The logger for diagnostic output
    * @param context The VS Code extension context for subscription management
    * @lastreviewed null
    */
   constructor(
     private readonly orgCache: OrgCache,
-    private readonly authManager: BasicAuthProvider,
+    private readonly authManager: BearerAuthProvider,
     private readonly logger: ILogger,
     context: vscode.ExtensionContext
   ) {
