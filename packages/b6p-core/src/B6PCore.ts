@@ -8,7 +8,8 @@ import type { B6PProviders, IFileSystem, ILogger, IPersistence, IProgress, IProm
 import { executePush } from './push';
 import { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
 import { OrgCache, type IOrgCacheSettings } from './cache/OrgCache';
-import { McpRegistrar, type RegisterResult } from './mcp/McpRegistrar';
+import { McpRegistrar, type RegisterResult, type McpTransportType } from './mcp/McpRegistrar';
+import { probeMcpTransport } from './mcp/probeTransport';
 import type { ScriptContext } from './script/ScriptContext';
 import { ScriptFactory } from './script/ScriptFactory';
 import { UpdateService } from './update/UpdateService';
@@ -57,6 +58,7 @@ export class B6PCore implements ScriptContext {
   readonly updateService: UpdateService | null = null;
   private factory: ScriptFactory | null = null;
   private readonly _isDebugMode: () => boolean;
+  private readonly fetchFn: (url: string | URL, init?: RequestInit) => Promise<Response>;
   constructor(providers: B6PProviders) {
     this.fs = providers.fs;
     this.persistence = providers.persistence;
@@ -64,6 +66,7 @@ export class B6PCore implements ScriptContext {
     this.logger = providers.logger;
     this.progress = providers.progress;
     this._isDebugMode = providers.isDebugMode ?? (() => false);
+    this.fetchFn = providers.fetchFn ?? globalThis.fetch.bind(globalThis);
 
     this.auth = new BasicAuthProvider(this.persistence, this.prompt, this.logger);
     this.sessionManager = new SessionManager(
@@ -510,46 +513,72 @@ export class B6PCore implements ScriptContext {
   /**
    * Register a BlueStep-hosted MCP server in a workspace-local `.mcp.json`.
    *
-   * Claude Code talks to the BlueStep endpoint directly over the HTTP MCP
+   * Claude Code talks to the BlueStep endpoint directly over the MCP HTTP
    * transport — `b6p` is only writing the pointer. The stored basic-auth
    * credentials get embedded as an `Authorization` header so the server can
    * authenticate the user without a separate handshake.
    *
-   * NOTE: this writes credentials to `.mcp.json`. Callers should warn the user
-   * to gitignore the file.
+   * Transport selection: probes the endpoint for streamable-HTTP support
+   * and writes `type: "http"` when available, otherwise falls back to
+   * `type: "sse"`. BlueStep is mid-migration from SSE to streamable HTTP.
+   *
+   * Safety: refuses to write unless `.mcp.json` is already covered by a
+   * `.gitignore` reachable from the workspace, or the caller passes
+   * `force: true`. This file ends up holding basic-auth credentials.
    */
   async registerMcpServer(opts: {
     url: string;
     workspacePath: string;
     serverName?: string;
+    force?: boolean;
   }): Promise<RegisterResult> {
     // The supplied URL (typically the `/api/ai/tools` discovery endpoint) only
     // names which tools the host exposes. The actual MCP transport Claude Code
-    // connects to lives at `<origin>/sse` on the same host.
-    let sseUrl: string;
+    // connects to lives at the canonical MCP path on the same origin.
+    let mcpUrl: string;
     try {
-      sseUrl = new URL('/sse', new URL(opts.url).origin).toString();
+      mcpUrl = new URL(McpRegistrar.MCP_PATH, new URL(opts.url).origin).toString();
     } catch {
       throw new Error(`Invalid URL: ${opts.url}`);
     }
-    const serverName = opts.serverName ?? McpRegistrar.deriveServerName(opts.url);
-    const authHeader = await this.auth.authHeaderValue();
+    const serverName = opts.serverName
+      ? McpRegistrar.validateServerName(opts.serverName)
+      : McpRegistrar.deriveServerName(opts.url);
+
     const registrar = new McpRegistrar(this.fs, this.logger);
+
+    if (!opts.force) {
+      const ignored = await registrar.isMcpJsonGitignored(opts.workspacePath);
+      if (!ignored) {
+        throw new Error(
+          `Refusing to write .mcp.json in ${opts.workspacePath}: no reachable .gitignore covers it. ` +
+          `This file will contain your basic-auth credentials. ` +
+          `Add ".mcp.json" to a .gitignore (or rerun with --force to override).`,
+        );
+      }
+    }
+
+    const authHeader = await this.auth.authHeaderValue();
+    const transport: McpTransportType = await probeMcpTransport(this.fetchFn, mcpUrl, authHeader, this.logger);
+
     const result = await registrar.register({
       workspaceDir: opts.workspacePath,
       serverName,
       entry: {
-        type: 'sse',
-        url: sseUrl,
+        type: transport,
+        url: mcpUrl,
         headers: { Authorization: authHeader },
       },
     });
+
     this.prompt.info(
-      `Registered MCP server "${result.serverName}" → ${sseUrl}\n` +
+      `Registered MCP server "${result.serverName}" → ${mcpUrl} (${transport})\n` +
       `(derived from ${opts.url})\n` +
       `Wrote ${result.filePath}${result.replaced ? ' (replaced existing entry)' : ''}.\n` +
-      `Restart Claude Code (or run /mcp) to pick up the new server.\n` +
-      `⚠  ${result.filePath} now contains your basic-auth credentials — add it to .gitignore if it isn't already.`,
+      `Restart Claude Code (or run /mcp) to pick up the new server.`,
+    );
+    this.prompt.warn(
+      `${result.filePath} contains your basic-auth credentials — keep it gitignored.`,
     );
     return result;
   }

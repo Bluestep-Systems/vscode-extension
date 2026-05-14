@@ -84,7 +84,8 @@ export { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
 
 // ─── MCP registration ────────────────────────────────────────────────
 export { McpRegistrar } from './mcp/McpRegistrar';
-export type { McpServerEntry, RegisterResult } from './mcp/McpRegistrar';
+export type { McpServerEntry, McpTransportType, RegisterResult } from './mcp/McpRegistrar';
+export { probeMcpTransport } from './mcp/probeTransport';
 
 // ─── Update service ──────────────────────────────────────────────────
 export { UpdateService } from './update/UpdateService';

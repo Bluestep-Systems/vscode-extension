@@ -338,10 +338,14 @@ program
 
 program
   .command('register-mcp <url>')
-  .description('Register a BlueStep-hosted MCP server in ./.mcp.json so Claude Code can call its tools')
+  .description(
+    'Register a BlueStep-hosted MCP server in ./.mcp.json so Claude Code can call its tools. ' +
+    'NOTE: writes your basic-auth credentials to .mcp.json; the file must be gitignored.',
+  )
   .option('--workspace <path>', 'Workspace folder containing .mcp.json (default: cwd)')
   .option('--name <name>', 'Override the derived server name (default: bluestep-<host-slug>)')
-  .action(async (url: string, opts: { workspace?: string; name?: string }) => {
+  .option('--force', 'Write .mcp.json even if no reachable .gitignore covers it')
+  .action(async (url: string, opts: { workspace?: string; name?: string; force?: boolean }) => {
     const globalOpts = program.opts();
     const { core, prompt, spinner } = await createCore(globalOpts);
     try {
@@ -349,6 +353,7 @@ program
         url,
         workspacePath: resolve(opts.workspace ?? '.'),
         serverName: opts.name,
+        force: opts.force,
       });
       if (globalOpts.json) {
         process.stdout.write(JSON.stringify(result, null, 2) + '\n');
