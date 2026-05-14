@@ -82,6 +82,10 @@ export { SharedFilePersistence } from './persistence/SharedFilePersistence';
 export { OrgCache } from './cache/OrgCache';
 export { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
 
+// ─── MCP registration ────────────────────────────────────────────────
+export { McpRegistrar } from './mcp/McpRegistrar';
+export type { McpServerEntry, RegisterResult } from './mcp/McpRegistrar';
+
 // ─── Update service ──────────────────────────────────────────────────
 export { UpdateService } from './update/UpdateService';
 export type { UpdateInfo, GithubRelease, ClientInfo, UpdateServiceConfig } from './update/types';

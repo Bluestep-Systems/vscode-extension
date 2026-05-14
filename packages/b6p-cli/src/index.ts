@@ -334,6 +334,31 @@ program
     }
   });
 
+// ── Register MCP ──────────────────────────────────────────────────
+
+program
+  .command('register-mcp <url>')
+  .description('Register a BlueStep-hosted MCP server in ./.mcp.json so Claude Code can call its tools')
+  .option('--workspace <path>', 'Workspace folder containing .mcp.json (default: cwd)')
+  .option('--name <name>', 'Override the derived server name (default: bluestep-<host-slug>)')
+  .action(async (url: string, opts: { workspace?: string; name?: string }) => {
+    const globalOpts = program.opts();
+    const { core, prompt, spinner } = await createCore(globalOpts);
+    try {
+      const result = await core.registerMcpServer({
+        url,
+        workspacePath: resolve(opts.workspace ?? '.'),
+        serverName: opts.name,
+      });
+      if (globalOpts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+      }
+    } finally {
+      spinner.stop();
+      prompt.close();
+    }
+  });
+
 // ── Setup ─────────────────────────────────────────────────────────
 
 program

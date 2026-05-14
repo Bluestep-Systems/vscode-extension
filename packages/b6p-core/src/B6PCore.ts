@@ -8,6 +8,7 @@ import type { B6PProviders, IFileSystem, ILogger, IPersistence, IProgress, IProm
 import { executePush } from './push';
 import { ScriptMetaDataStore } from './cache/ScriptMetaDataStore';
 import { OrgCache, type IOrgCacheSettings } from './cache/OrgCache';
+import { McpRegistrar, type RegisterResult } from './mcp/McpRegistrar';
 import type { ScriptContext } from './script/ScriptContext';
 import { ScriptFactory } from './script/ScriptFactory';
 import { UpdateService } from './update/UpdateService';
@@ -502,6 +503,55 @@ export class B6PCore implements ScriptContext {
 
   async getConfig<T>(key: string): Promise<T | undefined> {
     return this.persistence.get<T>(`settings.${key}`);
+  }
+
+  // ── MCP Registration ──────────────────────────────────────────────
+
+  /**
+   * Register a BlueStep-hosted MCP server in a workspace-local `.mcp.json`.
+   *
+   * Claude Code talks to the BlueStep endpoint directly over the HTTP MCP
+   * transport — `b6p` is only writing the pointer. The stored basic-auth
+   * credentials get embedded as an `Authorization` header so the server can
+   * authenticate the user without a separate handshake.
+   *
+   * NOTE: this writes credentials to `.mcp.json`. Callers should warn the user
+   * to gitignore the file.
+   */
+  async registerMcpServer(opts: {
+    url: string;
+    workspacePath: string;
+    serverName?: string;
+  }): Promise<RegisterResult> {
+    // The supplied URL (typically the `/api/ai/tools` discovery endpoint) only
+    // names which tools the host exposes. The actual MCP transport Claude Code
+    // connects to lives at `<origin>/sse` on the same host.
+    let sseUrl: string;
+    try {
+      sseUrl = new URL('/sse', new URL(opts.url).origin).toString();
+    } catch {
+      throw new Error(`Invalid URL: ${opts.url}`);
+    }
+    const serverName = opts.serverName ?? McpRegistrar.deriveServerName(opts.url);
+    const authHeader = await this.auth.authHeaderValue();
+    const registrar = new McpRegistrar(this.fs, this.logger);
+    const result = await registrar.register({
+      workspaceDir: opts.workspacePath,
+      serverName,
+      entry: {
+        type: 'sse',
+        url: sseUrl,
+        headers: { Authorization: authHeader },
+      },
+    });
+    this.prompt.info(
+      `Registered MCP server "${result.serverName}" → ${sseUrl}\n` +
+      `(derived from ${opts.url})\n` +
+      `Wrote ${result.filePath}${result.replaced ? ' (replaced existing entry)' : ''}.\n` +
+      `Restart Claude Code (or run /mcp) to pick up the new server.\n` +
+      `⚠  ${result.filePath} now contains your basic-auth credentials — add it to .gitignore if it isn't already.`,
+    );
+    return result;
   }
 
   // ── Setup URL ─────────────────────────────────────────────────────
