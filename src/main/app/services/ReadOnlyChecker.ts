@@ -1,15 +1,15 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 import { App } from "../App";
 import { Util } from "../util";
-import { ScriptFile } from '@bluestep-systems/b6p-core';
-import { ScriptFactory } from '@bluestep-systems/b6p-core';
-import { B6PUri } from '@bluestep-systems/b6p-core';
-import { Err } from '@bluestep-systems/b6p-core';
+import { ScriptFile } from "@bluestep-systems/b6p-core";
+import { ScriptFactory } from "@bluestep-systems/b6p-core";
+import { B6PUri } from "@bluestep-systems/b6p-core";
+import { Err } from "@bluestep-systems/b6p-core";
 
 export default async function () {
   try {
     if (App.isDebugMode()) {
-     return; // in debug mode, don't enforce read-only
+      return; // in debug mode, don't enforce read-only
     }
     const activeEditorUri = Util.getActiveEditorUri({ quiet: true });
     if (!activeEditorUri) {
@@ -30,7 +30,7 @@ export default async function () {
     }
 
     if (await determine(sf)) {
-      vscode.commands.executeCommand('workbench.action.files.setActiveEditorReadonlyInSession');
+      vscode.commands.executeCommand("workbench.action.files.setActiveEditorReadonlyInSession");
       App.isDebugMode() && App.logger.info(`Set ${activeEditorUri.toString()} to read-only`);
     } else {
       App.isDebugMode() && App.logger.info(sf.name() + " is not read-only");
@@ -42,9 +42,9 @@ export default async function () {
 
 /**
  * perform a determination on if the current file should be set to read only.
- * 
+ *
  * //TODO improve this logic to be more efficient
- * @param sf 
+ * @param sf
  */
 async function determine(sf: ScriptFile) {
   if (sf.isInDeclarations()) {

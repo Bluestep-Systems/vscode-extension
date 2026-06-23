@@ -1,17 +1,17 @@
 //@ts-ignore
-import * as assert from 'assert';
+import * as assert from "assert";
 //@ts-ignore
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 //@ts-ignore
-import { BASIC_AUTH_MANAGER } from '../../main/app/authentication/BasicAuthManager';
+import { BASIC_AUTH_MANAGER } from "../../main/app/authentication/BasicAuthManager";
 //@ts-ignore
-import { SessionManager } from '@bluestep-systems/b6p-core';
+import { SessionManager } from "@bluestep-systems/b6p-core";
 //@ts-ignore
-import { BasicAuth } from '../../main/app/authentication/classes';
+import { BasicAuth } from "../../main/app/authentication/classes";
 //@ts-ignore
-import { Err } from '@bluestep-systems/b6p-core';
+import { Err } from "@bluestep-systems/b6p-core";
 //@ts-ignore
-import type { BasicAuthParams } from '@bluestep-systems/b6p-core';
+import type { BasicAuthParams } from "@bluestep-systems/b6p-core";
 
 // suite('BasicAuthManager Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

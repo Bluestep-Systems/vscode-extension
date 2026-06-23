@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
-import type { IProgress, ProgressTask } from '@bluestep-systems/b6p-core';
+import * as vscode from "vscode";
+import type { IProgress, ProgressTask } from "@bluestep-systems/b6p-core";
 
 interface ProgressOptions {
   title: string;
@@ -33,23 +33,20 @@ export class VscodeProgress implements IProgress {
    * @param options Progress configuration options
    * @returns Promise that resolves when all tasks are complete
    */
-  private async withProgressInternal<T>(
-    tasks: ProgressTask<T>[],
-    options: ProgressOptions
-  ): Promise<T[]> {
+  private async withProgressInternal<T>(tasks: ProgressTask<T>[], options: ProgressOptions): Promise<T[]> {
     const {
       title,
       location = vscode.ProgressLocation.Notification,
       cancellable = false,
       showItemCount = true,
-      cleanupMessage
+      cleanupMessage,
     } = options;
 
     return vscode.window.withProgress(
       {
         location,
         title,
-        cancellable
+        cancellable,
       },
       async (progress) => {
         const TOTAL_TASKS = tasks.length;
@@ -60,12 +57,12 @@ export class VscodeProgress implements IProgress {
         const updateProgress = (description?: string) => {
           COMPLETED_TASKS++;
           const message = showItemCount
-            ? `Completed ${COMPLETED_TASKS} of ${TOTAL_TASKS}${description ? ` - ${description}` : ''}`
-            : description || '';
+            ? `Completed ${COMPLETED_TASKS} of ${TOTAL_TASKS}${description ? ` - ${description}` : ""}`
+            : description || "";
 
           progress.report({
             increment: INCREMENT_PER_TASK,
-            message
+            message,
           });
         };
 
@@ -97,17 +94,13 @@ export class VscodeProgress implements IProgress {
     operation: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<T>,
     options: { title: string; location?: vscode.ProgressLocation; cancellable?: boolean }
   ): Promise<T> {
-    const {
-      title,
-      location = vscode.ProgressLocation.Notification,
-      cancellable = false
-    } = options;
+    const { title, location = vscode.ProgressLocation.Notification, cancellable = false } = options;
 
     return vscode.window.withProgress(
       {
         location,
         title,
-        cancellable
+        cancellable,
       },
       operation
     );

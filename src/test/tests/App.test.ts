@@ -1,17 +1,17 @@
 //@ts-ignore
-import * as assert from 'assert';
+import * as assert from "assert";
 //@ts-ignore
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 //@ts-ignore
-import { App } from '../../main/app/App';
+import { App } from "../../main/app/App";
 //@ts-ignore
-import { Auth } from '../../main/app/authentication';
+import { Auth } from "../../main/app/authentication";
 //@ts-ignore
-import { SessionManager } from '@bluestep-systems/b6p-core';
+import { SessionManager } from "@bluestep-systems/b6p-core";
 //@ts-ignore
-import { UPDATE_MANAGER } from '../../main/app/services/UpdateManager';
+import { UPDATE_MANAGER } from "../../main/app/services/UpdateManager";
 //@ts-ignore
-import { Err } from '@bluestep-systems/b6p-core';
+import { Err } from "@bluestep-systems/b6p-core";
 
 // suite('App Singleton Tests', () => {
 

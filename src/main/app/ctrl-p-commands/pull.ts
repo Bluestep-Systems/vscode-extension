@@ -1,5 +1,5 @@
-import { App } from '../App';
-import { Util } from '../util/';
+import { App } from "../App";
+import { Util } from "../util/";
 
 let activePull: Promise<void> | null = null;
 
@@ -32,12 +32,11 @@ async function pullImpl(overrideFormulaUri?: string): Promise<void> {
     });
 
     // Show completion message (unless squelched)
-    if (!(App.settings.get("squelch").pullComplete)) {
-      App.core.prompt.info('Pull complete!');
+    if (!App.settings.get("squelch").pullComplete) {
+      App.core.prompt.info("Pull complete!");
     }
   } catch (e) {
     App.core.prompt.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);
     throw e;
   }
 }
-

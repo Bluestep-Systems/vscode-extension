@@ -1,37 +1,40 @@
 import * as vscode from "vscode";
-import type { Settings, JsonValue } from '@bluestep-systems/b6p-core';
+import type { Settings, JsonValue } from "@bluestep-systems/b6p-core";
 import { App } from "../App";
 import { Util } from "../util";
-import { TypedMap, Persistable } from '@bluestep-systems/b6p-core';
+import { TypedMap, Persistable } from "@bluestep-systems/b6p-core";
 
 /**
  * A wrapper around the vscode settings for this extension to provide typed access and modification.
- * 
+ *
  * A convention is used where the settings key in vscode is `bsjs-push-pull.<settingKey>`
  * and nested keys are represented with dot notation, e.g. `bsjs-push-pull.nested.key`.
- * 
+ *
  * We very specifically want to funnel all active settings changes through this class
  * so that we can ensure that the settings are always in sync with the appropriate context variables
  * that we use for UI responsiveness.
- * 
+ *
  * @lastreviewed 2025-10-01
  */
 export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persistable {
   public static readonly DEFAULT: Settings = {
-    debugMode: { enabled: false, anyDomainOverrideUrl: "U131364=https://templateassisted.myassn.com/", versionOverride: "1.1.0" },
+    debugMode: {
+      enabled: false,
+      anyDomainOverrideUrl: "U131364=https://templateassisted.myassn.com/",
+      versionOverride: "1.1.0",
+    },
     advancedMode: { enabled: false },
     updateCheck: { enabled: true, showNotifications: true },
     squelch: { pullComplete: false, pushComplete: false },
-    scriptRoot: { path: "" }
+    scriptRoot: { path: "" },
   };
 
   constructor() {
     // Read from user settings (global) with fallback to defaults
-    const config = vscode.workspace.getConfiguration().inspect<Settings>(App.appKey)?.globalValue ||
-      VsCodeSettingsWrapper.DEFAULT;
+    const config =
+      vscode.workspace.getConfiguration().inspect<Settings>(App.appKey)?.globalValue || VsCodeSettingsWrapper.DEFAULT;
     super(config);
   }
-
 
   override get<K extends keyof Settings>(key: K): Settings[K] {
     let ret = super.get(key) || VsCodeSettingsWrapper.DEFAULT[key];
@@ -40,7 +43,6 @@ export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persist
     }
     return ret;
   }
-
 
   override set<K extends keyof Settings>(key: K, value: Settings[K]): this {
     super.set(key, value);
@@ -55,13 +57,13 @@ export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persist
    * because otherwise it would cause an infinite loop when called from sync().
    */
   async store(update: boolean = true) {
-    const flattened: { key: string, value: JsonValue; }[] = [];
+    const flattened: { key: string; value: JsonValue }[] = [];
     for (const key of this.keys()) {
       Util.rethrow(flattenLayer, { key, obj: this.get(key) });
     }
 
-    function flattenLayer({ key, obj }: { key: string, obj: JsonValue; }) {
-      if (typeof obj === 'object' && obj !== null) {
+    function flattenLayer({ key, obj }: { key: string; obj: JsonValue }) {
+      if (typeof obj === "object" && obj !== null) {
         for (const [k, v] of Object.entries(obj)) {
           flattenLayer({ key: `${key}.${k}`, obj: v });
         }
@@ -74,7 +76,7 @@ export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persist
       const config = vscode.workspace.getConfiguration(App.appKey);
 
       // Set context variable for immediate UI responsiveness
-      vscode.commands.executeCommand('setContext', `bsjs-push-pull.${key}`, value);
+      vscode.commands.executeCommand("setContext", `bsjs-push-pull.${key}`, value);
 
       if (update) {
         try {
@@ -91,7 +93,7 @@ export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persist
    * Synchronizes the in-memory settings with the actual VSCode settings.
    * This reads the current settings from VSCode and updates the internal state accordingly.
    * It also removes any obsolete settings that are no longer present in the VSCode configuration.
-   * 
+   *
    * @lastreviewed 2025-10-01
    */
   sync(): void {
@@ -122,14 +124,17 @@ export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persist
   }
 
   getParsedAnyDomainOverrideUrl(u: string): URL | null {
-    const urlString = this.get('debugMode').anyDomainOverrideUrl;
+    const urlString = this.get("debugMode").anyDomainOverrideUrl;
     if (!urlString) {
       return null;
     }
-    if (this.get('debugMode').enabled) {
-      const override = this.get('debugMode').anyDomainOverrideUrl;
+    if (this.get("debugMode").enabled) {
+      const override = this.get("debugMode").anyDomainOverrideUrl;
       if (override) {
-        const lines = override.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        const lines = override
+          .split("\n")
+          .map((l) => l.trim())
+          .filter((l) => l.length > 0);
         for (const line of lines) {
           const parts = line.split("=");
           if (parts.length === 2 && parts[0] === u) {
@@ -145,5 +150,4 @@ export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persist
     }
     return null;
   }
-
 }

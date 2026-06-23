@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
-import { App } from '../app/App';
+import * as vscode from "vscode";
+import { App } from "../app/App";
 //@ts-ignore
-import { runConverts } from '../conversions';
+import { runConverts } from "../conversions";
 
 /**
  * Performs all startup tasks for the extension.
@@ -14,9 +14,11 @@ export default function (context: vscode.ExtensionContext) {
     App.isDebugMode() && console.log("B6P: App initialized in debug mode");
     App.logger.info("B6P: App initialized, version " + App.getVersion());
   } catch (error) {
-    vscode.window.showErrorMessage('Failed to initialize extension: ' + (error instanceof Error ? error.stack : error), { modal: true });
+    vscode.window.showErrorMessage(
+      "Failed to initialize extension: " + (error instanceof Error ? error.stack : error),
+      { modal: true }
+    );
     // rethrow until we know for sure we don't need to.
     throw error;
   }
 }
-

@@ -1,7 +1,7 @@
-import type { SourceOps } from '@bluestep-systems/b6p-core';
-import { App } from '../App';
-import { Util } from '../util';
-import { ScriptRoot } from '@bluestep-systems/b6p-core';
+import type { SourceOps } from "@bluestep-systems/b6p-core";
+import { App } from "../App";
+import { Util } from "../util";
+import { ScriptRoot } from "@bluestep-systems/b6p-core";
 
 /**
  * Pushes a script to a WebDAV location using the platform-agnostic B6PCore.
@@ -12,7 +12,13 @@ import { ScriptRoot } from '@bluestep-systems/b6p-core';
  * @param isSnapshot Whether this is a snapshot push
  * @param scriptRoot Optional pre-resolved ScriptRoot instance
  */
-export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isSnapshot, scriptRoot }: {
+export default async function ({
+  overrideFormulaUrl,
+  sourceOps,
+  skipMessage,
+  isSnapshot,
+  scriptRoot,
+}: {
   overrideFormulaUrl?: string;
   sourceOps?: SourceOps;
   skipMessage?: boolean;
@@ -27,10 +33,10 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
     } else {
       const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
       if (sourceEditorUri === undefined) {
-        App.core.prompt.error('No source path provided');
+        App.core.prompt.error("No source path provided");
         return;
       }
-      App.logger.info(Util.printLine({ ret: true }) as string + "Pushing script for: " + sourceEditorUri.toString());
+      App.logger.info((Util.printLine({ ret: true }) as string) + "Pushing script for: " + sourceEditorUri.toString());
       rootPath = sourceEditorUri.fsPath;
     }
 
@@ -42,13 +48,11 @@ export default async function ({ overrideFormulaUrl, sourceOps, skipMessage, isS
     });
 
     // Show completion message (unless squelched)
-    if (!skipMessage && !(App.settings.get("squelch").pushComplete)) {
-      App.core.prompt.info(isSnapshot ? 'Snapshot complete!' : 'Push complete!');
+    if (!skipMessage && !App.settings.get("squelch").pushComplete) {
+      App.core.prompt.info(isSnapshot ? "Snapshot complete!" : "Push complete!");
     }
   } catch (e) {
     App.core.prompt.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);
     throw e;
   }
 }
-
-

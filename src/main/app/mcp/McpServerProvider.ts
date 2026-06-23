@@ -1,8 +1,8 @@
-import * as vscode from 'vscode';
-import { BasicAuthProvider } from '@bluestep-systems/b6p-core';
-import { Http } from '@bluestep-systems/b6p-core';
-import type { ILogger } from '@bluestep-systems/b6p-core';
-import type { OrgCache } from '@bluestep-systems/b6p-core';
+import * as vscode from "vscode";
+import { BasicAuthProvider } from "@bluestep-systems/b6p-core";
+import { Http } from "@bluestep-systems/b6p-core";
+import type { ILogger } from "@bluestep-systems/b6p-core";
+import type { OrgCache } from "@bluestep-systems/b6p-core";
 
 /**
  * Provides MCP server definitions to VS Code for each known org in the OrgCache.
@@ -13,7 +13,6 @@ import type { OrgCache } from '@bluestep-systems/b6p-core';
  * @lastreviewed null
  */
 export class McpServerProvider {
-
   private _emitter: vscode.EventEmitter<void>;
 
   /**
@@ -33,27 +32,24 @@ export class McpServerProvider {
   ) {
     this._emitter = new vscode.EventEmitter<void>();
 
-    logger.info('MCP: Registering MCP server definition provider...');
-    const registration = vscode.lm.registerMcpServerDefinitionProvider(
-      'bluestep-mcp',
-      {
-        onDidChangeMcpServerDefinitions: this._emitter.event,
+    logger.info("MCP: Registering MCP server definition provider...");
+    const registration = vscode.lm.registerMcpServerDefinitionProvider("bluestep-mcp", {
+      onDidChangeMcpServerDefinitions: this._emitter.event,
 
-        provideMcpServerDefinitions: (_token) => {
-          return this.getDefinitions();
-        },
-
-        resolveMcpServerDefinition: async (server, _token) => {
-          if (server instanceof vscode.McpHttpServerDefinition) {
-            return await this.resolve(server);
-          }
-          return server;
-        },
+      provideMcpServerDefinitions: (_token) => {
+        return this.getDefinitions();
       },
-    );
+
+      resolveMcpServerDefinition: async (server, _token) => {
+        if (server instanceof vscode.McpHttpServerDefinition) {
+          return await this.resolve(server);
+        }
+        return server;
+      },
+    });
 
     context.subscriptions.push(registration, this._emitter);
-    logger.info('MCP: Provider registered successfully');
+    logger.info("MCP: Provider registered successfully");
   }
 
   /**
@@ -67,7 +63,7 @@ export class McpServerProvider {
    * Builds one {@link vscode.McpHttpServerDefinition} per unique origin in the OrgCache.
    */
   private getDefinitions(): vscode.McpHttpServerDefinition[] {
-    this.logger.info('MCP: provideMcpServerDefinitions called');
+    this.logger.info("MCP: provideMcpServerDefinitions called");
     const definitions: vscode.McpHttpServerDefinition[] = [];
     const seenHosts = new Set<string>();
 
@@ -84,14 +80,14 @@ export class McpServerProvider {
             new vscode.McpHttpServerDefinition(
               `BlueStep (${u} - ${element.host})`,
               vscode.Uri.parse(`${origin}/sse`),
-              {},
-            ),
+              {}
+            )
           );
         }
       }
     } catch {
       // OrgCache not initialized yet — return empty list
-      this.logger.info('MCP: OrgCache not ready, returning empty server list');
+      this.logger.info("MCP: OrgCache not ready, returning empty server list");
     }
 
     this.logger.info(`MCP: Returning ${definitions.length} server definition(s)`);
@@ -102,12 +98,10 @@ export class McpServerProvider {
    * Injects the Authorization header from the auth manager into the
    * server definition just before VS Code opens the SSE connection.
    */
-  private async resolve(
-    server: vscode.McpHttpServerDefinition,
-  ): Promise<vscode.McpHttpServerDefinition | undefined> {
+  private async resolve(server: vscode.McpHttpServerDefinition): Promise<vscode.McpHttpServerDefinition | undefined> {
     try {
       if (!(await this.authManager.hasCredentials())) {
-        this.logger.info('MCP: No credentials available, skipping server resolve');
+        this.logger.info("MCP: No credentials available, skipping server resolve");
         return undefined;
       }
       const authValue = await this.authManager.authHeaderValue();
@@ -117,7 +111,7 @@ export class McpServerProvider {
       };
       return server;
     } catch (e) {
-      this.logger.error('MCP: Failed to resolve server credentials', e instanceof Error ? e.message : String(e));
+      this.logger.error("MCP: Failed to resolve server credentials", e instanceof Error ? e.message : String(e));
       return undefined;
     }
   }

@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
-import { App } from '../App';
+import * as vscode from "vscode";
+import { App } from "../App";
 
 /**
  * Pulls the current script (derived from active editor) using B6PCore.
@@ -10,7 +10,7 @@ export default async function (): Promise<void> {
     const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
 
     if (!workspaceUri || !activeEditorUri) {
-      App.core.prompt.error('No workspace or active file');
+      App.core.prompt.error("No workspace or active file");
       return;
     }
 
@@ -24,7 +24,7 @@ export default async function (): Promise<void> {
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     App.core.prompt.error(`Error pulling current file: ${message}`);
-    App.logger.error('Pull current file error:', e);
+    App.logger.error("Pull current file error:", e);
     throw e;
   }
 }

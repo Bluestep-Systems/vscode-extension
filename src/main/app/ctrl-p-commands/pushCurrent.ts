@@ -1,9 +1,9 @@
-import * as vscode from 'vscode';
-import { App } from '../App';
-import { Util } from '../util';
-import { ScriptFactory } from '@bluestep-systems/b6p-core';
-import { B6PUri } from '@bluestep-systems/b6p-core';
-import type { ScriptRoot } from '@bluestep-systems/b6p-core';
+import * as vscode from "vscode";
+import { App } from "../App";
+import { Util } from "../util";
+import { ScriptFactory } from "@bluestep-systems/b6p-core";
+import { B6PUri } from "@bluestep-systems/b6p-core";
+import type { ScriptRoot } from "@bluestep-systems/b6p-core";
 
 /**
  * Pushes the current file (the one the editor is currently open to) to its associated WebDAV location using B6PCore.
@@ -25,15 +25,15 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot; mes
     // Check for unsaved changes
     const dirtyDocs = await Util.getDirtyDocs(vscode.Uri.file(actual_sr.getRootUri().fsPath));
     if (dirtyDocs.length > 0) {
-      const SAVE_AND_PUSH = 'Save and Push';
-      const CANCEL = 'Cancel';
+      const SAVE_AND_PUSH = "Save and Push";
+      const CANCEL = "Cancel";
       const save = await vscode.window.showWarningMessage(
-        `${dirtyDocs.length} files have unsaved changes. Save before pushing?\n ${dirtyDocs.map(doc => doc.uri.fsPath).join('\n ')}`,
+        `${dirtyDocs.length} files have unsaved changes. Save before pushing?\n ${dirtyDocs.map((doc) => doc.uri.fsPath).join("\n ")}`,
         SAVE_AND_PUSH,
         CANCEL
       );
       if (save === SAVE_AND_PUSH) {
-        await Promise.all(dirtyDocs.map(doc => doc.save()));
+        await Promise.all(dirtyDocs.map((doc) => doc.save()));
       } else {
         return; // User cancelled
       }
@@ -50,6 +50,6 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot; mes
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     App.core.prompt.error(`Error pushing current file: ${message}`);
-    App.logger.error('Push current file error:', e);
+    App.logger.error("Push current file error:", e);
   }
 }

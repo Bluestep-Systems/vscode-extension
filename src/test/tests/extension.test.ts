@@ -1,15 +1,15 @@
 //@ts-ignore
-import * as assert from 'assert';
+import * as assert from "assert";
 //@ts-ignore
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 //@ts-ignore
-import { App } from '../../main/app/App';
+import { App } from "../../main/app/App";
 //@ts-ignore
-import { SessionManager } from '@bluestep-systems/b6p-core';
+import { SessionManager } from "@bluestep-systems/b6p-core";
 //@ts-ignore
-import { UPDATE_MANAGER } from '../../main/app/services/UpdateManager';
+import { UPDATE_MANAGER } from "../../main/app/services/UpdateManager";
 //@ts-ignore
-import { ScriptFactory } from '@bluestep-systems/b6p-core';
+import { ScriptFactory } from "@bluestep-systems/b6p-core";
 
 // suite('Extension Integration Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;

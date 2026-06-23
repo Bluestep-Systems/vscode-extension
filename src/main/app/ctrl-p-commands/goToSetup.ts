@@ -1,8 +1,8 @@
-import * as vscode from 'vscode';
-import { App } from '../App';
-import { ScriptFactory } from '@bluestep-systems/b6p-core';
-import { B6PUri } from '@bluestep-systems/b6p-core';
-import { Util } from '../util';
+import * as vscode from "vscode";
+import { App } from "../App";
+import { ScriptFactory } from "@bluestep-systems/b6p-core";
+import { B6PUri } from "@bluestep-systems/b6p-core";
+import { Util } from "../util";
 
 export default async function (): Promise<void> {
   try {

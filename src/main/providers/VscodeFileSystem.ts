@@ -1,6 +1,6 @@
-import * as vscode from 'vscode';
-import type { IFileSystem, FileStat } from '@bluestep-systems/b6p-core';
-import { B6PUri } from '@bluestep-systems/b6p-core';
+import * as vscode from "vscode";
+import type { IFileSystem, FileStat } from "@bluestep-systems/b6p-core";
+import { B6PUri } from "@bluestep-systems/b6p-core";
 
 /**
  * VSCode implementation of the file system provider.
@@ -17,7 +17,7 @@ export class VscodeFileSystem implements IFileSystem {
 
   /** Convert vscode.Uri to B6PUri */
   private fromVscodeUri(uri: vscode.Uri): B6PUri {
-    if (uri.scheme === 'file') {
+    if (uri.scheme === "file") {
       return B6PUri.fromFsPath(uri.fsPath);
     }
     return B6PUri.fromUrl(uri.toString());
@@ -34,17 +34,17 @@ export class VscodeFileSystem implements IFileSystem {
   async stat(uri: B6PUri): Promise<FileStat> {
     const stat = await vscode.workspace.fs.stat(this.toVscodeUri(uri));
     return {
-      type: stat.type === vscode.FileType.File ? 'file' : 'directory',
+      type: stat.type === vscode.FileType.File ? "file" : "directory",
       mtime: stat.mtime,
       size: stat.size,
     };
   }
 
-  async readDirectory(uri: B6PUri): Promise<[string, 'file' | 'directory'][]> {
+  async readDirectory(uri: B6PUri): Promise<[string, "file" | "directory"][]> {
     const entries = await vscode.workspace.fs.readDirectory(this.toVscodeUri(uri));
     return entries.map(([name, type]) => [
       name,
-      type === vscode.FileType.File ? 'file' as const : 'directory' as const,
+      type === vscode.FileType.File ? ("file" as const) : ("directory" as const),
     ]);
   }
 
@@ -77,7 +77,7 @@ export class VscodeFileSystem implements IFileSystem {
     const pattern = new vscode.RelativePattern(this.toVscodeUri(base), include);
     const excludePattern = exclude ? new vscode.RelativePattern(this.toVscodeUri(base), exclude) : undefined;
     const files = await vscode.workspace.findFiles(pattern, excludePattern);
-    return files.map(uri => this.fromVscodeUri(uri));
+    return files.map((uri) => this.fromVscodeUri(uri));
   }
 
   async closest(startUri: B6PUri, fileName: string, maxDepth: number = 10): Promise<B6PUri | null> {
@@ -93,7 +93,7 @@ export class VscodeFileSystem implements IFileSystem {
         // File doesn't exist in this directory, continue searching
       }
 
-      const parentDir = vscode.Uri.joinPath(currentDir, '..');
+      const parentDir = vscode.Uri.joinPath(currentDir, "..");
       if (parentDir.path === currentDir.path) {
         break;
       }

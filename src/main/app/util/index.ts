@@ -1,26 +1,41 @@
-import * as path from 'path';
+import * as path from "path";
 import * as vscode from "vscode";
-import { PrimitiveNestedObject, JsonValue, SourceOps, type ScriptGQLBadResp, type ScriptGQLGoodResp, type ScriptGqlResp } from '@bluestep-systems/b6p-core';
-import { IdUtility } from '@bluestep-systems/b6p-core';
-import { ScriptKey } from '@bluestep-systems/b6p-core';
-import { Err } from '@bluestep-systems/b6p-core';
-import { ScriptFactory } from '@bluestep-systems/b6p-core';
-import type { ScriptFolder } from '@bluestep-systems/b6p-core';
-import { ApiEndpoints, Http, MimeTypes } from '@bluestep-systems/b6p-core';
-import { App } from '../App';
-import { B6PUri } from '@bluestep-systems/b6p-core';
+import {
+  PrimitiveNestedObject,
+  JsonValue,
+  SourceOps,
+  type ScriptGQLBadResp,
+  type ScriptGQLGoodResp,
+  type ScriptGqlResp,
+} from "@bluestep-systems/b6p-core";
+import { IdUtility } from "@bluestep-systems/b6p-core";
+import { ScriptKey } from "@bluestep-systems/b6p-core";
+import { Err } from "@bluestep-systems/b6p-core";
+import { ScriptFactory } from "@bluestep-systems/b6p-core";
+import type { ScriptFolder } from "@bluestep-systems/b6p-core";
+import { ApiEndpoints, Http, MimeTypes } from "@bluestep-systems/b6p-core";
+import { App } from "../App";
+import { B6PUri } from "@bluestep-systems/b6p-core";
 /**
  * Utility functions and types.
- * 
+ *
  * //TODO some of these may be redundant and can be consolidated
  */
 export namespace Util {
-  export function printLine(ops?: { ret?: boolean; }) {
-    const stack = new Error().stack || (() => { throw new Err.NoStackTraceError(); })();
-    let FULL_LINE = stack.split('\n')[2]!.trim(); // 0:Error, 1:this function, 2:
+  export function printLine(ops?: { ret?: boolean }) {
+    const stack =
+      new Error().stack ||
+      (() => {
+        throw new Err.NoStackTraceError();
+      })();
+    let FULL_LINE = stack.split("\n")[2]!.trim(); // 0:Error, 1:this function, 2:
 
     const match = FULL_LINE.match(/\(([^)]+)\)/);
-    const extracted = match && match[1] || (() => { throw new Err.NoExtractedValueError(); })();
+    const extracted =
+      (match && match[1]) ||
+      (() => {
+        throw new Err.NoExtractedValueError();
+      })();
     if (ops?.ret) {
       return extracted;
     }
@@ -30,7 +45,7 @@ export namespace Util {
 
   /**
    * performs a deep comparison between two savable objects to determine if they are equivalent.
-   * @returns 
+   * @returns
    */
   export function isDeepEqual(object1: JsonValue, object2: JsonValue): boolean {
     // Handle primitive values (including null)
@@ -79,18 +94,17 @@ export namespace Util {
 
     // Different types (one object, one primitive)
     return false;
-  };
+  }
 
-  export function isNonPrimitiveSavable(object: JsonValue): object is { [key: string]: JsonValue; } {
+  export function isNonPrimitiveSavable(object: JsonValue): object is { [key: string]: JsonValue } {
     // lack of strict equality check is intentional
     /* eslint-disable eqeqeq */
     return object != null && typeof object === "object" && !Array.isArray(object);
-  };
+  }
 
-
-  /** 
-   * Adds a value to the object at the defined path 
-   * 
+  /**
+   * Adds a value to the object at the defined path
+   *
    * Modified from BST methodology
    */
   export function PutObjVal(obj: PrimitiveNestedObject, path: string[], val: PrimitiveNestedObject, className: string) {
@@ -103,7 +117,7 @@ export namespace Util {
       const location = path.shift();
       if (location === undefined) {
         return;
-      };
+      }
       if (iteratedObj[location] === undefined) {
         iteratedObj[location] = {};
       } else if (typeof iteratedObj[location] === className) {
@@ -116,11 +130,11 @@ export namespace Util {
 
   /**
    * inserts a delay for a defined number of milliseconds.
-   * @param ms 
-   * @returns 
+   * @param ms
+   * @returns
    */
   export async function sleep(ms: number): Promise<unknown> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   export function rethrow<U, V>(fn: (arg: U) => V, arg: U): V {
@@ -138,7 +152,12 @@ export namespace Util {
    */
   export async function getDownstairsFileUri(sourceOps?: SourceOps): Promise<vscode.Uri> {
     if (!sourceOps) {
-      return vscode.window.activeTextEditor?.document.uri || (() => { throw new Err.NoActiveEditorError(); })();
+      return (
+        vscode.window.activeTextEditor?.document.uri ||
+        (() => {
+          throw new Err.NoActiveEditorError();
+        })()
+      );
     }
     const { sourceOrigin, topId } = sourceOps;
     const url = new URL(sourceOrigin);
@@ -173,22 +192,22 @@ export namespace Util {
   }
 
   /**
- * Gets the URI of the active editor; performing basic checks to ensure it is valid.
- * @returns The URI of the active editor, or undefined if not available. NOTE: it
- * will also inform the user via vscode notifications if there is an issue.
- */
-  export function getActiveEditorUri({ quiet = false }: { quiet?: boolean; } = {}): vscode.Uri | undefined {
+   * Gets the URI of the active editor; performing basic checks to ensure it is valid.
+   * @returns The URI of the active editor, or undefined if not available. NOTE: it
+   * will also inform the user via vscode notifications if there is an issue.
+   */
+  export function getActiveEditorUri({ quiet = false }: { quiet?: boolean } = {}): vscode.Uri | undefined {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
       if (!quiet) {
-        vscode.window.showErrorMessage('No workspace folder is open.');
+        vscode.window.showErrorMessage("No workspace folder is open.");
       }
       return void 0;
     }
     const activeEditor = getActiveEditor();
     if (!activeEditor) {
       if (!quiet) {
-        vscode.window.showErrorMessage('No active text editor found.');
+        vscode.window.showErrorMessage("No active text editor found.");
       }
       return void 0;
     }
@@ -196,7 +215,7 @@ export namespace Util {
     const activeEditorUri = activeEditor.document.uri;
     if (!activeEditorUri.path.startsWith(workspaceUri.path)) {
       if (!quiet) {
-        vscode.window.showWarningMessage('Active file is not in the current workspace');
+        vscode.window.showWarningMessage("Active file is not in the current workspace");
       }
       return void 0;
     }
@@ -217,13 +236,13 @@ export namespace Util {
   }
 
   /**
- * Reads the text content of a file.
- * @param uri The URI of the file to read.
- * @returns The text content of the file.
- */
+   * Reads the text content of a file.
+   * @param uri The URI of the file to read.
+   * @returns The text content of the file.
+   */
   export async function readFileText(uri: vscode.Uri) {
     const fileData = await readFileRaw(uri);
-    const textContent = Buffer.from(fileData).toString('utf8');
+    const textContent = Buffer.from(fileData).toString("utf8");
     return textContent;
   }
 
@@ -238,21 +257,21 @@ export namespace Util {
   }
 
   /**
- * Recursively retrieves all dirty documents within a given directory.
- * @param directoryUri The URI of the directory to search.
- * @returns An array of dirty text documents within the directory.
- */
+   * Recursively retrieves all dirty documents within a given directory.
+   * @param directoryUri The URI of the directory to search.
+   * @returns An array of dirty text documents within the directory.
+   */
   export async function getDirtyDocs(directoryUri: vscode.Uri): Promise<vscode.TextDocument[]> {
-    const activeEditorDocuments = vscode.window.visibleTextEditors.map(editor => editor.document);
+    const activeEditorDocuments = vscode.window.visibleTextEditors.map((editor) => editor.document);
     const dirtyDocs: vscode.TextDocument[] = [];
     const directory = await vscode.workspace.fs.readDirectory(directoryUri);
     for (const [name, type] of directory) {
       if (type === vscode.FileType.Directory) {
         const subDir = vscode.Uri.joinPath(directoryUri, name);
-        dirtyDocs.push(...await getDirtyDocs(subDir));
+        dirtyDocs.push(...(await getDirtyDocs(subDir)));
       } else if (type === vscode.FileType.File) {
         const fileUri = vscode.Uri.joinPath(directoryUri, name);
-        const dirtyDoc = activeEditorDocuments.find(doc => doc.uri.toString() === fileUri.toString() && doc.isDirty);
+        const dirtyDoc = activeEditorDocuments.find((doc) => doc.uri.toString() === fileUri.toString() && doc.isDirty);
         if (dirtyDoc) {
           dirtyDocs.push(dirtyDoc);
         }
@@ -265,10 +284,10 @@ export namespace Util {
     const dirUri = dir.uri();
     const items = await App.core.fs.readDirectory(dirUri);
 
-    result.push(dirUri.joinPath('/')); // include the directory itself
+    result.push(dirUri.joinPath("/")); // include the directory itself
     for (const [name, type] of items) {
       const fullPath = dirUri.joinPath(name);
-      if (type === 'directory') {
+      if (type === "directory") {
         const subFolder = ScriptFactory.createFolder(fullPath);
         result.push(...(await flattenDirectory(subFolder)));
       } else {
@@ -283,13 +302,13 @@ export namespace Util {
    * Uses the `scriptRoot.path` setting if set, otherwise falls back to the first workspace folder.
    */
   export function getActiveWorkspaceFolderUri() {
-    const configuredPath = vscode.workspace.getConfiguration('bsjs-push-pull').get<string>('scriptRoot.path');
+    const configuredPath = vscode.workspace.getConfiguration("bsjs-push-pull").get<string>("scriptRoot.path");
     if (configuredPath && configuredPath.trim()) {
       return vscode.Uri.file(configuredPath.trim());
     }
     const activeFolder = vscode.workspace.workspaceFolders?.[0];
     if (!activeFolder) {
-      vscode.window.showErrorMessage('No active file found');
+      vscode.window.showErrorMessage("No active file found");
       throw new Err.NoActiveFileError();
     }
     return activeFolder.uri;
@@ -303,19 +322,23 @@ export namespace Util {
    */
   export async function getScriptWebdavId(origin: string, topId: string): Promise<string | null> {
     const originUrl = new URL(origin);
-    const gqlBody = (topId: string) => `{\"query\":\"query ObjectData($id: String!) {\\n  children(parentId: $id) {\\n    ... on Parent {\\n      children {\\n        items {\\n          id\\n        }\\n      }\\n    }\\n  }\\n}\",\"variables\":{\"id\":\"${topId}\"},\"operationName\":\"ObjectData\"}`;
+    const gqlBody = (topId: string) =>
+      `{\"query\":\"query ObjectData($id: String!) {\\n  children(parentId: $id) {\\n    ... on Parent {\\n      children {\\n        items {\\n          id\\n        }\\n      }\\n    }\\n  }\\n}\",\"variables\":{\"id\":\"${topId}\"},\"operationName\":\"ObjectData\"}`;
 
     try {
-      const GQL_RESP = await App.sessionManager.csrfFetch(originUrl.origin + ApiEndpoints.GQL, {
-        method: Http.Methods.POST,
-        headers: {
-          [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
-          [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON
-        },
-        body: gqlBody(topId)
-      }).then((res: Response) => res.json()).catch((e: unknown) => {
-        throw new Err.GraphQLFetchError(e);
-      }) as ScriptGqlResp;
+      const GQL_RESP = (await App.sessionManager
+        .csrfFetch(originUrl.origin + ApiEndpoints.GQL, {
+          method: Http.Methods.POST,
+          headers: {
+            [Http.Headers.ACCEPT]: Http.Headers.ACCEPT_ALL,
+            [Http.Headers.CONTENT_TYPE]: MimeTypes.APPLICATION_JSON,
+          },
+          body: gqlBody(topId),
+        })
+        .then((res: Response) => res.json())
+        .catch((e: unknown) => {
+          throw new Err.GraphQLFetchError(e);
+        })) as ScriptGqlResp;
       if ((GQL_RESP as ScriptGQLBadResp).errors) {
         App.core.prompt.error("GraphQL errors found");
         throw new Err.GraphQLError((GQL_RESP as ScriptGQLBadResp).errors);
@@ -343,6 +366,3 @@ export namespace Util {
     }
   }
 }
-
-
-

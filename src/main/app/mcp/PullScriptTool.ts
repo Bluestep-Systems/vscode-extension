@@ -1,6 +1,6 @@
-import * as vscode from 'vscode';
-import { App } from '../App';
-import ctrlPCommands from '../ctrl-p-commands';
+import * as vscode from "vscode";
+import { App } from "../App";
+import ctrlPCommands from "../ctrl-p-commands";
 
 /**
  * Input schema for the pull_script LM tool.
@@ -21,10 +21,9 @@ interface PullScriptInput {
  * @lastreviewed null
  */
 export const PULL_SCRIPT_TOOL: vscode.LanguageModelTool<PullScriptInput> = {
-
   async invoke(
     options: vscode.LanguageModelToolInvocationOptions<PullScriptInput>,
-    _token: vscode.CancellationToken,
+    _token: vscode.CancellationToken
   ): Promise<vscode.LanguageModelToolResult> {
     const { webDavUrl } = options.input;
 
@@ -33,24 +32,18 @@ export const PULL_SCRIPT_TOOL: vscode.LanguageModelTool<PullScriptInput> = {
       await ctrlPCommands.pullScript(webDavUrl);
 
       return new vscode.LanguageModelToolResult([
-        new vscode.LanguageModelTextPart(
-          JSON.stringify({ success: true, webDavUrl }),
-        ),
+        new vscode.LanguageModelTextPart(JSON.stringify({ success: true, webDavUrl })),
       ]);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       App.logger.error(`PullScriptTool: ${message}`);
-      return new vscode.LanguageModelToolResult([
-        new vscode.LanguageModelTextPart(
-          JSON.stringify({ error: message }),
-        ),
-      ]);
+      return new vscode.LanguageModelToolResult([new vscode.LanguageModelTextPart(JSON.stringify({ error: message }))]);
     }
   },
 
   prepareInvocation(
     options: vscode.LanguageModelToolInvocationPrepareOptions<PullScriptInput>,
-    _token: vscode.CancellationToken,
+    _token: vscode.CancellationToken
   ): vscode.ProviderResult<vscode.PreparedToolInvocation> {
     return {
       invocationMessage: `Pulling script from ${options.input.webDavUrl}...`,

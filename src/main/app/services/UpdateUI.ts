@@ -1,9 +1,9 @@
-import * as vscode from 'vscode';
-import { FileExtensions, SettingsKeys } from '@bluestep-systems/b6p-core';
-import { B6PUri } from '@bluestep-systems/b6p-core';
-import type { UpdateInfo } from '@bluestep-systems/b6p-core';
-import type { UpdateService } from '@bluestep-systems/b6p-core';
-import type { IFileSystem, ILogger } from '@bluestep-systems/b6p-core';
+import * as vscode from "vscode";
+import { FileExtensions, SettingsKeys } from "@bluestep-systems/b6p-core";
+import { B6PUri } from "@bluestep-systems/b6p-core";
+import type { UpdateInfo } from "@bluestep-systems/b6p-core";
+import type { UpdateService } from "@bluestep-systems/b6p-core";
+import type { IFileSystem, ILogger } from "@bluestep-systems/b6p-core";
 
 /**
  * VS Code-specific UI wrapper for the UpdateService.
@@ -23,7 +23,7 @@ export class UpdateUI {
     // Start automatic update check after a delay
     setTimeout(async () => {
       try {
-        this.logger.info('B6P: Starting automatic update check...');
+        this.logger.info("B6P: Starting automatic update check...");
         await this.showVersionNotesIfNeeded();
         await this.checkForUpdatesAndNotify();
       } catch (error) {
@@ -38,7 +38,9 @@ export class UpdateUI {
    */
   private async showVersionNotesIfNeeded(): Promise<void> {
     const versionInfo = await this.updateService.getVersionNotes();
-    this.logger.info(`B6P: Stored version: ${versionInfo.storedVersion}, Current version: ${versionInfo.currentVersion}`);
+    this.logger.info(
+      `B6P: Stored version: ${versionInfo.storedVersion}, Current version: ${versionInfo.currentVersion}`
+    );
 
     // TODO: Implement release notes display when version changes
     // This would show a webview or open a markdown file with release notes
@@ -63,9 +65,9 @@ export class UpdateUI {
   private async showUpdateNotification(updateInfo: UpdateInfo): Promise<void> {
     const message = `B6P Extension v${updateInfo.version} is available. You have v${this.updateService.getCurrentVersion()}.`;
     const Actions = {
-      INSTALL: 'Install',
-      VIEW_NOTES: 'View Release Notes',
-      DISMISS: 'Dismiss'
+      INSTALL: "Install",
+      VIEW_NOTES: "View Release Notes",
+      DISMISS: "Dismiss",
     };
     const actions = [Actions.INSTALL, Actions.VIEW_NOTES, Actions.DISMISS];
 
@@ -90,26 +92,29 @@ export class UpdateUI {
    * @lastreviewed null
    */
   async checkForUpdatesManually(): Promise<UpdateInfo | null> {
-    return vscode.window.withProgress({
-      location: vscode.ProgressLocation.Notification,
-      title: 'Checking for B6P updates...',
-      cancellable: false
-    }, async (progress) => {
-      progress.report({ increment: 0 });
-      progress.report({ increment: 50, message: 'Contacting GitHub...' });
+    return vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Checking for B6P updates...",
+        cancellable: false,
+      },
+      async (progress) => {
+        progress.report({ increment: 0 });
+        progress.report({ increment: 50, message: "Contacting GitHub..." });
 
-      const updateInfo = await this.updateService.checkForUpdates();
+        const updateInfo = await this.updateService.checkForUpdates();
 
-      progress.report({ increment: 100 });
+        progress.report({ increment: 100 });
 
-      if (!updateInfo) {
-        await vscode.window.showInformationMessage('You are running the latest version of B6P Extension!');
-      } else {
-        await this.showUpdateNotification(updateInfo);
+        if (!updateInfo) {
+          await vscode.window.showInformationMessage("You are running the latest version of B6P Extension!");
+        } else {
+          await this.showUpdateNotification(updateInfo);
+        }
+
+        return updateInfo;
       }
-
-      return updateInfo;
-    });
+    );
   }
 
   /**
@@ -119,41 +124,43 @@ export class UpdateUI {
    */
   private async autoInstallUpdate(updateInfo: UpdateInfo): Promise<void> {
     try {
-      await vscode.window.withProgress({
-        location: vscode.ProgressLocation.Notification,
-        title: `Installing B6P Extension v${updateInfo.version}`,
-        cancellable: false
-      }, async (progress) => {
-        progress.report({ increment: 0, message: 'Downloading...' });
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Installing B6P Extension v${updateInfo.version}`,
+          cancellable: false,
+        },
+        async (progress) => {
+          progress.report({ increment: 0, message: "Downloading..." });
 
-        // Check if the download URL is a .vsix file
-        if (!updateInfo.downloadUrl.endsWith(FileExtensions.VSIX)) {
-          throw new Error('Auto-install requires direct .vsix download link');
+          // Check if the download URL is a .vsix file
+          if (!updateInfo.downloadUrl.endsWith(FileExtensions.VSIX)) {
+            throw new Error("Auto-install requires direct .vsix download link");
+          }
+
+          // Download the .vsix file
+          progress.report({ increment: 30, message: "Downloading extension..." });
+          const vsixPath = await this.downloadVsixFile(updateInfo.downloadUrl, updateInfo.version);
+
+          // Install the extension
+          progress.report({ increment: 70, message: "Installing extension..." });
+          await this.installVsixFile(vsixPath);
+
+          progress.report({ increment: 100, message: "Installation complete!" });
         }
-
-        // Download the .vsix file
-        progress.report({ increment: 30, message: 'Downloading extension...' });
-        const vsixPath = await this.downloadVsixFile(updateInfo.downloadUrl, updateInfo.version);
-
-        // Install the extension
-        progress.report({ increment: 70, message: 'Installing extension...' });
-        await this.installVsixFile(vsixPath);
-
-        progress.report({ increment: 100, message: 'Installation complete!' });
-      });
+      );
 
       // Prompt user to reload VS Code
-      const reloadAction = 'Reload Now';
+      const reloadAction = "Reload Now";
       const selection = await vscode.window.showInformationMessage(
         `B6P Extension v${updateInfo.version} has been installed successfully! Please reload VS Code to activate the new version.`,
         reloadAction,
-        'Later'
+        "Later"
       );
 
       if (selection === reloadAction) {
-        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+        await vscode.commands.executeCommand("workbench.action.reloadWindow");
       }
-
     } catch (error) {
       this.logger.error(`Auto-install failed: ${error instanceof Error ? error.message : error}`);
       vscode.window.showErrorMessage(
@@ -192,9 +199,8 @@ export class UpdateUI {
       await this.fs.writeFile(B6PUri.fromFsPath(tempFilePath.fsPath), fileContent);
 
       return tempFilePath.fsPath;
-
     } catch (error) {
-      throw new Error(`Extension download error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Extension download error: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
   }
 
@@ -205,7 +211,7 @@ export class UpdateUI {
    */
   private async installVsixFile(vsixPath: string): Promise<void> {
     try {
-      await vscode.commands.executeCommand('workbench.extensions.installExtension', vscode.Uri.file(vsixPath));
+      await vscode.commands.executeCommand("workbench.extensions.installExtension", vscode.Uri.file(vsixPath));
     } catch (error) {
       throw new Error(`Extension installation error: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -221,7 +227,7 @@ export class UpdateUI {
       await vscode.env.openExternal(vscode.Uri.parse(url));
     } catch (error) {
       this.logger.error(`Failed to open download URL: ${error instanceof Error ? error.message : error}`);
-      vscode.window.showErrorMessage('Failed to open download URL. Please visit the GitHub releases page manually.');
+      vscode.window.showErrorMessage("Failed to open download URL. Please visit the GitHub releases page manually.");
     }
   }
 
@@ -232,7 +238,7 @@ export class UpdateUI {
    */
   private async showReleaseNotes(updateInfo: UpdateInfo): Promise<void> {
     const panel = vscode.window.createWebviewPanel(
-      'b6pReleaseNotes',
+      "b6pReleaseNotes",
       `B6P Release Notes v${updateInfo.version}`,
       vscode.ViewColumn.One,
       {}
@@ -249,9 +255,9 @@ export class UpdateUI {
    */
   private getReleaseNotesHtml(updateInfo: UpdateInfo): string {
     const releaseNotes = updateInfo.releaseNotes
-      .replace(/\n/g, '<br>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>');
+      .replace(/\n/g, "<br>")
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>");
 
     return `
       <!DOCTYPE html>
@@ -298,7 +304,7 @@ export class UpdateUI {
           Released: ${new Date(updateInfo.publishedAt).toLocaleDateString()}
         </div>
         <div class="content">
-          ${releaseNotes || 'No release notes available.'}
+          ${releaseNotes || "No release notes available."}
         </div>
         <a href="${updateInfo.downloadUrl}" class="download-link">Download Update</a>
       </body>
@@ -317,13 +323,13 @@ export class UpdateUI {
         return; // Already shown
       }
 
-      const setupFilePath = vscode.Uri.joinPath(this.extensionUri, 'SETUP.md');
+      const setupFilePath = vscode.Uri.joinPath(this.extensionUri, "SETUP.md");
 
       // Open the setup guide
       const document = await vscode.workspace.openTextDocument(setupFilePath);
       await vscode.window.showTextDocument(document, {
         preview: false,
-        viewColumn: vscode.ViewColumn.One
+        viewColumn: vscode.ViewColumn.One,
       });
 
       // Show optional notification

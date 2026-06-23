@@ -1,13 +1,13 @@
 //@ts-ignore
-import * as assert from 'assert';
+import * as assert from "assert";
 //@ts-ignore
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 //@ts-ignore
-import { ContextNode } from '../../main/app/context/ContextNode';
+import { ContextNode } from "../../main/app/context/ContextNode";
 //@ts-ignore
-import { PseudoMap } from '../../main/app/util/PseudoMaps';
+import { PseudoMap } from "../../main/app/util/PseudoMaps";
 //@ts-ignore
-import { JsonValue } from '@bluestep-systems/b6p-core';
+import { JsonValue } from "@bluestep-systems/b6p-core";
 
 // suite('ContextNode Pattern Tests', () => {
 //   let mockFileSystemProvider: MockFileSystem;
