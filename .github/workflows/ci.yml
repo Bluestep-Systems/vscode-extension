@@ -1,0 +1,68 @@
+# ============================================================================
+# b6p-vscode CI
+# ============================================================================
+# Purpose: Validate the VS Code extension on pull requests and pushes to the
+#          default branch (type-check, lint, test) so it is checked on PRs,
+#          not only on release tags. Runs on the same win/mac matrix as the
+#          release workflow's validate job, because the VS Code test runner
+#          needs a GUI runner. No secrets required — the @bluestep-systems
+#          scope resolves from public npm via .npmrc.
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Least privilege: read-only is all validation needs.
+permissions:
+  contents: read
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.os }}, Node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false  # See results across all platforms, not just the first failure.
+      matrix:
+        os: [windows-latest, macos-latest]
+        node: ['20']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: |
+          for i in 1 2 3; do
+            npm ci --prefer-offline --no-audit && break
+            echo "Attempt $i failed, retrying..."
+            sleep 5
+          done
+        shell: bash
+
+      - name: Type check
+        run: npm run check-types
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
