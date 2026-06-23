@@ -12,7 +12,7 @@ npm registry and **bundled into the `.vsix`** at build time. The same core power
 
 ## Installing the extension
 
-The extension is distributed as a `.vsix` attached to each [GitHub Release](https://github.com/Bluestep-Systems/b6p-vscode/releases) — it is **not** on the VS Code Marketplace.
+The extension is distributed as a `.vsix` attached to each [GitHub Release](https://github.com/Bluestep-Systems/vscode-extension/releases) — it is **not** on the VS Code Marketplace.
 
 1. Download the latest `bsjs-push-pull-X.Y.Z.vsix` from the Releases page.
 2. In VS Code, open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).

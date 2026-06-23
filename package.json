@@ -6,12 +6,12 @@
   "publisher": "bluestep-systems",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Bluestep-Systems/b6p-vscode.git"
+    "url": "git+https://github.com/Bluestep-Systems/vscode-extension.git"
   },
   "bugs": {
-    "url": "https://github.com/Bluestep-Systems/b6p-vscode/issues"
+    "url": "https://github.com/Bluestep-Systems/vscode-extension/issues"
   },
-  "homepage": "https://github.com/Bluestep-Systems/b6p-vscode#readme",
+  "homepage": "https://github.com/Bluestep-Systems/vscode-extension#readme",
   "galleryBanner": {
     "color": "#C80000",
     "theme": "dark"
