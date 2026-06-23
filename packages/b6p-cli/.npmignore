@@ -1,6 +1,0 @@
-src/
-esbuild.js
-tsconfig.json
-tsconfig.tsbuildinfo
-.npmrc
-*.log
