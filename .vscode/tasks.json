@@ -4,51 +4,25 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "watch",
-			"dependsOn": [
-				"npm: watch:core",
-				"npm: watch:vscode"
-			],
-			"presentation": {
-				"reveal": "never"
-			},
+			"type": "npm",
+			"script": "watch",
+			"path": "",
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			}
-		},
-		{
-			"type": "npm",
-			"script": "watch:core",
-			"path": "",
-			"group": "build",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"label": "npm: watch:core",
-			"detail": "tsc -w on @bluestep-systems/b6p-core",
-			"presentation": {
-				"group": "watch",
-				"reveal": "never"
-			}
-		},
-		{
-			"type": "npm",
-			"script": "watch:vscode",
-			"path": "",
-			"group": "build",
+			},
 			"problemMatcher": "$esbuild-watch",
 			"isBackground": true,
-			"label": "npm: watch:vscode",
+			"label": "npm: watch",
 			"detail": "esbuild --watch on bsjs-push-pull",
 			"presentation": {
-				"group": "watch",
 				"reveal": "never"
 			}
 		},
 		{
 			"type": "npm",
 			"script": "watch-tests",
-			"path": "packages/b6p-vscode",
+			"path": "",
 			"problemMatcher": "$tsc-watch",
 			"isBackground": true,
 			"label": "npm: watch-tests",
@@ -61,8 +35,7 @@
 		{
 			"label": "tasks: watch-tests",
 			"dependsOn": [
-				"npm: watch:core",
-				"npm: watch:vscode",
+				"npm: watch",
 				"npm: watch-tests"
 			],
 			"problemMatcher": []
