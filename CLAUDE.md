@@ -4,23 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Layout
 
-This is an **npm workspaces monorepo** with three packages:
+This is the **single-package VS Code extension** `bsjs-push-pull`, distributed as a `.vsix` via GitHub
+Releases (no Marketplace). It depends on [`@bluestep-systems/b6p-core`](https://github.com/Bluestep-Systems/b6p-core)
+— the vscode-free core library (WebDAV, sessions, persistence, script tree, types) — resolved from the
+public npm registry and **bundled into the `.vsix`** by esbuild. The same core powers the standalone
+[`b6p` CLI](https://github.com/Bluestep-Systems/b6p-cli).
 
-- `packages/b6p-core/` — `@bluestep-systems/b6p-core`: vscode-free core library (WebDAV, sessions, persistence, types)
-- `packages/b6p-cli/`  — `@bluestep-systems/b6p-cli`: standalone `b6p` CLI binary
-- `packages/b6p-vscode/` — `bsjs-push-pull`: the VS Code extension (Marketplace artifact)
+This repo holds only the **VS Code layer**: the `App` singleton and command wiring, the VS Code
+implementations of the core's provider interfaces (`src/main/providers/`), the command handlers
+(`src/main/app/ctrl-p-commands/`), MCP integration, and settings. The orchestrator (`B6PCore`), session
+management, persistence, and script-tree logic all live in `@bluestep-systems/b6p-core`.
 
-Both `b6p-cli` and `b6p-vscode` depend on `b6p-core`. The core has zero `vscode` imports — anything reaching for `vscode` lives in `b6p-vscode`.
-
-When editing, the package boundary matters: cross-package imports must go through `'@bluestep-systems/b6p-core'`, not relative paths. If you add a new exported symbol in core, also add it to `packages/b6p-core/src/index.ts`.
+`b6p-core` is a normal `dependency` (bundled, not externalized — esbuild externalizes only `vscode`).
+Imports from the core MUST go through `'@bluestep-systems/b6p-core'`, never relative paths into another
+repo. Core-side changes (new exports, shared logic) belong in the `b6p-core` repo, not here.
 
 ## Common Development Commands
 
-### Build and Package (run from repo root)
+### Build and Package
 ```bash
-npm run compile          # Build core → cli → extension (in dependency order)
-npm run watch            # Parallel watch across all three packages
-npm run package-extension # Build .vsix into packages/b6p-vscode/
+npm run compile          # Type-check + esbuild bundle → dist/extension.js
+npm run watch            # Rebuild on change (esbuild --watch)
+npm run package-extension # Build the .vsix at the repo root
 ./build-vsix.sh -h       # See all build options (puts artifacts in releases/)
 ./build-vsix.sh -r -g -k # Release build with git and clean
 ```
@@ -46,11 +51,10 @@ This is a **WebDAV-based VS Code extension** (plus a standalone CLI sharing the 
 
 ### Core Components
 
-- **App singleton** (`packages/b6p-vscode/src/main/app/App.ts`): VS Code-side root context manager that initializes services and registers commands
-- **B6PCore** (`packages/b6p-core/src/B6PCore.ts`): Vscode-free orchestrator used by both the CLI and the extension; provides `push`, `pull`, `audit`, `deploy`, etc.
-- **ContextNode pattern** (`packages/b6p-vscode/src/main/app/context/ContextNode.ts`): Base class for components requiring VS Code context and persistence
-- **SessionManager** (`packages/b6p-core/src/session/SessionManager.ts`): WebDAV auth, CSRF tokens, HTTP session management
-- **BasicAuthProvider** (`packages/b6p-core/src/auth/BasicAuthProvider.ts`): Credential management per authentication profile ("flag")
+- **App singleton** (`src/main/app/App.ts`): VS Code-side root context manager that initializes services and registers commands
+- **VS Code providers** (`src/main/providers/`): VS Code implementations of the core's provider interfaces — `VscodeFileSystem`, `VscodeLogger`, `VscodeProgress`, `VscodePrompt`. These are injected into `B6PCore` so the core stays vscode-free.
+- **Command handlers** (`src/main/app/ctrl-p-commands/`): one file per command (push, pull, audit, snapshot, deploy, etc.)
+- **B6PCore** (in `@bluestep-systems/b6p-core`): vscode-free orchestrator shared with the CLI; provides `push`, `pull`, `audit`, `deploy`, etc. Session management, persistence, and the script tree also live in the core package.
 
 ### Key Architectural Patterns
 
@@ -64,7 +68,7 @@ export const MANAGER_NAME = new class extends ContextNode {
 **Command Registration Flow**:
 1. Define in `package.json` contributes.commands
 2. Register in `App.ts` disposables map
-3. Implementation in `src/main/app/ctrl-p-commands/scripts/`
+3. Implementation in `src/main/app/ctrl-p-commands/`
 
 **Multi-Tier Persistence System**:
 - `PublicPersistanceMap`: Workspace state for user settings

@@ -29,8 +29,8 @@ async function main() {
     sourcesContent: false,
     platform: 'node',
     outfile: 'dist/extension.js',
-    // Only `vscode` is provided by the host. Everything else (including the workspace
-    // dep @bluestep-systems/b6p-core) gets bundled into the .vsix.
+    // Only `vscode` is provided by the host. Everything else (including the public-npm
+    // dependency @bluestep-systems/b6p-core) gets bundled into the .vsix.
     external: ['vscode'],
     logLevel: 'silent',
     plugins: [problemMatcher],

@@ -2,13 +2,26 @@
 
 ## Overview
 
-This repository is now an **npm workspaces monorepo** with three packages under `packages/`:
+This repository is the **single-package VS Code extension** `bsjs-push-pull`, distributed as a `.vsix`
+via GitHub Releases (no Marketplace). It depends on
+[`@bluestep-systems/b6p-core`](https://github.com/Bluestep-Systems/b6p-core) — the vscode-free core
+library — resolved from public npm and bundled into the `.vsix` by esbuild. The same core powers the
+standalone [`b6p` CLI](https://github.com/Bluestep-Systems/b6p-cli).
 
-- `packages/b6p-core/` (`@bluestep-systems/b6p-core`) — vscode-free core library
-- `packages/b6p-cli/` (`@bluestep-systems/b6p-cli`) — standalone `b6p` CLI
-- `packages/b6p-vscode/` (`bsjs-push-pull`) — the VS Code extension
+This repo holds only the **VS Code layer** under [src/](src/): the `App` singleton and command wiring
+([src/main/app/App.ts](src/main/app/App.ts)), the VS Code implementations of the core's provider
+interfaces ([src/main/providers/](src/main/providers/)), the command handlers
+([src/main/app/ctrl-p-commands/](src/main/app/ctrl-p-commands/)), MCP integration, and settings.
 
-Old paths like `src/main/app/...` should be read as `packages/b6p-vscode/src/main/app/...`. Old paths like `src/core/...` are now `packages/b6p-core/src/...`. Cross-package imports MUST use the package name (`'@bluestep-systems/b6p-core'`), never relative paths across the boundary. New exported symbols in core must be added to `packages/b6p-core/src/index.ts`.
+Hard constraints for this repo:
+
+- **Cross-package code goes through `@bluestep-systems/b6p-core`** — never relative paths into the core
+  source (it lives in a different repo). The orchestrator (`B6PCore`), session management, persistence,
+  and script-tree logic belong in core; this repo only adapts it to VS Code. `b6p-core` is a bundled
+  `dependency` (esbuild externalizes only `vscode`); see [esbuild.js](esbuild.js). New exports or shared
+  logic go in the `b6p-core` repo, not here.
+- **Never use `any`.** If it appears unavoidable, leave a `//HUMAN-REVIEW-NEEDED` comment. If a human
+  reviewer later accepts `any`, they add a `//REASON-FOR-ANY` comment.
 
 When making changes to this VS Code extension codebase, AI agents MUST obey the guidelines delineated below:
 
@@ -31,6 +44,8 @@ When making changes to this VS Code extension codebase, AI agents MUST obey the 
 | File | Purpose | Update When |
 |------|---------|-------------|
 | `.github/copilot-instructions.md` | AI agent development guide | Architecture, patterns, or workflow changes |
+| `CLAUDE.md` | Developer/agent guide (layout, commands, architecture) | Layout, build commands, or architecture changes |
+| `AGENTS.md` | AI agent rules (this file) | Conventions or process changes |
 | `README.md` | User-facing documentation | Features, configuration, or usage changes |
 | `CHANGELOG.md` | Version history | Any user-visible changes or fixes |
 | `package.json` | Extension manifest | Commands, settings, dependencies, or metadata |

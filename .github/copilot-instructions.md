@@ -8,11 +8,14 @@ AI agents must follow the guidelines in `AGENTS.md` when making changes to this 
 
 This is a **WebDAV-based VS Code extension** for syncing JavaScript files with BlueStep systems. The architecture uses a singleton pattern with hierarchical context management.
 
+This repository is the **VS Code layer only**. The vscode-free engine — `B6PCore`, `SessionManager`, `ContextNode`, persistence, and the script tree — lives in [`@bluestep-systems/b6p-core`](https://github.com/Bluestep-Systems/b6p-core), a public-npm dependency that esbuild **bundles into the `.vsix`** (only `vscode` is externalized). Code in `src/` adapts that core to VS Code; import core symbols via `'@bluestep-systems/b6p-core'`, never relative paths.
+
 ### Core Components
 
 - **App singleton** (`src/main/app/App.ts`): Root context manager that initializes all services and command registration
-- **SessionManager** (`src/main/app/b6p_session/SessionManager.ts`): Handles authentication, CSRF tokens, and HTTP session management for BlueStep servers
-- **ContextNode pattern** (`src/main/app/context/ContextNode.ts`): Base class for all components requiring VS Code context and persistence
+- **VS Code providers** (`src/main/providers/`): VS Code implementations of the core's provider interfaces — `VscodeFileSystem`, `VscodeLogger`, `VscodeProgress`, `VscodePrompt` — injected into `B6PCore`
+- **Command handlers** (`src/main/app/ctrl-p-commands/`): one file per command palette action
+- **SessionManager / ContextNode** (in `@bluestep-systems/b6p-core`): authentication, CSRF tokens, HTTP session management, and the base class for components requiring context and persistence
 
 ### Key Patterns
 
@@ -46,7 +49,7 @@ npm run package-extension  # Create .vsix package
 
 ### Testing
 - Use VS Code's "Run Test Environment" from Run panel
-- Tests in `src/test/` directory (e.g., `extension.test.ts`, `ScriptFile.test.ts`)
+- Tests in `src/test/tests/` directory (e.g., `extension.test.ts`, `ScriptNode.test.ts`, `ScriptRoot.test.ts`)
 - `npm run pretest` builds and lints before testing
 - Test framework: Mocha with VS Code's built-in test runner
 - **Mocking limitations**: VS Code file system APIs are read-only and cannot be directly mocked
@@ -75,12 +78,12 @@ npm run package-extension  # Create .vsix package
 - Async initialization required for private persistence - check `isInitialized()`
 
 ### Command Implementation
-- Commands in `src/main/app/ctrl-p-commands/scripts/`
+- Commands in `src/main/app/ctrl-p-commands/`
 - Follow pattern: user input → authentication → WebDAV operation → user feedback
 - Use `Alert.info()` for user notifications, `App.logger.info()` for debugging
 
 ### Update System
-- Custom GitHub releases-based update checker (`src/main/app/services/UpdateChecker.ts`)
+- Custom GitHub releases-based update checking. The check logic (`UpdateService`) is in `@bluestep-systems/b6p-core`; the VS Code notification UI is in `src/main/app/services/UpdateUI.ts`
 - Runs 5 seconds after startup, checks every 24 hours
 - Configured via `bsjs-push-pull.updateCheck.*` settings
 

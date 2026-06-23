@@ -5,6 +5,23 @@ All notable changes to the B6P - BlueStep JavaScript Push/Pull extension will be
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Extracted from the former `bsjs-push-pull` monorepo into this standalone single-extension
+  repository. The vscode-free core was split into
+  [`@bluestep-systems/b6p-core`](https://github.com/Bluestep-Systems/b6p-core) and the CLI into
+  [`@bluestep-systems/b6p-cli`](https://github.com/Bluestep-Systems/b6p-cli).
+- `@bluestep-systems/b6p-core` is now resolved from the **public npm registry** by version (pinned via
+  the committed `.npmrc`) and bundled into the `.vsix` by esbuild, instead of a monorepo workspace
+  symlink. Self-contained `tsconfig`/eslint/prettier config now live at the repo root.
+- Added a PR/push CI validation workflow (`.github/workflows/ci.yml`) on the win/mac matrix alongside the
+  existing tag-driven release workflow.
+
+No change to extension behavior, commands, settings, or installation — it is still distributed as a
+`.vsix` via GitHub Releases (no Marketplace).
+
 ## [0.0.1] - 2025-08-28
 
 ### Added

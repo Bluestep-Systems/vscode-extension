@@ -1,50 +1,57 @@
-Welcome to the BlueStep Systems VS Code Extension! 🚀
+# B6P — BlueStep VS Code Extension
 
-This repository is an **npm workspaces monorepo** containing three packages:
+The **B6P Push/Pull** VS Code extension (`bsjs-push-pull`) syncs JavaScript files with
+[BlueStep](https://www.bluestep.net/) systems over WebDAV: pull components from the platform into
+your workspace, push changes back, audit local vs. server, snapshot history, and deploy.
 
-| Package | Path | Purpose |
-| --- | --- | --- |
-| `@bluestep-systems/b6p-core` | `packages/b6p-core/` | Vscode-free core library: WebDAV client, sessions, persistence, script tree, types |
-| `@bluestep-systems/b6p-cli` | `packages/b6p-cli/` | Standalone `b6p` command-line tool — usable in any Node environment, Claude Code sessions, CI |
-| `bsjs-push-pull` | `packages/b6p-vscode/` | The VS Code extension published to the Marketplace |
+This repository is the **VS Code extension only**. It depends on
+[`@bluestep-systems/b6p-core`](https://github.com/Bluestep-Systems/b6p-core) — the vscode-free core
+library (WebDAV client, sessions, persistence, script tree, types) — which is resolved from the public
+npm registry and **bundled into the `.vsix`** at build time. The same core powers the standalone
+[`b6p` CLI](https://github.com/Bluestep-Systems/b6p-cli).
 
-The CLI and the extension are independent shipping artifacts that share the same core library.
+## Installing the extension
 
-## Installing the CLI
+The extension is distributed as a `.vsix` attached to each [GitHub Release](https://github.com/Bluestep-Systems/b6p-vscode/releases) — it is **not** on the VS Code Marketplace.
 
-> **Note:** The CLI is not yet published to npm. Until then, install from a source checkout:
->
-> ```bash
-> git clone https://github.com/bluestep-systems/vscode-extension
-> cd vscode-extension
-> npm install
-> npm run compile
-> cd packages/b6p-cli
-> npm link    # adds `b6p` to your PATH
-> b6p --help
-> ```
+1. Download the latest `bsjs-push-pull-X.Y.Z.vsix` from the Releases page.
+2. In VS Code, open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`).
+3. Run **"Extensions: Install from VSIX…"** and select the downloaded file.
 
-## Installing the VS Code extension
-
-Install from the VS Code Marketplace as `bsjs-push-pull`, or build a `.vsix` locally with `./build-vsix.sh`.
+To build a `.vsix` yourself, see [DEVELOPER_README.md](DEVELOPER_README.md) and `./build-vsix.sh`.
 
 ## Users
-Please refer to the [SETUP.md](SETUP.md) for setup instructions and configuration.
+
+Please refer to [SETUP.md](SETUP.md) for setup instructions and configuration.
 
 ## Contributors
-Please refer to the [DEVELOPER_README.md](DEVELOPER_README.md) for detailed information on development and testing.
+
+Please refer to [DEVELOPER_README.md](DEVELOPER_README.md) for detailed development and testing information.
 
 ### Common dev commands
 
 ```bash
-npm install                     # installs all three workspaces
-npm run compile                 # builds core → cli → extension
-npm run watch                   # parallel watch across all three
-npm test                        # runs the extension test suite (153 tests as of writing)
-npm run package-extension       # builds the .vsix into packages/b6p-vscode/
-./build-vsix.sh                 # full release flow → releases/bsjs-push-pull-X.Y.Z.vsix
+npm install                # install dependencies (b6p-core from public npm)
+npm run compile            # type-check + esbuild bundle → dist/extension.js
+npm run watch              # rebuild on change
+npm test                   # full extension test suite
+npm run check-types        # tsc --noEmit
+npm run lint               # eslint
+npm run format             # prettier --write
+npm run package-extension  # build the .vsix at the repo root
+./build-vsix.sh            # full release flow → releases/bsjs-push-pull-X.Y.Z.vsix
 ```
 
-### Follow-ups (out of scope for the initial split)
-- Publish `@bluestep-systems/b6p-core` and `@bluestep-systems/b6p-cli` to npm
-- Extract pure-core tests into a `packages/b6p-core/test/` mocha suite that runs without the VS Code electron harness
+> The `@bluestep-systems` scope is pinned to the public npm registry via the committed `.npmrc`, so
+> `npm install` needs no authentication.
+
+## Related repositories
+
+| Repo | npm | Purpose |
+| --- | --- | --- |
+| [`b6p-core`](https://github.com/Bluestep-Systems/b6p-core) | `@bluestep-systems/b6p-core` | Shared vscode-free core library |
+| [`b6p-cli`](https://github.com/Bluestep-Systems/b6p-cli) | `@bluestep-systems/b6p-cli` | Standalone `b6p` command-line tool |
+
+## License
+
+MIT
