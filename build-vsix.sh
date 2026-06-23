@@ -1,11 +1,11 @@
 #!/bin/bash
 # Build a .vsix for the bsjs-push-pull VS Code extension.
-# After the workspaces split, all extension-specific work happens inside
-# packages/b6p-vscode/. The build artifact lands in <repo-root>/releases/.
+# The extension lives at the repo root; the build artifact lands in
+# <repo-root>/releases/.
 set -euo pipefail
 cd "$(dirname "${0}")"
 REPO_ROOT="$(pwd)"
-EXT_DIR="${REPO_ROOT}/packages/b6p-vscode"
+EXT_DIR="${REPO_ROOT}"
 RELEASES_DIR="${REPO_ROOT}/releases"
 cd "${EXT_DIR}"
 
