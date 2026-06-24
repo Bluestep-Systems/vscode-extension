@@ -94,11 +94,13 @@ suite("ScriptNode Tests", () => {
 
   suite("URI Operations", () => {
     test("should convert to downstairs URI correctly", () => {
-      const expectedPath = path.join("/test/workspace/U100001/1466960", "draft", "test.js");
+      const expectedUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
       const downstairsUri = scriptNode.uri();
 
-      // Normalize paths for cross-platform compatibility
-      assert.strictEqual(path.normalize(downstairsUri.fsPath), path.normalize(expectedPath));
+      assert.strictEqual(
+        path.normalize(downstairsUri.fsPath),
+        path.normalize(expectedUri.fsPath)
+      );
     });
   });
 
