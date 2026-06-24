@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-06-24
+
 ### Changed
 
 - Extracted from the former `bsjs-push-pull` monorepo into this standalone single-extension
@@ -18,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   symlink. Self-contained `tsconfig`/eslint/prettier config now live at the repo root.
 - Added a PR/push CI validation workflow (`.github/workflows/ci.yml`) on the win/mac matrix alongside the
   existing tag-driven release workflow.
+
+### Fixed
+
+- Bumped `@bluestep-systems/b6p-core` to `0.1.1`, which fixes Windows drive-letter path parsing in
+  `DownstairsPathParser` — gitignore detection and root URI resolution now work correctly on Windows.
+- Fixed test assertion for downstairs URI conversion to be drive-letter tolerant on Windows.
 
 No change to extension behavior, commands, settings, or installation — it is still distributed as a
 `.vsix` via GitHub Releases (no Marketplace).
