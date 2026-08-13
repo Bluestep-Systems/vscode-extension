@@ -3,7 +3,7 @@ import { FileExtensions, SettingsKeys } from "@bluestep-systems/b6p-core";
 import { B6PUri } from "@bluestep-systems/b6p-core";
 import type { UpdateInfo } from "@bluestep-systems/b6p-core";
 import type { UpdateService } from "@bluestep-systems/b6p-core";
-import type { IFileSystem, ILogger } from "@bluestep-systems/b6p-core";
+import type { FileSystem, Logger } from "@bluestep-systems/b6p-core";
 
 /**
  * VS Code-specific UI wrapper for the UpdateService.
@@ -14,8 +14,8 @@ import type { IFileSystem, ILogger } from "@bluestep-systems/b6p-core";
 export class UpdateUI {
   constructor(
     private readonly updateService: UpdateService,
-    private readonly fs: IFileSystem,
-    private readonly logger: ILogger,
+    private readonly fs: FileSystem,
+    private readonly logger: Logger,
     private readonly extensionUri: vscode.Uri,
     private readonly globalStorageUri: vscode.Uri,
     _appKey: string

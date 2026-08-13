@@ -33,7 +33,7 @@ export default async function ({
     } else {
       const sourceEditorUri = await Util.getDownstairsFileUri(sourceOps);
       if (sourceEditorUri === undefined) {
-        App.core.prompt.error("No source path provided");
+        App.prompt.error("No source path provided");
         return;
       }
       App.logger.info((Util.printLine({ ret: true }) as string) + "Pushing script for: " + sourceEditorUri.toString());
@@ -41,7 +41,7 @@ export default async function ({
     }
 
     // Use B6PCore for the push operation (handles all business logic)
-    await App.core.push({
+    await App.core.script.push({
       targetUrl: overrideFormulaUrl, // Will prompt if undefined
       rootPath,
       snapshot: isSnapshot ?? false,
@@ -49,10 +49,10 @@ export default async function ({
 
     // Show completion message (unless squelched)
     if (!skipMessage && !App.settings.get("squelch").pushComplete) {
-      App.core.prompt.info(isSnapshot ? "Snapshot complete!" : "Push complete!");
+      App.prompt.info(isSnapshot ? "Snapshot complete!" : "Push complete!");
     }
   } catch (e) {
-    App.core.prompt.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);
+    App.prompt.error(`Error pushing files: ${e instanceof Error ? e.message : e}`);
     throw e;
   }
 }

@@ -10,12 +10,12 @@ export default async function (): Promise<void> {
     const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
 
     if (!workspaceUri || !activeEditorUri) {
-      App.core.prompt.error("No workspace or active file");
+      App.prompt.error("No workspace or active file");
       return;
     }
 
     // Use B6PCore for pullCurrent
-    await App.core.pullCurrent({
+    await App.core.script.pullCurrent({
       filePath: activeEditorUri.fsPath,
       workspacePath: workspaceUri.fsPath,
     });
@@ -23,7 +23,7 @@ export default async function (): Promise<void> {
     // Success message shown by B6PCore
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    App.core.prompt.error(`Error pulling current file: ${message}`);
+    App.prompt.error(`Error pulling current file: ${message}`);
     App.logger.error("Pull current file error:", e);
     throw e;
   }

@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
-import type { IPrompt } from "@bluestep-systems/b6p-core";
+import type { Prompt } from "@bluestep-systems/b6p-core";
 
 /**
  * VSCode implementation of the prompt provider.
  * Wraps vscode.window UI APIs.
  */
-export class VscodePrompt implements IPrompt {
+export class VscodePrompt implements Prompt {
   async inputBox(options: { prompt: string; password?: boolean; value?: string }): Promise<string | undefined> {
     return await vscode.window.showInputBox({
       prompt: options.prompt,

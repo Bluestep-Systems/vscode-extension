@@ -34,15 +34,15 @@ npm run package-extension # Build the .vsix at the repo root
 ```bash
 npm test               # Full test suite (includes pretest compilation)
 npm run watch-tests    # Watch mode for test development
-npm run pretest        # Compile tests, main code, and lint
+npm run pretest        # Compile tests and main code
 ```
 
 ### Code Quality
 ```bash
-npm run check-types    # TypeScript type checking
-npm run lint          # ESLint checks
+npm run check-types    # TypeScript type checking (TypeScript 7 — the native Go compiler)
 npm run format        # Format code with Prettier
-npm run format-check  # Check formatting
+npm run format-check  # Check formatting (this is the CI gate; ESLint was removed —
+                      # @typescript-eslint supports typescript <6.1.0 and crashes on TS 7)
 ```
 
 ## Architecture Overview
@@ -51,10 +51,10 @@ This is a **WebDAV-based VS Code extension** (plus a standalone CLI sharing the 
 
 ### Core Components
 
-- **App singleton** (`src/main/app/App.ts`): VS Code-side root context manager that initializes services and registers commands
-- **VS Code providers** (`src/main/providers/`): VS Code implementations of the core's provider interfaces — `VscodeFileSystem`, `VscodeLogger`, `VscodeProgress`, `VscodePrompt`. These are injected into `B6PCore` so the core stays vscode-free.
+- **App singleton** (`src/main/app/App.ts`): the VS Code composition root. It **owns** the four provider implementations (core keeps its copies private), initializes services, and registers commands. It exposes `App.fs` / `App.prompt` / `App.logger` / `App.progress`, *holds* a `ScriptContext` as `App.scriptContext`, and exposes `App.factory` — a `ScriptFactory` bound to that context.
+- **VS Code providers** (`src/main/providers/`): VS Code implementations of the core's provider interfaces — `VscodeFileSystem`, `VscodeLogger`, `VscodeProgress`, `VscodePrompt` — bundled by the `VscodeProviders` interface. These are injected into `B6PCore` so the core stays vscode-free.
 - **Command handlers** (`src/main/app/ctrl-p-commands/`): one file per command (push, pull, audit, snapshot, deploy, etc.)
-- **B6PCore** (in `@bluestep-systems/b6p-core`): vscode-free orchestrator shared with the CLI; provides `push`, `pull`, `audit`, `deploy`, etc. Session management, persistence, and the script tree also live in the core package.
+- **B6PCore** (in `@bluestep-systems/b6p-core`): vscode-free orchestrator shared with the CLI. Since core 0.5.0 the script commands live on a sibling service reached as **`core.script`** (`core.script.push`, `.pull`, `.audit`, `.deploy`, …); `B6PCore` itself keeps credentials, sessions, settings, reporting and updates. Session management, persistence, and the script tree also live in the core package.
 
 ### Key Architectural Patterns
 
@@ -79,6 +79,11 @@ export const MANAGER_NAME = new class extends ContextNode {
 
 ### Authentication & Session Management
 
+- **Bearer token** (core 0.5.0+): a single opaque token in secret storage under `bearerAuth`, rendered
+  as `Authorization: Bearer <token>`. It replaced basic auth outright — there is no migration from a
+  stored username/password, so the user is prompted for a token on first use after upgrading. Reached
+  through the scheme-agnostic `AuthProvider<AuthParams>` interface (`App.auth`); never hold the
+  concrete provider unless you need scheme-specific members.
 - **WebDAV workflow**: Login → CSRF token extraction → Request retry with tokens
 - **Custom csrfFetch()** with automatic retry and re-authentication
 - **Session cleanup** on 403 responses with progressive retry delays
@@ -137,11 +142,18 @@ When making changes, update corresponding documentation:
 ## Configuration and External Dependencies
 
 ### TypeScript Configuration
+- **Compiler**: TypeScript 7 (`tsc`, the native Go compiler)
 - **Target**: ES2022 with Node16 modules
-- **Strict mode** enabled with comprehensive null/undefined checking
+- **Strict mode** enabled with comprehensive null/undefined checking, plus `noImplicitOverride`
+- **`types: ["node", "vscode", "mocha"]`** — TypeScript 7 does not pull every `node_modules/@types`
+  package into global scope the way 5.x did, so ambient declarations are requested by name. A new
+  `@types/*` package whose globals you need must be added to that list.
 - **Output**: `./dist` for main code, `./out` for tests
 
 ### Key Dependencies
+- `@bluestep-systems/b6p-core`: the vscode-free core, bundled into the `.vsix`. It carries its own
+  pinned `typescript@5.9.2` as a **runtime** dependency (`ScriptTranspiler` uses the classic compiler
+  API, which TypeScript 7 does not expose), nested under its own `node_modules` since the root is on 7.
 - `fast-xml-parser`: WebDAV response parsing
 - `esbuild`: Production bundling with watch mode
 - `@vscode/test-cli` + `@vscode/test-electron`: VS Code testing framework

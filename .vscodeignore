@@ -9,9 +9,14 @@ esbuild.js
 package-extension.js
 vsc-extension-quickstart.md
 **/tsconfig.json
-**/eslint.config.mjs
 **/*.map
 **/*.ts
+# ...but dist/lib/lib.*.d.ts must ship: the bundled b6p-core resolves TypeScript's
+# standard library from there on a snapshot push (see esbuild.js copy-ts-libs).
+# package-extension.js archives dist/ wholesale and does not read this file, so this
+# negation only matters if the .vsix is ever built with vsce — which is exactly when
+# the omission would be silent.
+!dist/lib/**
 **/.vscode-test.*
 *.vsix
 *.zip

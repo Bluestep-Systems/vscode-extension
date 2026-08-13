@@ -16,16 +16,16 @@ export default async function (): Promise<AuditResult | null> {
     const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
 
     if (!workspaceUri) {
-      App.core.prompt.error("No workspace folder open");
+      App.prompt.error("No workspace folder open");
       return null;
     }
     if (!activeEditorUri) {
-      App.core.prompt.error("No active editor");
+      App.prompt.error("No active editor");
       return null;
     }
 
     // Use B6PCore for audit
-    const result = await App.core.audit({
+    const result = await App.core.script.audit({
       filePath: activeEditorUri.fsPath,
       workspacePath: workspaceUri.fsPath,
     });
@@ -34,7 +34,7 @@ export default async function (): Promise<AuditResult | null> {
     return result;
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    App.core.prompt.error(`Error during audit: ${message}`);
+    App.prompt.error(`Error during audit: ${message}`);
     App.logger.error("Audit error:", e);
     throw e;
   }

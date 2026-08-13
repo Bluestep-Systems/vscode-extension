@@ -2,7 +2,7 @@
 # b6p-vscode CI
 # ============================================================================
 # Purpose: Validate the VS Code extension on pull requests and pushes to the
-#          default branch (type-check, lint, test) so it is checked on PRs,
+#          default branch (type-check, format check, test) so it is checked on PRs,
 #          not only on release tags. Runs on the same win/mac matrix as the
 #          release workflow's validate job, because the VS Code test runner
 #          needs a GUI runner. No secrets required — the @bluestep-systems
@@ -61,8 +61,8 @@ jobs:
       - name: Type check
         run: npm run check-types
 
-      - name: Lint
-        run: npm run lint
+      - name: Format check
+        run: npm run format-check
 
       - name: Test
         run: npm test

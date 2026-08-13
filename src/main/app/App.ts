@@ -1,29 +1,49 @@
 import * as vscode from "vscode";
 import type { ScriptContext } from "@bluestep-systems/b6p-core";
-import type { IFileSystem, ILogger, IPrompt } from "@bluestep-systems/b6p-core";
-import { BasicAuthProvider } from "@bluestep-systems/b6p-core";
+import type { AuthParams, AuthProvider, FileSystem, Logger, Progress, Prompt } from "@bluestep-systems/b6p-core";
 import { SessionManager } from "@bluestep-systems/b6p-core";
 import { OutputChannels, SettingsKeys } from "@bluestep-systems/b6p-core";
 import ctrlPCommands from "./ctrl-p-commands";
 import readOnlyCheck from "./services/ReadOnlyChecker";
+import { resolveTsLibDirs } from "./services/tsLibs";
 import { UpdateUI } from "./services/UpdateUI";
 import { VsCodeSettingsWrapper } from "./settings/VsCodeSettingsWrapper";
 import { Err } from "@bluestep-systems/b6p-core";
 import { HttpClient } from "@bluestep-systems/b6p-core";
 import { OrgCache } from "@bluestep-systems/b6p-core";
-import { ScriptMetaDataStore } from "@bluestep-systems/b6p-core";
 import { McpServerProvider } from "./mcp/McpServerProvider";
 import { PULL_SCRIPT_TOOL } from "./mcp/PullScriptTool";
 import { B6PCore } from "@bluestep-systems/b6p-core";
 import { ScriptFactory } from "@bluestep-systems/b6p-core";
-import { VscodeFileSystem, VscodePrompt, VscodeLogger, VscodeProgress } from "../providers";
+import type { VscodeProviders } from "../providers";
+import { VscodeLogger, createVscodeProviders } from "../providers";
 import { SharedFilePersistence } from "@bluestep-systems/b6p-core";
 import { PrivateKeys, PublicKeys } from "@bluestep-systems/b6p-core";
 
-export const App = new (class AppImpl implements ScriptContext {
+/**
+ * The VS Code composition root.
+ *
+ * App **owns** the provider implementations it hands to {@link B6PCore} — since
+ * b6p-core 0.5.0 the core keeps its copies private, so this is the only place they
+ * can be reached from. It likewise *holds* a {@link ScriptContext} rather than
+ * implementing one: the context is a dependency bundle, and satisfying its shape
+ * here is what once let unrelated members leak into it.
+ *
+ * That second claim is **enforced, not asserted.** TypeScript is structural, so dropping
+ * the `implements ScriptContext` clause removed the declaration and not the conformance —
+ * `const ctx: ScriptContext = App` still compiled, because the getters below supplied
+ * every member. This class deliberately exposes **no** `scriptMetadataStore` (it had no
+ * readers), which is what breaks the match and makes `App.scriptContext` the only way to
+ * obtain the bundle. Do not re-add one; reach it through `App.core.scriptMetadataStore`.
+ * @lastreviewed null
+ */
+export const App = new (class AppImpl {
   private _core: B6PCore | null = null;
   private _settings: VsCodeSettingsWrapper | null = null;
   private _updateUI: UpdateUI | null = null;
+  private _providers: VscodeProviders | null = null;
+  private _scriptContext: ScriptContext | null = null;
+  private _factory: ScriptFactory | null = null;
 
   public readonly appKey = SettingsKeys.APP_KEY;
 
@@ -43,12 +63,6 @@ export const App = new (class AppImpl implements ScriptContext {
     }
     return this._settings;
   }
-  public get logger(): ILogger {
-    if (this.core.logger === null) {
-      throw new Err.ContextNotSetError("App");
-    }
-    return this.core.logger;
-  }
   public get updateUI(): UpdateUI {
     if (this._updateUI === null) {
       throw new Err.ManagerNotInitializedError("UpdateUI");
@@ -56,27 +70,57 @@ export const App = new (class AppImpl implements ScriptContext {
     return this._updateUI;
   }
 
-  // ScriptContext members (delegated to B6PCore)
+  // ── Providers this extension owns and injects into B6PCore ────────
+  private get providers(): VscodeProviders {
+    if (this._providers === null) {
+      throw new Err.ContextNotSetError("App");
+    }
+    return this._providers;
+  }
+  public get fs(): FileSystem {
+    return this.providers.fs;
+  }
+  public get prompt(): Prompt {
+    return this.providers.prompt;
+  }
+  public get logger(): Logger {
+    return this.providers.logger;
+  }
+  public get progress(): Progress {
+    return this.providers.progress;
+  }
+
+  // ── Objects B6PCore builds ────────────────────────────────────────
   public get sessionManager(): SessionManager {
     return this.core.sessionManager;
   }
   public get orgCache(): OrgCache {
     return this.core.orgCache;
   }
-  public get scriptMetadataStore(): ScriptMetaDataStore {
-    return this.core.scriptMetadataStore;
-  }
-  public get fs(): IFileSystem {
-    return this.core.fs;
-  }
-  public get prompt(): IPrompt {
-    return this.core.prompt;
-  }
-  public get auth(): BasicAuthProvider {
+  public get auth(): AuthProvider<AuthParams> {
     return this.core.auth;
   }
-  public getScriptFactory() {
-    return this.core.getScriptFactory();
+
+  /**
+   * The script subsystem's dependency bundle, assembled from the providers this
+   * class owns plus the stores {@link B6PCore} builds. Held, never implemented.
+   */
+  public get scriptContext(): ScriptContext {
+    if (this._scriptContext === null) {
+      throw new Err.ContextNotSetError("App");
+    }
+    return this._scriptContext;
+  }
+
+  /**
+   * A {@link ScriptFactory} bound to {@link scriptContext}. Replaces the static
+   * `ScriptFactory.create*` shims that b6p-core 0.5.0 removed.
+   */
+  public get factory(): ScriptFactory {
+    if (this._factory === null) {
+      throw new Err.ContextNotSetError("App");
+    }
+    return this._factory;
   }
 
   public init(context: vscode.ExtensionContext) {
@@ -89,18 +133,20 @@ export const App = new (class AppImpl implements ScriptContext {
 
     const settings = new VsCodeSettingsWrapper();
     const vscodeLogger = new VscodeLogger(outputChannel);
+    const providers = createVscodeProviders(vscodeLogger);
+    this._providers = providers;
 
     const persistence = new SharedFilePersistence();
     persistence.setPendingBootstrap(() => migrateFromVscodeStores(persistence, context));
 
     const core = new B6PCore({
-      fs: new VscodeFileSystem(),
+      ...providers,
       persistence,
-      prompt: new VscodePrompt(),
-      logger: vscodeLogger,
-      progress: new VscodeProgress(),
       isDebugMode: () => settings.get("debugMode").enabled,
       orgCacheSettings: settings,
+      // Snapshot pushes transpile, and the bundled core cannot find lib.*.d.ts on its
+      // own — see resolveTsLibDirs.
+      typescriptLibDirs: resolveTsLibDirs(context.extensionUri),
       fetchFn: (url, options) => HttpClient.getInstance().fetch(url, options),
       updateServiceConfig: {
         currentVersion: this.getVersion(),
@@ -112,10 +158,18 @@ export const App = new (class AppImpl implements ScriptContext {
     });
     context.subscriptions.push(core);
 
-    ScriptFactory.setDefaultContext(core);
-
     this._settings = settings;
     this._core = core;
+    this._scriptContext = {
+      ...providers,
+      sessionManager: core.sessionManager,
+      isDebugMode: () => this.isDebugMode(),
+      scriptMetadataStore: core.scriptMetadataStore,
+      orgCache: core.orgCache,
+      // Same libs core got, so a tree built from App.factory transpiles identically.
+      typescriptLibDirs: resolveTsLibDirs(context.extensionUri),
+    };
+    this._factory = new ScriptFactory(this._scriptContext);
     this._updateUI = this.buildUpdateUI(context, core, vscodeLogger);
 
     this.buildMcp(context, core, vscodeLogger);
@@ -150,14 +204,14 @@ export const App = new (class AppImpl implements ScriptContext {
     reg("bsjs-push-pull.auditPull", ctrlPCommands.auditPull);
     reg("bsjs-push-pull.goToSetup", ctrlPCommands.goToSetup);
 
-    reg("bsjs-push-pull.report", () => ctrlPCommands.report(this));
+    reg("bsjs-push-pull.report", () => ctrlPCommands.report(this.scriptContext));
     reg("bsjs-push-pull.clearSettings", () => ctrlPCommands.clearSettings(this));
-    reg("bsjs-push-pull.clearSessions", () => ctrlPCommands.clearSessions(this));
+    reg("bsjs-push-pull.clearSessions", () => ctrlPCommands.clearSessions(this.scriptContext));
     reg("bsjs-push-pull.clearAll", () => ctrlPCommands.clearAll(this));
     reg("bsjs-push-pull.toggleAdvanced", () => ctrlPCommands.toggleAdvanced(this));
     reg("bsjs-push-pull.toggleDebug", () => ctrlPCommands.toggleDebug(this));
     reg("bsjs-push-pull.openSettings", ctrlPCommands.openSettings);
-    reg("bsjs-push-pull.browseScriptRoot", () => ctrlPCommands.browseScriptRoot(this));
+    reg("bsjs-push-pull.browseScriptRoot", () => ctrlPCommands.browseScriptRoot(this.scriptContext));
   }
 
   private wireEvents(context: vscode.ExtensionContext) {
@@ -189,7 +243,6 @@ export const App = new (class AppImpl implements ScriptContext {
   }
 
   private registerUriHandler(context: vscode.ExtensionContext) {
-    const core = this.core;
     context.subscriptions.push(
       vscode.window.registerUriHandler({
         handleUri: (uri: vscode.Uri) => {
@@ -198,7 +251,7 @@ export const App = new (class AppImpl implements ScriptContext {
             if (formulaUrl) {
               ctrlPCommands.pullScript(formulaUrl);
             } else {
-              core.prompt.error('Missing "url" parameter in URI');
+              this.prompt.error('Missing "url" parameter in URI');
             }
           } else if (uri.path === "/audit-pull") {
             ctrlPCommands.auditPull();
@@ -212,6 +265,18 @@ export const App = new (class AppImpl implements ScriptContext {
     const provider = new McpServerProvider(core.orgCache, core.auth, logger, context);
     context.subscriptions.push(provider);
     core.orgCache.onChanged = () => provider.fireChanged();
+
+    // `OrgCache.map()` is deliberately not gated on the initial persistence load, and
+    // `onChanged` does not fire when that load lands — it fires only on mutations. So
+    // VS Code's first `provideMcpServerDefinitions` can run against an empty cache and
+    // offer no servers for the rest of the session, since a user whose session cookie is
+    // still valid may never trigger a login. Re-offer the list once the cache is loaded.
+    void core.orgCache
+      .whenReady()
+      .then(() => provider.fireChanged())
+      .catch((e: unknown) => {
+        logger.warn("Failed to refresh MCP servers after org cache load:", e instanceof Error ? e.message : String(e));
+      });
   }
 
   private buildUpdateUI(context: vscode.ExtensionContext, core: B6PCore, logger: VscodeLogger): UpdateUI | null {
@@ -220,7 +285,7 @@ export const App = new (class AppImpl implements ScriptContext {
     }
     const updateUI = new UpdateUI(
       core.updateService,
-      core.fs,
+      this.fs,
       logger,
       context.extensionUri,
       context.globalStorageUri,
@@ -233,7 +298,7 @@ export const App = new (class AppImpl implements ScriptContext {
   public clearMap(alreadyAlerted: boolean = false) {
     this.settings.clear();
     if (!alreadyAlerted) {
-      this.core.prompt.info("Cleared all Settings");
+      this.prompt.info("Cleared all Settings");
     }
     this.settings.set("debugMode", VsCodeSettingsWrapper.DEFAULT.debugMode);
     this.settings.set("advancedMode", VsCodeSettingsWrapper.DEFAULT.advancedMode);
@@ -253,7 +318,7 @@ export const App = new (class AppImpl implements ScriptContext {
     const next = { ...current, enabled: !current.enabled };
     this.settings.set("advancedMode", next);
     this.logger.debug("Toggling advanced mode");
-    this.core.prompt.info(`Advanced mode ${next.enabled ? "enabled" : "disabled"}`);
+    this.prompt.info(`Advanced mode ${next.enabled ? "enabled" : "disabled"}`);
   }
 
   public toggleDebugMode() {
@@ -261,7 +326,7 @@ export const App = new (class AppImpl implements ScriptContext {
     const next = { ...current, enabled: !current.enabled };
     this.settings.set("debugMode", next);
     this.logger.debug("Toggling debug mode");
-    this.core.prompt.info(`Debug mode ${next.enabled ? "enabled" : "disabled"}`);
+    this.prompt.info(`Debug mode ${next.enabled ? "enabled" : "disabled"}`);
   }
 
   public getVersion(): string {

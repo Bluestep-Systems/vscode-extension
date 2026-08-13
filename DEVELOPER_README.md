@@ -20,7 +20,7 @@ The testing system uses **VS Code's official testing framework** with **Mocha** 
   "scripts": {
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out", 
-    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "pretest": "npm run compile-tests && npm run compile",
     "test": "vscode-test"
   },
   "devDependencies": {
@@ -55,8 +55,10 @@ export default defineConfig({
    ```bash
    npm run compile-tests  # Compile TypeScript tests → out/
    npm run compile        # Compile main code → dist/
-   npm run lint          # Run ESLint checks
    ```
+   (There is no lint step — ESLint was removed with the TypeScript 7 upgrade, since
+   `@typescript-eslint` supports `typescript <6.1.0`. `npm run format-check` is the
+   style gate, and CI runs it.)
 
 2. **Test execution** (`test` script):
    ```bash

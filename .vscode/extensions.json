@@ -1,5 +1,11 @@
 {
   // See http://go.microsoft.com/fwlink/?LinkId=827846
   // for the documentation about the extensions.json format
-  "recommendations": ["dbaeumer.vscode-eslint", "connor4312.esbuild-problem-matchers", "ms-vscode.extension-test-runner"]
+  // ESLint was dropped when this repo moved to TypeScript 7 (@typescript-eslint
+  // supports typescript <6.1.0); Prettier is the style gate now.
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "connor4312.esbuild-problem-matchers",
+    "ms-vscode.extension-test-runner"
+  ]
 }

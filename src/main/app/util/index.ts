@@ -11,7 +11,6 @@ import {
 import { IdUtility } from "@bluestep-systems/b6p-core";
 import { ScriptKey } from "@bluestep-systems/b6p-core";
 import { Err } from "@bluestep-systems/b6p-core";
-import { ScriptFactory } from "@bluestep-systems/b6p-core";
 import type { ScriptFolder } from "@bluestep-systems/b6p-core";
 import { ApiEndpoints, Http, MimeTypes } from "@bluestep-systems/b6p-core";
 import { App } from "../App";
@@ -163,7 +162,7 @@ export namespace Util {
     const url = new URL(sourceOrigin);
     let found = false;
     const curWorkspaceFolder = vscode.workspace.workspaceFolders![0]!;
-    const wsDir = await App.core.fs.readDirectory(B6PUri.fromFsPath(curWorkspaceFolder.uri.fsPath));
+    const wsDir = await App.fs.readDirectory(B6PUri.fromFsPath(curWorkspaceFolder.uri.fsPath));
 
     const folderUri = wsDir.reduce(
       (curValue, [subFolderName, _fileType]) => {
@@ -184,7 +183,7 @@ export namespace Util {
     }
     const id = new IdUtility(topId);
 
-    const ret = await id.findFileContaining(folderUri.fsPath, App.core.fs, App.core.prompt);
+    const ret = await id.findFileContaining(folderUri.fsPath, App.fs, App.prompt);
     if (!ret) {
       throw new Err.NoMatchingFileFoundError();
     }
@@ -252,7 +251,7 @@ export namespace Util {
    * @returns The raw binary content of the file.
    */
   export async function readFileRaw(uri: vscode.Uri) {
-    const fileData = await App.core.fs.readFile(B6PUri.fromFsPath(uri.fsPath));
+    const fileData = await App.fs.readFile(B6PUri.fromFsPath(uri.fsPath));
     return fileData;
   }
 
@@ -282,13 +281,13 @@ export namespace Util {
   export async function flattenDirectory(dir: ScriptFolder): Promise<B6PUri[]> {
     const result: B6PUri[] = [];
     const dirUri = dir.uri();
-    const items = await App.core.fs.readDirectory(dirUri);
+    const items = await App.fs.readDirectory(dirUri);
 
     result.push(dirUri.joinPath("/")); // include the directory itself
     for (const [name, type] of items) {
       const fullPath = dirUri.joinPath(name);
       if (type === "directory") {
-        const subFolder = ScriptFactory.createFolder(fullPath);
+        const subFolder = App.factory.createFolder(fullPath);
         result.push(...(await flattenDirectory(subFolder)));
       } else {
         result.push(fullPath);
@@ -340,12 +339,12 @@ export namespace Util {
           throw new Err.GraphQLFetchError(e);
         })) as ScriptGqlResp;
       if ((GQL_RESP as ScriptGQLBadResp).errors) {
-        App.core.prompt.error("GraphQL errors found");
+        App.prompt.error("GraphQL errors found");
         throw new Err.GraphQLError((GQL_RESP as ScriptGQLBadResp).errors);
       }
       const targetScriptRootFolderId = (GQL_RESP as ScriptGQLGoodResp).data.children[0]?.children.items[0]?.id;
       if (!targetScriptRootFolderId) {
-        App.core.prompt.error(`No script root folder found for topId: ${topId}`);
+        App.prompt.error(`No script root folder found for topId: ${topId}`);
         throw new Err.ScriptRootFolderNotFoundError(topId);
       }
       try {
@@ -358,9 +357,9 @@ export namespace Util {
       if (e instanceof Err.ScriptKeyParsingError) {
         return null;
       } else if (e instanceof Error) {
-        App.core.prompt.error(e.stack || e.message || String(e));
+        App.prompt.error(e.stack || e.message || String(e));
       } else {
-        App.core.prompt.error(String(e));
+        App.prompt.error(String(e));
       }
       throw new Err.WebdavIdFetchError(origin, topId);
     }
