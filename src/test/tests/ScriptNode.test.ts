@@ -4,14 +4,17 @@ import { App } from "../../main/app/App";
 import { MockFileSystem } from "@bluestep-systems/b6p-core";
 import { B6PUri } from "@bluestep-systems/b6p-core";
 import { ScriptFactory } from "@bluestep-systems/b6p-core";
+import type { ScriptContext } from "@bluestep-systems/b6p-core";
 import { ScriptNode } from "@bluestep-systems/b6p-core";
 import { ScriptRoot } from "@bluestep-systems/b6p-core";
 
 suite("ScriptNode Tests", () => {
   let mockFs: MockFileSystem;
   let scriptNode: ScriptNode;
+  let factory: ScriptFactory;
   let originalLogger: PropertyDescriptor | undefined;
   let originalCore: PropertyDescriptor | undefined;
+  let originalFactory: PropertyDescriptor | undefined;
 
   suiteSetup(() => {
     mockFs = new MockFileSystem();
@@ -34,14 +37,21 @@ suite("ScriptNode Tests", () => {
 
     // Override the core getter to provide our mock fs
     originalCore = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(App), "core");
-    const mockCtx = { fs: mockFs, logger: mockLogger } as unknown as Parameters<
-      typeof ScriptFactory.setDefaultContext
-    >[0];
+    const mockCtx = { fs: mockFs, logger: mockLogger } as unknown as ScriptContext;
     Object.defineProperty(App, "core", {
       get: () => mockCtx,
       configurable: true,
     });
-    ScriptFactory.setDefaultContext(mockCtx);
+
+    // b6p-core 0.5.0 removed ScriptFactory's static shims and the process-global
+    // default context they read through, so the tree under test is built from a
+    // factory bound to this suite's mock context.
+    factory = new ScriptFactory(mockCtx);
+    originalFactory = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(App), "factory");
+    Object.defineProperty(App, "factory", {
+      get: () => factory,
+      configurable: true,
+    });
   });
 
   suiteTeardown(() => {
@@ -50,6 +60,9 @@ suite("ScriptNode Tests", () => {
     }
     if (originalCore) {
       Object.defineProperty(App, "core", originalCore);
+    }
+    if (originalFactory) {
+      Object.defineProperty(App, "factory", originalFactory);
     }
   });
 
@@ -62,7 +75,7 @@ suite("ScriptNode Tests", () => {
     const mockChildUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
 
     // Create test ScriptFile
-    scriptNode = ScriptFactory.createNode(() => mockChildUri);
+    scriptNode = factory.createNode(() => mockChildUri);
 
     // Set up some default mock files
     const testContent = Buffer.from('console.log("test");');
@@ -77,7 +90,7 @@ suite("ScriptNode Tests", () => {
   suite("File Type Detection", () => {
     test("should identify draft files correctly", () => {
       const draftUri = B6PUri.fromFsPath("/test/workspace/U100002/123/draft/test-script.js");
-      const scriptFile = ScriptFactory.createFile(draftUri);
+      const scriptFile = factory.createFile(draftUri);
 
       assert.strictEqual(scriptFile.isInDraft(), true);
       assert.strictEqual(scriptFile.isInDeclarations(), false);
@@ -85,7 +98,7 @@ suite("ScriptNode Tests", () => {
 
     test("should identify declarations files correctly", () => {
       const declarationsUri = B6PUri.fromFsPath("/test/workspace/U100003/123/declarations/test-script.js");
-      const scriptFile = ScriptFactory.createFile(declarationsUri);
+      const scriptFile = factory.createFile(declarationsUri);
 
       assert.strictEqual(scriptFile.isInDeclarations(), true);
       assert.strictEqual(scriptFile.isInDraft(), false);
@@ -97,10 +110,7 @@ suite("ScriptNode Tests", () => {
       const expectedUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
       const downstairsUri = scriptNode.uri();
 
-      assert.strictEqual(
-        path.normalize(downstairsUri.fsPath),
-        path.normalize(expectedUri.fsPath)
-      );
+      assert.strictEqual(path.normalize(downstairsUri.fsPath), path.normalize(expectedUri.fsPath));
     });
   });
 
@@ -168,8 +178,8 @@ suite("ScriptNode Tests", () => {
       const uri1 = B6PUri.fromFsPath("/test/workspace/U100007/123/draft/test-script.js");
       const uri2 = B6PUri.fromFsPath("/test/workspace/U100007/123/draft/test-script.js");
 
-      const scriptFile1 = ScriptFactory.createFile(uri1);
-      const scriptFile2 = ScriptFactory.createFile(uri2);
+      const scriptFile1 = factory.createFile(uri1);
+      const scriptFile2 = factory.createFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, true);
@@ -179,8 +189,8 @@ suite("ScriptNode Tests", () => {
       const uri1 = B6PUri.fromFsPath("/test/workspace/U100007/123/draft/test-script.js");
       const uri2 = B6PUri.fromFsPath("/test/workspace/U100008/456/draft/other-script.js");
 
-      const scriptFile1 = ScriptFactory.createFile(uri1);
-      const scriptFile2 = ScriptFactory.createFile(uri2);
+      const scriptFile1 = factory.createFile(uri1);
+      const scriptFile2 = factory.createFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
@@ -190,8 +200,8 @@ suite("ScriptNode Tests", () => {
       const uri1 = B6PUri.fromFsPath("/test/workspace/U100007/123/draft/test-script.js");
       const uri2 = B6PUri.fromFsPath("/test/workspace/U100007/123/declarations/test-script.js");
 
-      const scriptFile1 = ScriptFactory.createFile(uri1);
-      const scriptFile2 = ScriptFactory.createFile(uri2);
+      const scriptFile1 = factory.createFile(uri1);
+      const scriptFile2 = factory.createFile(uri2);
 
       const areEqual = scriptFile1.equals(scriptFile2);
       assert.strictEqual(areEqual, false);
@@ -207,7 +217,7 @@ suite("ScriptNode Tests", () => {
 
     test("should allow overwriting script root for non-metadata files", () => {
       const newUri = B6PUri.fromFsPath("/test/workspace/U100008/456/draft/new-script.js");
-      const newRoot = ScriptFactory.createScriptRoot(newUri);
+      const newRoot = factory.createScriptRoot(newUri);
 
       const result = scriptNode.withScriptRoot(newRoot);
 
@@ -217,9 +227,9 @@ suite("ScriptNode Tests", () => {
 
     test("should throw error when trying to overwrite script root of metadata file", () => {
       const metadataUri = B6PUri.fromFsPath("/test/workspace/U100004/123/.gitignore");
-      const metadataFile = ScriptFactory.createFile(metadataUri);
+      const metadataFile = factory.createFile(metadataUri);
       const newChildUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/other.js");
-      const newRoot = ScriptFactory.createScriptRoot(newChildUri);
+      const newRoot = factory.createScriptRoot(newChildUri);
 
       assert.throws(() => {
         metadataFile.withScriptRoot(newRoot);
@@ -259,7 +269,7 @@ suite("ScriptNode Tests", () => {
       // REASON-FOR-ANY: Accessing private property for test verification
       const originalParser = (scriptNode as any).parser;
       const newUri = B6PUri.fromFsPath("/test/workspace/U100006/9999/draft/different.js");
-      const newScriptFile = ScriptFactory.createFile(newUri);
+      const newScriptFile = factory.createFile(newUri);
       // REASON-FOR-ANY: Accessing private property for test verification
       const newParser = (newScriptFile as any).parser;
 
@@ -302,13 +312,13 @@ suite("ScriptNode Tests", () => {
       const metadataUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/.b6p_metadata.json");
 
       assert.throws(() => {
-        ScriptFactory.createFile(() => metadataUri);
+        factory.createFile(() => metadataUri);
       }, /Invalid type segment: .b6p_metadata.json/);
     });
 
     test("should return reason for declarations files", async () => {
       const declarationsUri = B6PUri.fromFsPath("/test/workspace/U123456/1466960/declarations/test.js");
-      const declarationsFile = ScriptFactory.createFile(declarationsUri);
+      const declarationsFile = factory.createFile(declarationsUri);
 
       const reason = await declarationsFile.getReasonToNotPush();
 
@@ -358,7 +368,7 @@ suite("ScriptNode Tests", () => {
         size: testContent.length,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       // Run multiple hash calculations concurrently
       const hashPromises = [];
@@ -383,7 +393,7 @@ suite("ScriptNode Tests", () => {
         size: 100,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       // Run multiple existence checks concurrently
       const existencePromises = [];
@@ -413,7 +423,7 @@ suite("ScriptNode Tests", () => {
         size: largeContent.length,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       // Should handle large files without error
       const hash = await scriptFile.getHash();
@@ -434,7 +444,7 @@ suite("ScriptNode Tests", () => {
         size: binaryContent.length,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       // Should handle binary content
       const hash = await scriptFile.getHash();
@@ -455,7 +465,7 @@ suite("ScriptNode Tests", () => {
         size: 0,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       const hash = await scriptFile.getHash();
       assert.ok(hash, "Should generate hash for empty file");
@@ -473,7 +483,7 @@ suite("ScriptNode Tests", () => {
         size: Buffer.from(unicodeContent, "utf8").length,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       const hash = await scriptFile.getHash();
       assert.ok(hash, "Should generate hash for Unicode file");
@@ -491,7 +501,7 @@ suite("ScriptNode Tests", () => {
         size: 4,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       const exists = await scriptFile.exists();
       assert.strictEqual(exists, true, "Should handle very long file paths");
@@ -508,7 +518,7 @@ suite("ScriptNode Tests", () => {
         size: 4,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       const exists = await scriptFile.exists();
       assert.strictEqual(exists, true, "Should handle special characters in file names");
@@ -525,7 +535,7 @@ suite("ScriptNode Tests", () => {
         size: 10,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       // Perform many operations in rapid succession
       const operations = [];
@@ -560,7 +570,7 @@ suite("ScriptNode Tests", () => {
       // Create multiple ScriptNode instances for the same URI
       const scriptFiles = [];
       for (let i = 0; i < 10; i++) {
-        scriptFiles.push(ScriptFactory.createFile(testUri));
+        scriptFiles.push(factory.createFile(testUri));
       }
 
       // All instances should behave consistently
@@ -591,7 +601,7 @@ suite("ScriptNode Tests", () => {
           size: 10,
         });
 
-        const scriptFile = ScriptFactory.createFile(testUri);
+        const scriptFile = factory.createFile(testUri);
 
         // Perform operations
         await scriptFile.exists();
@@ -617,7 +627,7 @@ suite("ScriptNode Tests", () => {
         size: largeContent.length,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       // Process the large content
       const hash = await scriptFile.getHash();
@@ -640,7 +650,7 @@ suite("ScriptNode Tests", () => {
         size: testContent.length,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
       const hash = await scriptFile.getHash();
 
       assert.ok(hash, "Hash should be calculated");
@@ -653,7 +663,7 @@ suite("ScriptNode Tests", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/nonexistent.js");
       mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error("File not found"));
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       await assert.rejects(
         async () => await scriptFile.getHash(),
@@ -680,8 +690,8 @@ suite("ScriptNode Tests", () => {
         size: testContent.length,
       });
 
-      const scriptFile1 = ScriptFactory.createFile(testUri1);
-      const scriptFile2 = ScriptFactory.createFile(testUri2);
+      const scriptFile1 = factory.createFile(testUri1);
+      const scriptFile2 = factory.createFile(testUri2);
 
       const hash1 = await scriptFile1.getHash();
       const hash2 = await scriptFile2.getHash();
@@ -708,8 +718,8 @@ suite("ScriptNode Tests", () => {
         size: testContent2.length,
       });
 
-      const scriptFile1 = ScriptFactory.createFile(testUri1);
-      const scriptFile2 = ScriptFactory.createFile(testUri2);
+      const scriptFile1 = factory.createFile(testUri1);
+      const scriptFile2 = factory.createFile(testUri2);
 
       const hash1 = await scriptFile1.getHash();
       const hash2 = await scriptFile2.getHash();
@@ -721,7 +731,7 @@ suite("ScriptNode Tests", () => {
   suite("ScriptFile Extension and Type Detection", () => {
     test("should correctly identify TypeScript files", () => {
       const tsUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.ts");
-      const scriptFile = ScriptFactory.createFile(tsUri);
+      const scriptFile = factory.createFile(tsUri);
 
       assert.strictEqual(scriptFile.extension, ".ts", "Should identify .ts extension");
       assert.strictEqual(scriptFile.shouldCopyRaw(), false, "TypeScript files should not be copied raw");
@@ -729,7 +739,7 @@ suite("ScriptNode Tests", () => {
 
     test("should correctly identify TypeScript JSX files", () => {
       const tsxUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/component.tsx");
-      const scriptFile = ScriptFactory.createFile(tsxUri);
+      const scriptFile = factory.createFile(tsxUri);
 
       assert.strictEqual(scriptFile.extension, ".tsx", "Should identify .tsx extension");
       // Note: .tsx is not .ts so it gets copied raw according to shouldCopyRaw logic
@@ -738,7 +748,7 @@ suite("ScriptNode Tests", () => {
 
     test("should correctly identify JavaScript files", () => {
       const jsUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
-      const scriptFile = ScriptFactory.createFile(jsUri);
+      const scriptFile = factory.createFile(jsUri);
 
       assert.strictEqual(scriptFile.extension, ".js", "Should identify .js extension");
       assert.strictEqual(scriptFile.shouldCopyRaw(), true, "JavaScript files should be copied raw");
@@ -746,7 +756,7 @@ suite("ScriptNode Tests", () => {
 
     test("should correctly identify JSON files", () => {
       const jsonUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/data.json");
-      const scriptFile = ScriptFactory.createFile(jsonUri);
+      const scriptFile = factory.createFile(jsonUri);
 
       assert.strictEqual(scriptFile.extension, ".json", "Should identify .json extension");
       assert.strictEqual(scriptFile.shouldCopyRaw(), true, "JSON files should be copied raw");
@@ -754,7 +764,7 @@ suite("ScriptNode Tests", () => {
 
     test("should correctly identify Markdown files", () => {
       const mdUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/README.md");
-      const scriptFile = ScriptFactory.createFile(mdUri);
+      const scriptFile = factory.createFile(mdUri);
 
       assert.strictEqual(scriptFile.extension, ".md", "Should identify .md extension");
       assert.strictEqual(scriptFile.isMarkdown(), true, "Should identify as markdown");
@@ -763,14 +773,14 @@ suite("ScriptNode Tests", () => {
 
     test("should correctly identify tsconfig.json files", () => {
       const tsconfigUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/tsconfig.json");
-      const scriptFile = ScriptFactory.createFile(tsconfigUri);
+      const scriptFile = factory.createFile(tsconfigUri);
 
       assert.strictEqual(scriptFile.isTsConfig(), true, "Should identify tsconfig.json");
     });
 
     test("should handle case-insensitive extension matching", () => {
       const upperUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.JS");
-      const scriptFile = ScriptFactory.createFile(upperUri);
+      const scriptFile = factory.createFile(upperUri);
 
       assert.strictEqual(scriptFile.extension, ".js", "Extension should be lowercase");
     });
@@ -779,21 +789,21 @@ suite("ScriptNode Tests", () => {
   suite("ScriptFile Name Operations", () => {
     test("should extract file name correctly", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/myfile.js");
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       assert.strictEqual(scriptFile.name(), "myfile.js", "Should extract correct file name");
     });
 
     test("should handle files with multiple dots in name", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.spec.ts");
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       assert.strictEqual(scriptFile.name(), "test.spec.ts", "Should handle multiple dots correctly");
     });
 
     test("should handle files with no extension", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/Makefile");
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       assert.strictEqual(scriptFile.name(), "Makefile", "Should handle files without extension");
       assert.strictEqual(scriptFile.extension, "", "Extension should be empty for extensionless files");
@@ -801,7 +811,7 @@ suite("ScriptNode Tests", () => {
 
     test("should handle hidden files", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/.gitignore");
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       assert.strictEqual(scriptFile.name(), ".gitignore", "Should handle hidden files");
     });
@@ -810,21 +820,21 @@ suite("ScriptNode Tests", () => {
   suite("ScriptFolder Operations", () => {
     test("should get folder name correctly", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/scripts");
-      const scriptFolder = ScriptFactory.createFolder(folderUri);
+      const scriptFolder = factory.createFolder(folderUri);
 
       assert.strictEqual(scriptFolder.name(), "scripts", "Should extract correct folder name");
     });
 
     test("should detect folder path correctly", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const scriptFolder = ScriptFactory.createFolder(folderUri);
+      const scriptFolder = factory.createFolder(folderUri);
 
       assert.ok(scriptFolder.path().includes("draft"), "Folder path should contain folder name");
     });
 
     test("should create child folder correctly", () => {
       const parentUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const parentFolder = ScriptFactory.createFolder(parentUri);
+      const parentFolder = factory.createFolder(parentUri);
 
       const childFolder = parentFolder.getChildFolder("scripts");
 
@@ -837,8 +847,8 @@ suite("ScriptNode Tests", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
       const fileUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
 
-      const folder = ScriptFactory.createFolder(folderUri);
-      const file = ScriptFactory.createFile(fileUri);
+      const folder = factory.createFolder(folderUri);
+      const file = factory.createFile(fileUri);
 
       assert.strictEqual(folder.contains(file), true, "Folder should contain file in its path");
     });
@@ -847,8 +857,8 @@ suite("ScriptNode Tests", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
       const fileUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/declarations/test.js");
 
-      const folder = ScriptFactory.createFolder(folderUri);
-      const file = ScriptFactory.createFile(fileUri);
+      const folder = factory.createFolder(folderUri);
+      const file = factory.createFile(fileUri);
 
       assert.strictEqual(folder.contains(file), false, "Folder should not contain file outside its path");
     });
@@ -857,8 +867,8 @@ suite("ScriptNode Tests", () => {
       const uri1 = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
       const uri2 = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
 
-      const folder1 = ScriptFactory.createFolder(uri1);
-      const folder2 = ScriptFactory.createFolder(uri2);
+      const folder1 = factory.createFolder(uri1);
+      const folder2 = factory.createFolder(uri2);
 
       assert.strictEqual(folder1.equals(folder2), true, "Same folder paths should be equal");
     });
@@ -867,15 +877,15 @@ suite("ScriptNode Tests", () => {
       const uri1 = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
       const uri2 = B6PUri.fromFsPath("/test/workspace/U100001/1466960/declarations");
 
-      const folder1 = ScriptFactory.createFolder(uri1);
-      const folder2 = ScriptFactory.createFolder(uri2);
+      const folder1 = factory.createFolder(uri1);
+      const folder2 = factory.createFolder(uri2);
 
       assert.strictEqual(folder1.equals(folder2), false, "Different folder paths should not be equal");
     });
 
     test("should get immediate child file", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const folder = ScriptFactory.createFolder(folderUri);
+      const folder = factory.createFolder(folderUri);
 
       const childFile = folder.getImmediateChildFile("test.js");
 
@@ -885,7 +895,7 @@ suite("ScriptNode Tests", () => {
 
     test("should get immediate child node", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const folder = ScriptFactory.createFolder(folderUri);
+      const folder = factory.createFolder(folderUri);
 
       const childNode = folder.getImmediateChildNode("test.js");
 
@@ -895,7 +905,7 @@ suite("ScriptNode Tests", () => {
 
     test("should get immediate child folder", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const folder = ScriptFactory.createFolder(folderUri);
+      const folder = factory.createFolder(folderUri);
 
       const childFolder = folder.getImmediateChildFolder("scripts");
 
@@ -905,7 +915,7 @@ suite("ScriptNode Tests", () => {
 
     test("should throw MethodNotImplementedError for currentIntegrityMatches", async () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const folder = ScriptFactory.createFolder(folderUri);
+      const folder = factory.createFolder(folderUri);
 
       await assert.rejects(
         async () => await folder.currentIntegrityMatches(),
@@ -916,7 +926,7 @@ suite("ScriptNode Tests", () => {
 
     test("should throw MethodNotImplementedError for upstairsUrl", async () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const folder = ScriptFactory.createFolder(folderUri);
+      const folder = factory.createFolder(folderUri);
 
       await assert.rejects(
         async () => await folder.upstairsUrl(),
@@ -927,7 +937,7 @@ suite("ScriptNode Tests", () => {
 
     test("should return teapot status for folder upload", async () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const folder = ScriptFactory.createFolder(folderUri);
+      const folder = factory.createFolder(folderUri);
 
       const response = await folder.upload();
 
@@ -936,7 +946,7 @@ suite("ScriptNode Tests", () => {
 
     test("should return teapot status for folder download", async () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft");
-      const folder = ScriptFactory.createFolder(folderUri);
+      const folder = factory.createFolder(folderUri);
 
       const response = await folder.download();
 
@@ -948,7 +958,7 @@ suite("ScriptNode Tests", () => {
   suite("ScriptNode Folder Operations", () => {
     test("should get parent folder correctly", () => {
       const fileUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
-      const scriptFile = ScriptFactory.createFile(fileUri);
+      const scriptFile = factory.createFile(fileUri);
 
       const parentFolder = scriptFile.folder();
 
@@ -967,7 +977,7 @@ suite("ScriptNode Tests", () => {
         size: fileContent.length,
       });
 
-      const scriptNode = ScriptFactory.createNode(fileUri);
+      const scriptNode = factory.createNode(fileUri);
 
       const isFile = await scriptNode.isFile();
       const isFolder = await scriptNode.isFolder();
@@ -986,7 +996,7 @@ suite("ScriptNode Tests", () => {
         size: 0,
       });
 
-      const scriptNode = ScriptFactory.createNode(folderUri);
+      const scriptNode = factory.createNode(folderUri);
 
       const isFolder = await scriptNode.isFolder();
       const isFile = await scriptNode.isFile();
@@ -1008,7 +1018,7 @@ suite("ScriptNode Tests", () => {
 
       mockFs.setMockStat(B6PUri.fromFsPath(testUri.fsPath), mockStat);
 
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
       const stat = await scriptNode.stat();
 
       assert.ok(stat, "Stat should not be null");
@@ -1022,7 +1032,7 @@ suite("ScriptNode Tests", () => {
 
       mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error("File not found"));
 
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
       const stat = await scriptNode.stat();
 
       assert.strictEqual(stat, null, "Stat should be null for non-existent file");
@@ -1034,7 +1044,7 @@ suite("ScriptNode Tests", () => {
 
       mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(testContent));
 
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
       const contents = await scriptNode.readContents();
 
       assert.ok(contents instanceof Uint8Array, "Should return Uint8Array");
@@ -1053,7 +1063,7 @@ suite("ScriptNode Tests", () => {
         size: testContent.length,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
       const content = await scriptFile.getDownstairsContent();
 
       assert.strictEqual(content, testContent, "Content should match original text");
@@ -1064,7 +1074,7 @@ suite("ScriptNode Tests", () => {
 
       mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error("File not found"));
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
 
       await assert.rejects(
         async () => await scriptFile.getDownstairsContent(),
@@ -1077,21 +1087,21 @@ suite("ScriptNode Tests", () => {
   suite("ScriptNode Path Operations", () => {
     test("should get URI correctly", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
 
       assert.strictEqual(scriptNode.uri().toString(), testUri.toString(), "URI should match");
     });
 
     test("should get path correctly", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
 
       assert.strictEqual(scriptNode.path(), testUri.fsPath, "Path should match URI fsPath");
     });
 
     test("should handle Unix-style paths", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100009/someName/draft/test.js");
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
 
       assert.ok(scriptNode.path(), "Should handle Unix paths");
       assert.strictEqual(scriptNode.uri().scheme, "file", "Should be file scheme");
@@ -1101,21 +1111,21 @@ suite("ScriptNode Tests", () => {
   suite("ScriptNode Snapshot Type Detection", () => {
     test("should detect snapshot files correctly", () => {
       const snapshotUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/snapshot/test.js");
-      const scriptFile = ScriptFactory.createFile(snapshotUri);
+      const scriptFile = factory.createFile(snapshotUri);
 
       assert.strictEqual(scriptFile.isInSnapshot(), true, "Should identify snapshot files");
     });
 
     test("should detect non-snapshot files correctly", () => {
       const draftUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
-      const scriptFile = ScriptFactory.createFile(draftUri);
+      const scriptFile = factory.createFile(draftUri);
 
       assert.strictEqual(scriptFile.isInSnapshot(), false, "Draft files should not be snapshots");
     });
 
     test("should detect declarations are not snapshots", () => {
       const declarationsUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/declarations/test.js");
-      const scriptFile = ScriptFactory.createFile(declarationsUri);
+      const scriptFile = factory.createFile(declarationsUri);
 
       assert.strictEqual(scriptFile.isInSnapshot(), false, "Declarations should not be snapshots");
     });
@@ -1124,42 +1134,42 @@ suite("ScriptNode Tests", () => {
   suite("ScriptFactory Node Creation", () => {
     test("should create file when URI does not end with slash", () => {
       const fileUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
-      const node = ScriptFactory.createNode(fileUri);
+      const node = factory.createNode(fileUri);
 
       assert.ok(node.constructor.name.includes("File"), "Should create ScriptFile");
     });
 
     test("should create folder when URI ends with slash", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/");
-      const node = ScriptFactory.createNode(folderUri);
+      const node = factory.createNode(folderUri);
 
       assert.ok(node.constructor.name.includes("Folder"), "Should create ScriptFolder");
     });
 
     test("should create file with function supplier", () => {
       const fileUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
-      const node = ScriptFactory.createNode(() => fileUri);
+      const node = factory.createNode(() => fileUri);
 
       assert.ok(node.constructor.name.includes("File"), "Should create ScriptFile from supplier");
     });
 
     test("should create folder with function supplier", () => {
       const folderUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/");
-      const node = ScriptFactory.createNode(() => folderUri);
+      const node = factory.createNode(() => folderUri);
 
       assert.ok(node.constructor.name.includes("Folder"), "Should create ScriptFolder from supplier");
     });
 
     test("should create explicit file regardless of path format", () => {
       const uri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/folder");
-      const file = ScriptFactory.createFile(uri);
+      const file = factory.createFile(uri);
 
       assert.ok(file.constructor.name.includes("File"), "Should explicitly create ScriptFile");
     });
 
     test("should create explicit folder regardless of path format", () => {
       const uri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
-      const folder = ScriptFactory.createFolder(uri);
+      const folder = factory.createFolder(uri);
 
       assert.ok(folder.constructor.name.includes("Folder"), "Should explicitly create ScriptFolder");
     });
@@ -1170,7 +1180,7 @@ suite("ScriptNode Tests", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/error.js");
       mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error("Permission denied"));
 
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
       const stat = await scriptNode.stat();
 
       assert.strictEqual(stat, null, "Should return null on stat error");
@@ -1180,7 +1190,7 @@ suite("ScriptNode Tests", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/missing.js");
       mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error("File not found"));
 
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
 
       await assert.rejects(
         async () => await scriptNode.lastModifiedTime(),
@@ -1193,7 +1203,7 @@ suite("ScriptNode Tests", () => {
       const testUri = B6PUri.fromFsPath("/test/workspace/U100001/1466960/draft/test.js");
       mockFs.setMockError(B6PUri.fromFsPath(testUri.fsPath), new Error("Unknown error"));
 
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
 
       await assert.rejects(
         async () => await scriptNode.isFolder(),
@@ -1221,7 +1231,7 @@ suite("ScriptNode Tests", () => {
         size: 11,
       });
 
-      const scriptFile = ScriptFactory.createFile(testUri);
+      const scriptFile = factory.createFile(testUri);
       const isIgnored = await scriptFile.isInGitIgnore();
 
       assert.strictEqual(isIgnored, true, "Should detect file matching .gitignore pattern");
@@ -1236,7 +1246,7 @@ suite("ScriptNode Tests", () => {
 
       mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(buffer));
 
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
       await scriptNode.writeContent(buffer);
 
       // Verify write was called (in actual implementation)
@@ -1249,7 +1259,7 @@ suite("ScriptNode Tests", () => {
 
       mockFs.setMockFile(B6PUri.fromFsPath(testUri.fsPath), Buffer.from(emptyBuffer));
 
-      const scriptNode = ScriptFactory.createNode(testUri);
+      const scriptNode = factory.createNode(testUri);
       await scriptNode.writeContent(emptyBuffer);
 
       assert.ok(true, "Should handle empty content writes");

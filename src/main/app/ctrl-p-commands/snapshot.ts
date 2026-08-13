@@ -1,7 +1,6 @@
 import { SourceOps } from "@bluestep-systems/b6p-core";
 import { App } from "../App";
 import { Util } from "../util";
-import { ScriptFactory } from "@bluestep-systems/b6p-core";
 import { B6PUri } from "@bluestep-systems/b6p-core";
 import pushCurrent from "./pushCurrent";
 export default async function snapshot({
@@ -17,9 +16,9 @@ export default async function snapshot({
     // "contextual" meaning currently open or determined from sourceOps
     const contextualUri = await Util.getDownstairsFileUri(sourceOps);
     App.logger.info("Contextual URI determined to be:", contextualUri?.toString() ?? "undefined");
-    const sf = ScriptFactory.createFile(B6PUri.fromFsPath(contextualUri.fsPath));
+    const sf = App.factory.createFile(B6PUri.fromFsPath(contextualUri.fsPath));
     const sr = sf.getScriptRoot();
-    const message = await App.core.prompt.inputBox({
+    const message = await App.prompt.inputBox({
       prompt: "Snapshot commit message (optional)",
     });
     if (message === undefined) {
@@ -27,6 +26,6 @@ export default async function snapshot({
     }
     await pushCurrent({ isSnapshot: true, sr, message });
   } catch (e) {
-    App.core.prompt.error("Error during snapshot: " + (e instanceof Error ? e.message : e));
+    App.prompt.error("Error during snapshot: " + (e instanceof Error ? e.message : e));
   }
 }

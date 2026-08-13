@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
-import type { ILogger } from "@bluestep-systems/b6p-core";
+import type { Logger } from "@bluestep-systems/b6p-core";
 
 /**
  * VSCode implementation of the logger provider.
  * Wraps a vscode.OutputChannel.
  */
-export class VscodeLogger implements ILogger {
+export class VscodeLogger implements Logger {
   constructor(private readonly channel: vscode.OutputChannel) {}
 
   info(...args: unknown[]): void {

@@ -12,9 +12,10 @@ This repository is the **VS Code layer only**. The vscode-free engine — `B6PCo
 
 ### Core Components
 
-- **App singleton** (`src/main/app/App.ts`): Root context manager that initializes all services and command registration
-- **VS Code providers** (`src/main/providers/`): VS Code implementations of the core's provider interfaces — `VscodeFileSystem`, `VscodeLogger`, `VscodeProgress`, `VscodePrompt` — injected into `B6PCore`
-- **Command handlers** (`src/main/app/ctrl-p-commands/`): one file per command palette action
+- **App singleton** (`src/main/app/App.ts`): the composition root. It initializes all services and command registration, and **owns** the provider implementations — `B6PCore` keeps its copies private since core 0.5.0, so `App.fs` / `App.prompt` / `App.logger` / `App.progress` are the only way to reach them
+- **VS Code providers** (`src/main/providers/`): VS Code implementations of the core's provider interfaces — `VscodeFileSystem`, `VscodeLogger`, `VscodeProgress`, `VscodePrompt` — bundled as `VscodeProviders` and injected into `B6PCore`
+- **`App.scriptContext` / `App.factory`**: the script subsystem's dependency bundle (held, never implemented) and a `ScriptFactory` bound to it. Core 0.5.0 removed `ScriptFactory`'s static `create*` shims and the process-global default context, so **every** node/file/folder/root construction goes through `App.factory`
+- **Command handlers** (`src/main/app/ctrl-p-commands/`): one file per command palette action. Script operations call `App.core.script.*` (`push`, `pull`, `audit`, `auditPull`, `deploy`, …), not `App.core.*`
 - **SessionManager / ContextNode** (in `@bluestep-systems/b6p-core`): authentication, CSRF tokens, HTTP session management, and the base class for components requiring context and persistence
 
 ### Key Patterns
@@ -50,7 +51,7 @@ npm run package-extension  # Create .vsix package
 ### Testing
 - Use VS Code's "Run Test Environment" from Run panel
 - Tests in `src/test/tests/` directory (e.g., `extension.test.ts`, `ScriptNode.test.ts`, `ScriptRoot.test.ts`)
-- `npm run pretest` builds and lints before testing
+- `npm run pretest` compiles the tests and the main bundle before testing
 - Test framework: Mocha with VS Code's built-in test runner
 - **Mocking limitations**: VS Code file system APIs are read-only and cannot be directly mocked
 - Focus tests on logic that doesn't require file system operations, or use integration tests
@@ -63,7 +64,12 @@ npm run package-extension  # Create .vsix package
 ## Critical Conventions
 
 ### Authentication & Sessions
-- **BasicAuthManager**: Singleton managing credentials per "flag" (authentication profile)
+- **BearerAuthProvider** (in core, 0.5.0+): holds one opaque bearer token in secret storage under
+  `bearerAuth` and renders `Authorization: Bearer <token>`. It replaced the old basic-auth pair with
+  no migration path, so the user is prompted for a token on first use after the upgrade. Reach it as
+  `App.auth`, typed `AuthProvider<AuthParams>` — scheme-agnostic on purpose; core drives the whole
+  credential lifecycle (`getOrCreate` / `createNew` / `update` / `clear` / `hasCredentials`) through
+  that interface and never inspects the credentials themselves
 - **SessionManager**: Handles WebDAV authentication, CSRF token management, and cookie persistence
 - Session flow: Login → CSRF token extraction → Request retry with tokens
 - Custom `csrfFetch()` with automatic retry and re-authentication
@@ -95,7 +101,14 @@ npm run package-extension  # Create .vsix package
 - Commands, settings, and views all defined in `package.json` contributes
 
 ### External Dependencies
-- `fast-xml-parser`: WebDAV response parsing
+- `@bluestep-systems/b6p-core` (`^0.5.0`): the vscode-free engine, from public npm, bundled into the
+  `.vsix`. It ships its own pinned `typescript@5.9.2` as a **runtime** dependency — `ScriptTranspiler`
+  drives the classic compiler API, which TypeScript 7 does not expose — nested under its own
+  `node_modules` because this repo's root TypeScript is 7.x
+- `fast-xml-parser` (`^5.10.1`): WebDAV response parsing. The floor is above
+  [GHSA-8r6m-32jq-jx6q](https://github.com/advisories/GHSA-8r6m-32jq-jx6q); do not lower it
+- `typescript` (`^7.0.2`, dev): type-checks and compiles the tests. No ESLint — `@typescript-eslint`
+  supports `typescript <6.1.0` and crashes on 7; Prettier's `format-check` is the CI style gate
 - esbuild: Production bundling with watch mode
 - Built-in fetch for HTTP requests (no external HTTP library)
 

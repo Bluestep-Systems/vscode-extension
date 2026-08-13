@@ -35,9 +35,9 @@ npm install                # install dependencies (b6p-core from public npm)
 npm run compile            # type-check + esbuild bundle → dist/extension.js
 npm run watch              # rebuild on change
 npm test                   # full extension test suite
-npm run check-types        # tsc --noEmit
-npm run lint               # eslint
+npm run check-types        # tsc --noEmit (TypeScript 7, the native Go compiler)
 npm run format             # prettier --write
+npm run format-check       # prettier --check (gated in CI)
 npm run package-extension  # build the .vsix at the repo root
 ./build-vsix.sh            # full release flow → releases/bsjs-push-pull-X.Y.Z.vsix
 ```

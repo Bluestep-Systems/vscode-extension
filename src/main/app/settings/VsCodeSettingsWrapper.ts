@@ -82,7 +82,7 @@ export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persist
         try {
           config.update(key, value, vscode.ConfigurationTarget.Global);
         } catch (e) {
-          App.core.prompt.error(`Error updating settings key ${key}: ${e}`);
+          App.prompt.error(`Error updating settings key ${key}: ${e}`);
           throw e;
         }
       }
@@ -142,7 +142,7 @@ export class VsCodeSettingsWrapper extends TypedMap<Settings> implements Persist
               return new URL(parts[1]);
             } catch (e) {
               App.logger.error("Invalid anyDomainOverrideUrl in debugMode settings:", parts[1]);
-              App.core.prompt.info("Invalid anyDomainOverrideUrl in debugMode settings. Please fix it.");
+              App.prompt.info("Invalid anyDomainOverrideUrl in debugMode settings. Please fix it.");
             }
           }
         }

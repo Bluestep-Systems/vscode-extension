@@ -1,0 +1,10 @@
+# Normalize line endings to LF in the working tree on every platform.
+#
+# Prettier's `endOfLine` default is "lf", and `npm run format-check` is the CI style
+# gate. Without this, a Windows runner checks out CRLF (core.autocrlf=true is the
+# default there) and Prettier reports every file as unformatted — which is exactly
+# what happened the first time format-check ran in CI, flagging 50 files that are
+# byte-identical to what Prettier writes on Linux/macOS.
+#
+# `text=auto` still lets git detect binaries (images, .vsix), so those are untouched.
+* text=auto eol=lf

@@ -10,7 +10,7 @@ let activePull: Promise<void> | null = null;
  */
 export default async function (overrideFormulaUri?: string): Promise<void> {
   if (activePull !== null) {
-    App.core.prompt.warn("A pull operation is already in progress");
+    App.prompt.warn("A pull operation is already in progress");
     return;
   }
   activePull = pullImpl(overrideFormulaUri);
@@ -26,17 +26,17 @@ async function pullImpl(overrideFormulaUri?: string): Promise<void> {
     const workspacePath = Util.getActiveWorkspaceFolderUri().fsPath;
 
     // Use B6PCore for the pull operation (handles all business logic)
-    await App.core.pull({
+    await App.core.script.pull({
       formulaUrl: overrideFormulaUri, // Will prompt if undefined
       workspacePath,
     });
 
     // Show completion message (unless squelched)
     if (!App.settings.get("squelch").pullComplete) {
-      App.core.prompt.info("Pull complete!");
+      App.prompt.info("Pull complete!");
     }
   } catch (e) {
-    App.core.prompt.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);
+    App.prompt.error(`Error pulling files: ${e instanceof Error ? e.stack || e.message || e : e}`);
     throw e;
   }
 }

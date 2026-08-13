@@ -41,7 +41,7 @@ concurrency:
 # ENVIRONMENT VARIABLES
 # ============================================================================
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   ARTIFACT_RETENTION_DAYS: 30
   VSIX_ARTIFACT_NAME: vsix-package
   # Security: Use commit SHAs instead of version tags for actions
@@ -67,7 +67,7 @@ jobs:
       fail-fast: false  # Continue testing on other platforms even if one fails
       matrix:
         os: [windows-latest, macos-latest]
-        node: ['20']  
+        node: ['22']  
 
     outputs:
       tests-passed: ${{ steps.test-status.outputs.passed }}
@@ -123,10 +123,11 @@ jobs:
         run: npm run check-types
 
       # ----------------------------------------------------------------------
-      # Linting with problem matchers
+      # Style gate. ESLint was removed with the TypeScript 7 upgrade
+      # (@typescript-eslint supports typescript <6.1.0); Prettier gates style now.
       # ----------------------------------------------------------------------
-      - name: Lint code
-        run: npm run lint
+      - name: Format check
+        run: npm run format-check
 
       # ----------------------------------------------------------------------
       # Run tests with coverage reporting

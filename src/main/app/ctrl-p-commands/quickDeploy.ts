@@ -11,7 +11,7 @@ import push from "./push";
 export default async function (): Promise<void> {
   const activeTextEditor = vscode.window.activeTextEditor;
   if (activeTextEditor === undefined) {
-    App.core.prompt.error("No active text editor found");
+    App.prompt.error("No active text editor found");
     return;
   }
   const curText = activeTextEditor.document.getText();
@@ -19,7 +19,7 @@ export default async function (): Promise<void> {
   const getArgs = eval(curText) as () => { recipientOrgs: string[]; topIds: string[]; sourceOrigin: string };
 
   if (typeof getArgs !== "function") {
-    App.core.prompt.error("getArgs is not a function!");
+    App.prompt.error("getArgs is not a function!");
     return;
   }
   const { recipientOrgs, topIds, sourceOrigin } = getArgs();
@@ -41,7 +41,7 @@ export default async function (): Promise<void> {
             });
             return { origin, topId, webDavId };
           } else {
-            App.core.prompt.error(`Could not find script at ${origin} with topId ${topId}`);
+            App.prompt.error(`Could not find script at ${origin} with topId ${topId}`);
             throw new Err.ScriptNotFoundError(origin, topId);
           }
         },
@@ -50,10 +50,10 @@ export default async function (): Promise<void> {
     }
   }
 
-  await App.core.progress.withProgress(deployTasks, {
+  await App.progress.withProgress(deployTasks, {
     title: "Doing Quick Deploy...",
     showItemCount: true,
   });
 
-  App.core.prompt.info("Quick Deploy complete!");
+  App.prompt.info("Quick Deploy complete!");
 }

@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { App } from "../App";
 import { Util } from "../util";
-import { ScriptFactory } from "@bluestep-systems/b6p-core";
 import { B6PUri } from "@bluestep-systems/b6p-core";
 import type { ScriptRoot } from "@bluestep-systems/b6p-core";
 
@@ -19,7 +18,7 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot; mes
       if (activeEditorUri === undefined) {
         return;
       }
-      actual_sr = ScriptFactory.createScriptRoot(B6PUri.fromFsPath(activeEditorUri.fsPath));
+      actual_sr = App.factory.createScriptRoot(B6PUri.fromFsPath(activeEditorUri.fsPath));
     }
 
     // Check for unsaved changes
@@ -40,7 +39,7 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot; mes
     }
 
     // Use B6PCore for pushCurrent
-    await App.core.pushCurrent({
+    await App.core.script.pushCurrent({
       filePath: actual_sr.getRootUri().fsPath,
       snapshot: args?.isSnapshot ?? false,
       message: args?.message,
@@ -49,7 +48,7 @@ export default async function (args?: { isSnapshot: boolean; sr: ScriptRoot; mes
     // Success message shown by B6PCore
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    App.core.prompt.error(`Error pushing current file: ${message}`);
+    App.prompt.error(`Error pushing current file: ${message}`);
     App.logger.error("Push current file error:", e);
   }
 }

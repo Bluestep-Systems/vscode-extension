@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
-import type { IFileSystem, FileStat } from "@bluestep-systems/b6p-core";
+import type { FileSystem, FileStat } from "@bluestep-systems/b6p-core";
 import { B6PUri } from "@bluestep-systems/b6p-core";
 
 /**
  * VSCode implementation of the file system provider.
  * Wraps vscode.workspace.fs APIs.
  */
-export class VscodeFileSystem implements IFileSystem {
+export class VscodeFileSystem implements FileSystem {
   /** Convert B6PUri to vscode.Uri */
   private toVscodeUri(uri: B6PUri): vscode.Uri {
     if (uri.isFile) {
@@ -20,7 +20,7 @@ export class VscodeFileSystem implements IFileSystem {
     if (uri.scheme === "file") {
       return B6PUri.fromFsPath(uri.fsPath);
     }
-    return B6PUri.fromUrl(uri.toString());
+    return B6PUri.fromString(uri.toString());
   }
 
   async readFile(uri: B6PUri): Promise<Uint8Array> {

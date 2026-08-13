@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { IProgress, ProgressTask } from "@bluestep-systems/b6p-core";
+import type { Progress, ProgressTask } from "@bluestep-systems/b6p-core";
 
 interface ProgressOptions {
   title: string;
@@ -13,7 +13,7 @@ interface ProgressOptions {
  * VSCode implementation of the progress provider.
  * Provides progress indication for tasks using VS Code's native progress API.
  */
-export class VscodeProgress implements IProgress {
+export class VscodeProgress implements Progress {
   async withProgress<T>(
     tasks: ProgressTask<T>[],
     options: { title: string; showItemCount?: boolean; cleanupMessage?: string }

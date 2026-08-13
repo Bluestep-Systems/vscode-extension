@@ -11,12 +11,12 @@ export default async function (): Promise<void> {
     const activeEditorUri = vscode.window.activeTextEditor?.document.uri;
 
     if (!workspaceUri || !activeEditorUri) {
-      App.core.prompt.error("No workspace or active file");
+      App.prompt.error("No workspace or active file");
       return;
     }
 
     // Use B6PCore for auditPull (includes confirmation prompt)
-    await App.core.auditPull({
+    await App.core.script.auditPull({
       filePath: activeEditorUri.fsPath,
       workspacePath: workspaceUri.fsPath,
     });
@@ -24,7 +24,7 @@ export default async function (): Promise<void> {
     // Success message shown by B6PCore
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    App.core.prompt.error(`Error during audit-pull: ${message}`);
+    App.prompt.error(`Error during audit-pull: ${message}`);
     App.logger.error("Audit-pull error:", e);
   }
 }

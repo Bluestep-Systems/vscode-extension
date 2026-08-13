@@ -270,7 +270,7 @@ suite("DownstairsPathParser Tests", () => {
   suite("Paths with Spaces and Special Characters", () => {
     test("should handle scriptName with spaces and .gitignore", () => {
       // Using B6PUri to handle URL-encoded paths correctly
-      const uri = B6PUri.fromUrl(
+      const uri = B6PUri.fromString(
         "file:///c%3A/Users/jrigb/Bluestep/Organizations/U142023/Site%20Audit%20Post-Save/.gitignore"
       );
       const parser = new DownstairsPathParser(uri.fsPath);
