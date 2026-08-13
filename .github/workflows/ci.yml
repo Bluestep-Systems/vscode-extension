@@ -34,7 +34,10 @@ jobs:
       fail-fast: false  # See results across all platforms, not just the first failure.
       matrix:
         os: [windows-latest, macos-latest]
-        node: ['20']
+        # Node 22 floor: @vscode/test-cli 0.0.15 and @vscode/test-electron 3.1.0
+        # both declare engines.node >=22, and older test-electron cannot launch
+        # VS Code 1.110+ on macOS (the binary was renamed off Contents/MacOS/Electron).
+        node: ['22']
 
     steps:
       - name: Checkout repository

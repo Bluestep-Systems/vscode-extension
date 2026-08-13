@@ -26,6 +26,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   anyway (fixed in 0.5.0) — so the cache was empty at activation regardless. Fixing that upstream
   is what made this reachable.
 
+- **CI was broken on both legs before this branch even touched it**, surfaced by PR #16:
+
+  - *Windows, format check.* Prettier's `endOfLine` default is `lf`, and a Windows runner checks
+    out CRLF, so the newly-added `format-check` gate reported all 50 source files as unformatted
+    — files byte-identical to what Prettier writes elsewhere. A `.gitattributes` with
+    `* text=auto eol=lf` normalizes the working tree on every platform. The gate could never have
+    caught this before, because the step it replaced was ESLint, which could not fail.
+  - *macOS, tests.* `@vscode/test-electron` 2.5.2 launches VS Code via
+    `Contents/MacOS/Electron`, which VS Code renamed to the product name; any 1.110+ archive
+    fails with `spawn … ENOENT`, and CI now downloads 1.133. Bumped `@vscode/test-electron` to
+    `^3.1.0` and `@vscode/test-cli` to `^0.0.15`, which fix it — both declare `engines.node >=22`,
+    so the CI matrix in `ci.yml` and `release.yml` moves from Node 20 to 22. (VS Code 1.103+ ships
+    a Node 22 extension host, so this only aligns CI with the runtime.)
+
 - **Snapshot pushes reported bogus type errors for every file.** The extension never passed
   `B6PProviders.typescriptLibDirs`, added in core 0.2.0 for exactly this: once b6p-core is bundled
   into `dist/extension.js`, TypeScript's default host resolves `lib.*.d.ts` relative to
